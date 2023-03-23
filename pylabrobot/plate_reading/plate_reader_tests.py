@@ -4,7 +4,8 @@ import unittest
 
 from pylabrobot.plate_reading import PlateReader
 from pylabrobot.plate_reading.backend import PlateReaderBackend
-from pylabrobot.resources.abstract import Plate, Well, create_equally_spaced
+from pylabrobot.resources import Plate, Well, create_equally_spaced
+
 
 class MockPlateReaderBackend(PlateReaderBackend):
   """ A mock backend for testing. """
@@ -22,6 +23,9 @@ class MockPlateReaderBackend(PlateReaderBackend):
     pass
 
   async def read_luminescence(self):
+    return [[1, 2, 3], [4, 5, 6]]
+
+  async def read_absorbance(self):
     return [[1, 2, 3], [4, 5, 6]]
 
 
@@ -56,3 +60,10 @@ class TestPlateReaderResource(unittest.TestCase):
     plate_reader.assign_child_resource(plate)
 
     self.assertEqual(plate_reader.get_plate(), plate)
+
+  def test_serialization(self):
+    backend = MockPlateReaderBackend()
+    self.assertEqual(backend.serialize(), {
+      "type": "MockPlateReaderBackend",
+    })
+    self.assertIsInstance(backend.deserialize(backend.serialize()), MockPlateReaderBackend)

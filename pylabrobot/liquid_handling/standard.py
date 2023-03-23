@@ -8,11 +8,11 @@ from typing import List, Optional, TYPE_CHECKING
 
 from pylabrobot.default import Defaultable, Default, is_not_default
 from pylabrobot.liquid_handling.liquid_classes.abstract import LiquidClass
-from pylabrobot.resources.abstract.coordinate import Coordinate
+from pylabrobot.resources.coordinate import Coordinate
 if TYPE_CHECKING:
-  from pylabrobot.resources import Resource
-  from pylabrobot.liquid_handling.tip import Tip
-  from pylabrobot.resources.abstract.tip_rack import TipSpot
+  from pylabrobot.resources import Container, Plate, Resource, TipRack
+  from pylabrobot.resources.tip import Tip
+  from pylabrobot.resources.tip_rack import TipSpot
 
 
 class PipettingOp(ABC):
@@ -111,24 +111,66 @@ class Drop(TipOp):
     )
 
 
-class LiquidHandlingOp(PipettingOp, metaclass=ABCMeta):
-  """ Abstract base class for liquid handling operations.
+class TipRackOp(PipettingOp, metaclass=ABCMeta):
+  """ Abstract base class for tip rack operations. """
 
-  Attributes:
-    resource: The resource that will be used in the operation.
-    volume: The volume of the liquid that is being handled.
-    flow_rate: The flow rate with which to perform this operation.
-    offset: The offset in the z direction.
-  """
+  def __init__(
+    self,
+    resource: TipRack,
+    offset: Defaultable[Coordinate] = Default
+  ):
+    super().__init__(resource=resource, offset=offset)
+    self.resource: TipRack = resource # fix type
+
+
+class PickupTipRack(TipRackOp):
+  """ A pickup operation for an entire tip rack. """
+
+  def __init__(
+    self,
+    resource: TipRack,
+    offset: Defaultable[Coordinate] = Default
+  ):
+    super().__init__(resource=resource, offset=offset)
+
+  @classmethod
+  def deserialize(cls, data: dict, resource: TipRack) -> PickupTipRack:
+    assert resource.name == data["resource_name"]
+    return PickupTipRack(
+      resource=resource,
+      offset=Default if data["offset"] == "default" else Coordinate.deserialize(data["offset"])
+    )
+
+
+class DropTipRack(TipRackOp):
+  """ A drop operation for an entire tip rack. """
+
+  def __init__(
+    self,
+    resource: TipRack,
+    offset: Defaultable[Coordinate] = Default
+  ):
+    super().__init__(resource=resource, offset=offset)
+
+  @classmethod
+  def deserialize(cls, data: dict, resource: TipRack) -> DropTipRack:
+    assert resource.name == data["resource_name"]
+    return DropTipRack(
+      resource=resource,
+      offset=Default if data["offset"] == "default" else Coordinate.deserialize(data["offset"])
+    )
+
+
+class LiquidHandlingOp(PipettingOp, metaclass=ABCMeta):
+  """ Abstract base class for liquid handling operations. """
 
   def __init__(
     self,
     resource: Resource,
     volume: float,
-    tip: Tip,
     flow_rate: Defaultable[float] = Default,
     offset: Defaultable[Coordinate] = Default,
-    liquid_height: float = 0,
+    liquid_height: Defaultable[float] = Default,
     blow_out_air_volume: float = 0,
     liquid_class: LiquidClass = LiquidClass.WATER
   ):
@@ -148,19 +190,17 @@ class LiquidHandlingOp(PipettingOp, metaclass=ABCMeta):
     self.flow_rate = flow_rate
     self.liquid_height = liquid_height
     self.blow_out_air_volume = blow_out_air_volume
-    self.tip = tip
     self.liquid_class = liquid_class
 
   def __eq__(self, other: object) -> bool:
     return super().__eq__(other) and (
-      isinstance(other, LiquidHandlingOp) and
+      isinstance(other, LiquidHandlingOp) and # TODO: does this mean that asp == disp?
       self.resource == other.resource and
       self.volume == other.volume and
       self.flow_rate == other.flow_rate and
       self.offset == other.offset and
       self.liquid_height == other.liquid_height and
       self.blow_out_air_volume == other.blow_out_air_volume and
-      self.tip == other.tip and
       self.liquid_class == other.liquid_class
     )
 
@@ -171,8 +211,7 @@ class LiquidHandlingOp(PipettingOp, metaclass=ABCMeta):
     return (
       f"{self.__class__.__name__}(resource={repr(self.resource)}, volume={repr(self.volume)}, "
       f"flow_rate={self.flow_rate}, offset={self.offset}, liquid_height={self.liquid_height}, "
-      f"blow_out_air_volume={self.blow_out_air_volume}, tip={self.tip}, "
-      "liquid_class={self.liquid_class})"
+      f"blow_out_air_volume={self.blow_out_air_volume}, liquid_class={self.liquid_class})"
     )
 
   def serialize(self) -> dict:
@@ -186,30 +225,70 @@ class LiquidHandlingOp(PipettingOp, metaclass=ABCMeta):
       **super().serialize(),
       "volume": self.volume,
       "flow_rate": self.flow_rate if is_not_default(self.flow_rate) else "default",
-      "liquid_height": self.liquid_height,
+      "liquid_height": self.liquid_height if is_not_default(self.liquid_height) else "default",
       "blow_out_air_volume": self.blow_out_air_volume,
-      "tip": self.tip.serialize(),
       "liquid_class": self.liquid_class.name
     }
 
 
 class Aspiration(LiquidHandlingOp):
-  """ Aspiration is a class that contains information about an aspiration.
+  """ Aspiration contains information about an aspiration.
 
   This class is be used by
   :meth:`pyhamilton.liquid_handling.liquid_handler.LiquidHandler.aspirate` to store information
   about the aspiration for each individual channel.
   """
 
+  def __init__(
+    self,
+    resource: Container,
+    volume: float,
+    tip: Tip,
+    flow_rate: Defaultable[float] = Default,
+    offset: Defaultable[Coordinate] = Default,
+    liquid_height: Defaultable[float] = Default,
+    blow_out_air_volume: float = 0,
+    liquid_class: LiquidClass = LiquidClass.WATER
+  ):
+    """ Initialize an aspiration operation.
+
+    Args:
+      resource: The resource that will be used in the operation.
+      volume: The volume of the liquid that is being handled. In ul.
+      tip: The tip that is being used in the operation.
+      flow_rate: The flow rate. None is default for the Machine. In ul/s.
+      offset: The offset in the z direction. In mm.
+      liquid_height: The height of the liquid in the well. In mm.
+    """
+
+    super().__init__(
+      resource=resource,
+      volume=volume,
+      flow_rate=flow_rate,
+      offset=offset,
+      liquid_height=liquid_height,
+      blow_out_air_volume=blow_out_air_volume,
+      liquid_class=liquid_class
+    )
+
+    self.resource: Container = resource # fix type
+    self.tip = tip
+
+  def serialize(self) -> dict:
+    return {
+      **super().serialize(),
+      "tip": self.tip.serialize(),
+    }
+
   @classmethod
-  def deserialize(cls, data: dict, resource: Resource, tip: Tip) -> Aspiration:
+  def deserialize(cls, data: dict, resource: Container, tip: Tip) -> Aspiration:
     assert resource.name == data["resource_name"]
     return Aspiration(
       resource=resource,
       volume=data["volume"],
       flow_rate=Default if data["flow_rate"] == "default" else data["flow_rate"],
       offset=Default if data["offset"] == "default" else Coordinate.deserialize(data["offset"]),
-      liquid_height=data["liquid_height"],
+      liquid_height=Default if data["liquid_height"] == "default" else data["liquid_height"],
       blow_out_air_volume=data["blow_out_air_volume"],
       tip=tip,
       liquid_class=LiquidClass[data["liquid_class"]]
@@ -217,24 +296,192 @@ class Aspiration(LiquidHandlingOp):
 
 
 class Dispense(LiquidHandlingOp):
-  """ Dispense is a class that contains information about an dispense.
+  """ Dispense contains information about an dispense.
 
   This class is be used by
   :meth:`pyhamilton.liquid_handling.liquid_handler.LiquidHandler.aspirate` to store information
   about the dispense for each individual channel.
   """
 
+  def __init__(
+    self,
+    resource: Container,
+    volume: float,
+    tip: Tip,
+    flow_rate: Defaultable[float] = Default,
+    offset: Defaultable[Coordinate] = Default,
+    liquid_height: Defaultable[float] = Default,
+    blow_out_air_volume: float = 0,
+    liquid_class: LiquidClass = LiquidClass.WATER
+  ):
+    """ Initialize a dispense operation.
+
+    Args:
+      resource: The resource that will be used in the operation.
+      volume: The volume of the liquid that is being handled. In ul.
+      tip: The tip that is being used in the operation.
+      flow_rate: The flow rate. None is default for the Machine. In ul/s.
+      offset: The offset in the z direction. In mm.
+      liquid_height: The height of the liquid in the well. In mm.
+    """
+
+    super().__init__(
+      resource=resource,
+      volume=volume,
+      flow_rate=flow_rate,
+      offset=offset,
+      liquid_height=liquid_height,
+      blow_out_air_volume=blow_out_air_volume,
+      liquid_class=liquid_class
+    )
+
+    self.resource: Container = resource # fix type
+    self.tip = tip
+
+  def serialize(self) -> dict:
+    return {
+      **super().serialize(),
+      "tip": self.tip.serialize(),
+    }
+
   @classmethod
-  def deserialize(cls, data: dict, resource: Resource, tip: Tip) -> Dispense:
+  def deserialize(cls, data: dict, resource: Container, tip: Tip) -> Dispense:
     assert resource.name == data["resource_name"]
     return Dispense(
       resource=resource,
       volume=data["volume"],
       flow_rate=Default if data["flow_rate"] == "default" else data["flow_rate"],
       offset=Default if data["offset"] == "default" else Coordinate.deserialize(data["offset"]),
-      liquid_height=data["liquid_height"],
+      liquid_height=Default if data["liquid_height"] == "default" \
+        else data["liquid_height"],
       blow_out_air_volume=data["blow_out_air_volume"],
       tip=tip,
+      liquid_class=LiquidClass[data["liquid_class"]]
+    )
+
+
+class AspirationPlate(LiquidHandlingOp):
+  """ AspirationPlate contains information about an aspiration from a plate (in a single movement).
+
+  This class is be used by
+  :meth:`pyhamilton.liquid_handling.liquid_handler.LiquidHandler.aspirate_plate`.
+  """
+
+  def __init__(
+    self,
+    resource: Plate,
+    volume: float,
+    tips: List[Tip],
+    flow_rate: Defaultable[float] = Default,
+    offset: Defaultable[Coordinate] = Default,
+    liquid_height: Defaultable[float] = Default,
+    blow_out_air_volume: float = 0,
+    liquid_class: LiquidClass = LiquidClass.WATER
+  ):
+    """ Initialize an aspiration plate operation.
+
+    Args:
+      resource: The resource that will be used in the operation.
+      volume: The volume of the liquid that is being handled. In ul. Per tip.
+      tips: The tips that are being used in the operation.
+      flow_rate: The flow rate. None is default for the Machine. In ul/s. For all tips.
+      offset: The offset in the z direction. In mm. For all tips.
+      liquid_height: The height of the liquid in the well. In mm. For all tips.
+    """
+
+    super().__init__(
+      resource=resource,
+      volume=volume,
+      flow_rate=flow_rate,
+      offset=offset,
+      liquid_height=liquid_height,
+      blow_out_air_volume=blow_out_air_volume,
+      liquid_class=liquid_class
+    )
+
+    self.resource: Plate = resource # fix type
+    self.tips = tips
+
+  def serialize(self) -> dict:
+    return {
+      **super().serialize(),
+      "tips": [tip.serialize() for tip in self.tips]
+    }
+
+  @classmethod
+  def deserialize(cls, data: dict, resource: Plate, tips: List[Tip]) -> AspirationPlate:
+    assert resource.name == data["resource_name"]
+    return AspirationPlate(
+      resource=resource,
+      volume=data["volume"],
+      flow_rate=Default if data["flow_rate"] == "default" else data["flow_rate"],
+      offset=Default if data["offset"] == "default" else Coordinate.deserialize(data["offset"]),
+      liquid_height=Default if data["liquid_height"] == "default" else data["liquid_height"],
+      blow_out_air_volume=data["blow_out_air_volume"],
+      tips=tips,
+      liquid_class=LiquidClass[data["liquid_class"]]
+    )
+
+
+class DispensePlate(LiquidHandlingOp):
+  """ DispensePlate contains information about an aspiration from a plate (in a single movement).
+
+  This class is be used by
+  :meth:`pyhamilton.liquid_handling.liquid_handler.LiquidHandler.dispense_plate`.
+  """
+
+  def __init__(
+    self,
+    resource: Plate,
+    volume: float,
+    tips: List[Tip],
+    flow_rate: Defaultable[float] = Default,
+    offset: Defaultable[Coordinate] = Default,
+    liquid_height: Defaultable[float] = Default,
+    blow_out_air_volume: float = 0,
+    liquid_class: LiquidClass = LiquidClass.WATER
+  ):
+    """ Initialize an dispense plate operation.
+
+    Args:
+      resource: The resource that will be used in the operation.
+      volume: The volume of the liquid that is being handled. In ul. Per tip.
+      tips: The tips that are being used in the operation.
+      flow_rate: The flow rate. None is default for the Machine. In ul/s. For all tips.
+      offset: The offset in the z direction. In mm. For all tips.
+      liquid_height: The height of the liquid in the well. In mm. For all tips.
+    """
+
+    super().__init__(
+      resource=resource,
+      volume=volume,
+      flow_rate=flow_rate,
+      offset=offset,
+      liquid_height=liquid_height,
+      blow_out_air_volume=blow_out_air_volume,
+      liquid_class=liquid_class
+    )
+
+    self.resource: Plate = resource # fix type
+    self.tips = tips
+
+  def serialize(self) -> dict:
+    return {
+      **super().serialize(),
+      "tips": [tip.serialize() for tip in self.tips]
+    }
+
+  @classmethod
+  def deserialize(cls, data: dict, resource: Plate, tips: List[Tip]) -> AspirationPlate:
+    assert resource.name == data["resource_name"]
+    return AspirationPlate(
+      resource=resource,
+      volume=data["volume"],
+      flow_rate=Default if data["flow_rate"] == "default" else data["flow_rate"],
+      offset=Default if data["offset"] == "default" else Coordinate.deserialize(data["offset"]),
+      liquid_height=Default if data["liquid_height"] == "default" else data["liquid_height"],
+      blow_out_air_volume=data["blow_out_air_volume"],
+      tips=tips,
       liquid_class=LiquidClass[data["liquid_class"]]
     )
 

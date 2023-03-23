@@ -15,7 +15,6 @@ from pylabrobot.resources import (
 )
 import pylabrobot.utils.file_parsing as file_parser
 import pylabrobot.resources as resources_module
-from pylabrobot import utils
 
 
 logger = logging.getLogger(__name__)
@@ -47,13 +46,16 @@ class HamiltonDeck(Deck):
     size_x: float,
     size_y: float,
     size_z: float,
+    name: str = "deck",
+    category: str = "deck",
     resource_assigned_callback: Optional[Callable] = None,
     resource_unassigned_callback: Optional[Callable] = None,
-    origin: Coordinate = Coordinate(0, 63, 100),
+    origin: Coordinate = Coordinate.zero(),
     no_trash: bool = False,
   ):
-    super().__init__(size_x, size_y, size_z,
-      resource_assigned_callback, resource_unassigned_callback, origin)
+    super().__init__(name=name, size_x=size_x, size_y=size_y, size_z=size_z, category=category,
+      resource_assigned_callback=resource_assigned_callback,
+      resource_unassigned_callback=resource_unassigned_callback, origin=origin)
     self.num_rails = num_rails
 
     # assign trash area
@@ -62,26 +64,15 @@ class HamiltonDeck(Deck):
 
       self.assign_child_resource(
         resource=Trash("trash", size_x=0, size_y=241.2, size_z=0),
-        location=Coordinate(x=trash_x, y=190.6-63, z=37.1)) # z I am not sure about
+        location=Coordinate(x=trash_x, y=190.6, z=137.1)) # z I am not sure about
 
   def serialize(self) -> dict:
     """ Serialize this deck. """
     return {
       **super().serialize(),
       "num_rails": self.num_rails,
+      "no_trash": True # data encoded as child. (not very pretty to have this key though...)
     }
-
-  @classmethod
-  def deserialize(cls, data: dict):
-    """ Deserialize this deck. """
-    return cls(
-      num_rails=data["num_rails"],
-      size_x=data["size_x"],
-      size_y=data["size_y"],
-      size_z=data["size_z"],
-      origin=Coordinate.deserialize(data["location"]),
-      no_trash=True # will be added back in by the deserializer
-    )
 
   def assign_child_resource(
     self,
@@ -129,7 +120,7 @@ class HamiltonDeck(Deck):
         raise ValueError(f"Resource with name '{resource.name}' already defined.")
 
     if rails is not None:
-      resource_location = Coordinate(x=self._x_coordinate_for_rails(rails), y=0, z=0)
+      resource_location = Coordinate(x=self._x_coordinate_for_rails(rails), y=63, z=100)
     elif location is not None:
       resource_location = location
     else:
@@ -274,16 +265,15 @@ class HamiltonDeck(Deck):
       )
 
     # Print header.
-    summary_ = utils.pad_string("Rail", 9) + utils.pad_string("Resource", 27) + \
-                utils.pad_string("Type", 20) + "Coordinates (mm)\n"
+    summary_ = "Rail" + " " * 5 + "Resource" + " " * 19 +  "Type" + " " * 16 + "Coordinates (mm)\n"
     summary_ += "=" * 95 + "\n"
 
     def parse_resource(resource):
       # TODO: print something else if resource is not assigned to a rails.
       rails = _rails_for_x_coordinate(resource.location.x)
-      rail_label = utils.pad_string(f"({rails})", 4)
-      r_summary = f"{rail_label} ├── {utils.pad_string(resource.name, 27)}" + \
-            f"{utils.pad_string(resource.__class__.__name__, 20)}" + \
+      rail_label = f"({rails})" if rails is not None else "     "
+      r_summary = f"{rail_label:4} ├── {resource.name:27}" + \
+            f"{resource.__class__.__name__:20}" + \
             f"{resource.get_absolute_location()}\n"
 
       if isinstance(resource, Carrier):
@@ -297,8 +287,8 @@ class HamiltonDeck(Deck):
                 subresource.get_item("A1").center()
             else:
               location = subresource.get_absolute_location()
-            r_summary += f"     │   ├── {utils.pad_string(subresource.name, 27-4)}" + \
-                  f"{utils.pad_string(subresource.__class__.__name__, 20)}" + \
+            r_summary += f"     │   ├── {subresource.name:23}" + \
+                  f"{subresource.__class__.__name__:20}" + \
                   f"{location}\n"
 
       return r_summary
@@ -318,7 +308,7 @@ class HamiltonDeck(Deck):
 def STARLetDeck( # pylint: disable=invalid-name
   resource_assigned_callback: Optional[Callable] = None,
   resource_unassigned_callback: Optional[Callable] = None,
-  origin: Coordinate = Coordinate(0, 63, 100),
+  origin: Coordinate = Coordinate.zero(),
 ) -> HamiltonDeck:
   """ A STARLet deck.
 
@@ -326,19 +316,19 @@ def STARLetDeck( # pylint: disable=invalid-name
   """
 
   return HamiltonDeck(
-      num_rails=STARLET_NUM_RAILS,
-      size_x=STARLET_SIZE_X,
-      size_y=STARLET_SIZE_Y,
-      size_z=STARLET_SIZE_Z,
-      resource_assigned_callback=resource_assigned_callback,
-      resource_unassigned_callback=resource_unassigned_callback,
-      origin=origin)
+    num_rails=STARLET_NUM_RAILS,
+    size_x=STARLET_SIZE_X,
+    size_y=STARLET_SIZE_Y,
+    size_z=STARLET_SIZE_Z,
+    resource_assigned_callback=resource_assigned_callback,
+    resource_unassigned_callback=resource_unassigned_callback,
+    origin=origin)
 
 
 def STARDeck( # pylint: disable=invalid-name
   resource_assigned_callback: Optional[Callable] = None,
   resource_unassigned_callback: Optional[Callable] = None,
-  origin: Coordinate = Coordinate(0, 63, 100),
+  origin: Coordinate = Coordinate.zero(),
 ) -> HamiltonDeck:
   """ The Hamilton STAR deck.
 
@@ -346,10 +336,10 @@ def STARDeck( # pylint: disable=invalid-name
   """
 
   return HamiltonDeck(
-      num_rails=STAR_NUM_RAILS,
-      size_x=STAR_SIZE_X,
-      size_y=STAR_SIZE_Y,
-      size_z=STAR_SIZE_Z,
-      resource_assigned_callback=resource_assigned_callback,
-      resource_unassigned_callback=resource_unassigned_callback,
-      origin=origin)
+    num_rails=STAR_NUM_RAILS,
+    size_x=STAR_SIZE_X,
+    size_y=STAR_SIZE_Y,
+    size_z=STAR_SIZE_Z,
+    resource_assigned_callback=resource_assigned_callback,
+    resource_unassigned_callback=resource_unassigned_callback,
+    origin=origin)

@@ -2,7 +2,7 @@ import sys
 from typing import List
 import unittest
 
-from pylabrobot.resources.abstract import (
+from pylabrobot.resources import (
   Coordinate,
   Plate,
   Well,
@@ -221,7 +221,3 @@ class TestCreateEquallySpaced(unittest.TestCase):
     correct_items[2][1].location = Coordinate(18, 0, 0)
 
     self.assertEqual(equally_spaced, correct_items)
-
-
-if __name__ == "__main__":
-  unittest.main()

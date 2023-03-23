@@ -40,7 +40,7 @@ extras_opentrons = [
 ]
 
 extras_server = [
-    'flask',
+    'flask[async]',
 ]
 
 extras_testing = [
@@ -64,7 +64,7 @@ setup(
     description='A hardware agnostic platform for liquid handling',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    install_requires=[],
+    install_requires=["typing_extensions"],
     url='https://github.com/pylabrobot/pylabrobot.git',
     package_data={'pylabrobot': ['liquid_handling/backends/simulation/simulator/*']},
     extras_require={
@@ -80,6 +80,10 @@ setup(
         'server': extras_server,
         'dev': extras_dev,
         'all': extras_all,
+    },
+    entry_points={
+        'console_scripts': [
+            'lh-server=pylabrobot.server.liquid_handling_server:main',
+        ],
     }
 )
-

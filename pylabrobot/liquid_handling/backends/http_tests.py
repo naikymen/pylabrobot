@@ -3,20 +3,22 @@ import unittest
 import responses
 from responses import matchers
 
-from pylabrobot.liquid_handling import LiquidHandler, no_tip_tracking, no_volume_tracking
+from pylabrobot.liquid_handling import LiquidHandler
 from pylabrobot.liquid_handling.backends import HTTPBackend
 from pylabrobot.resources.hamilton import STARLetDeck
 from pylabrobot.resources import (
   PLT_CAR_L5AC_A00,
   TIP_CAR_480_A00,
   HTF_L,
-  Cos_96_EZWash
+  Cos_96_EZWash,
+  no_tip_tracking,
+  no_volume_tracking
 )
 
 header_match = matchers.header_matcher({"User-Agent": "pylabrobot/0.1.0"})
 
 
-class TestHTTPBackendCom(unittest.TestCase):
+class TestHTTPBackendCom(unittest.IsolatedAsyncioTestCase):
   """ Tests for setup and stop """
   def setUp(self) -> None:
     self.deck = STARLetDeck()
@@ -24,7 +26,7 @@ class TestHTTPBackendCom(unittest.TestCase):
     self.lh = LiquidHandler(self.backend, deck=self.deck)
 
   @responses.activate
-  def test_setup_stop(self):
+  async def test_setup_stop(self):
     responses.add(
       responses.POST,
       "http://localhost:8080/events/setup",
@@ -46,15 +48,15 @@ class TestHTTPBackendCom(unittest.TestCase):
       json={"status": "ok"},
       status=200,
     )
-    self.lh.setup()
-    self.lh.stop()
+    await self.lh.setup()
+    await self.lh.stop()
 
 
-class TestHTTPBackendOps(unittest.TestCase):
+class TestHTTPBackendOps(unittest.IsolatedAsyncioTestCase):
   """ Tests for liquid handling ops. """
 
   @responses.activate
-  def setUp(self) -> None:
+  async def asyncSetUp(self) -> None:
     responses.add(
       responses.POST,
       "http://localhost:8080/events/setup",
@@ -80,20 +82,21 @@ class TestHTTPBackendOps(unittest.TestCase):
     self.backend = HTTPBackend("localhost", 8080, num_channels=8)
     self.lh = LiquidHandler(self.backend, deck=self.deck)
 
-    self.lh.setup()
+    await self.lh.setup()
 
   @responses.activate
-  def tearDown(self) -> None:
+  async def asyncTearDown(self) -> None:
+    await super().asyncTearDown()
     responses.add(
       responses.POST,
       "http://localhost:8080/events/stop",
       json={"status": "ok"},
       status=200,
     )
-    self.lh.stop()
+    await self.lh.stop()
 
   @responses.activate
-  def test_tip_pickup(self):
+  async def test_tip_pickup(self):
     responses.add(
       responses.POST,
       "http://localhost:8080/events/pick-up-tips",
@@ -111,10 +114,10 @@ class TestHTTPBackendOps(unittest.TestCase):
       json={"status": "ok"},
       status=200,
     )
-    self.lh.pick_up_tips(self.tip_rack["A1"])
+    await self.lh.pick_up_tips(self.tip_rack["A1"])
 
   @responses.activate
-  def test_tip_drop(self):
+  async def test_tip_drop(self):
     responses.add(
       responses.POST,
       "http://localhost:8080/events/drop-tips",
@@ -135,10 +138,10 @@ class TestHTTPBackendOps(unittest.TestCase):
 
     with no_tip_tracking():
       self.lh.update_head_state({0: self.tip_rack.get_tip("A1")})
-      self.lh.drop_tips(self.tip_rack["A1"])
+      await self.lh.drop_tips(self.tip_rack["A1"])
 
   @responses.activate
-  def test_aspirate(self):
+  async def test_aspirate(self):
     responses.add(
       responses.POST,
       "http://localhost:8080/events/aspirate",
@@ -150,7 +153,7 @@ class TestHTTPBackendOps(unittest.TestCase):
             "resource_name": "plate_well_0_0",
             "volume": 10,
             "flow_rate": "default",
-            "liquid_height": 0,
+            "liquid_height": "default",
             "blow_out_air_volume": 0,
             "tip": self.tip_rack.get_tip("A1").serialize(),
             "liquid_class": "WATER"
@@ -164,10 +167,10 @@ class TestHTTPBackendOps(unittest.TestCase):
     self.lh.update_head_state({0: self.tip_rack.get_tip("A1")})
     well = self.plate.get_item("A1")
     well.tracker.set_used_volume(10)
-    self.lh.aspirate([well], 10)
+    await self.lh.aspirate([well], 10)
 
   @responses.activate
-  def test_dispense(self):
+  async def test_dispense(self):
     responses.add(
       responses.POST,
       "http://localhost:8080/events/dispense",
@@ -179,7 +182,7 @@ class TestHTTPBackendOps(unittest.TestCase):
             "resource_name": "plate_well_0_0",
             "volume": 10,
             "flow_rate": "default",
-            "liquid_height": 0,
+            "liquid_height": "default",
             "blow_out_air_volume": 0,
             "tip": self.tip_rack.get_tip("A1").serialize(),
             "liquid_class": "WATER"
@@ -192,10 +195,10 @@ class TestHTTPBackendOps(unittest.TestCase):
     )
     self.lh.update_head_state({0: self.tip_rack.get_tip("A1")})
     with no_volume_tracking():
-      self.lh.dispense(self.plate["A1"], 10)
+      await self.lh.dispense(self.plate["A1"], 10)
 
   @responses.activate
-  def test_pick_up_tips96(self):
+  async def test_pick_up_tips96(self):
     responses.add(
       responses.POST,
       "http://localhost:8080/events/pick-up-tips96",
@@ -203,15 +206,16 @@ class TestHTTPBackendOps(unittest.TestCase):
         header_match,
         matchers.json_params_matcher({
           "resource_name": "tiprack",
+          "offset": {"x": 0, "y": 0, "z": 0},
         })
       ],
       json={"status": "ok"},
       status=200,
     )
-    self.lh.pick_up_tips96(self.tip_rack)
+    await self.lh.pick_up_tips96(self.tip_rack)
 
   @responses.activate
-  def test_drop_tips96(self):
+  async def test_drop_tips96(self):
     responses.add(
       responses.POST,
       "http://localhost:8080/events/drop-tips96",
@@ -219,15 +223,16 @@ class TestHTTPBackendOps(unittest.TestCase):
         header_match,
         matchers.json_params_matcher({
           "resource_name": "tiprack",
+          "offset": {"x": 0, "y": 0, "z": 0},
         })
       ],
       json={"status": "ok"},
       status=200,
     )
-    self.lh.drop_tips96(self.tip_rack)
+    await self.lh.drop_tips96(self.tip_rack)
 
   @responses.activate
-  def test_aspirate96(self):
+  async def test_aspirate96(self):
     # FIXME: pick up tips first, but make nicer.
     responses.add(
       responses.POST,
@@ -236,12 +241,13 @@ class TestHTTPBackendOps(unittest.TestCase):
         header_match,
         matchers.json_params_matcher({
           "resource_name": "tiprack",
+          "offset": {"x": 0, "y": 0, "z": 0},
         })
       ],
       json={"status": "ok"},
       status=200,
     )
-    self.lh.pick_up_tips96(self.tip_rack)
+    await self.lh.pick_up_tips96(self.tip_rack)
 
     responses.add(
       responses.POST,
@@ -254,9 +260,9 @@ class TestHTTPBackendOps(unittest.TestCase):
             "volume": 10,
             "flow_rate": "default",
             "offset": "default",
-            "liquid_height": 0,
+            "liquid_height": "default",
             "blow_out_air_volume": 0,
-            "tip": self.tip_rack.get_tip("A1").serialize(),
+            "tips": [tip.serialize() for tip in self.tip_rack.get_all_tips()],
             "liquid_class": "WATER"
           }
         })
@@ -265,10 +271,10 @@ class TestHTTPBackendOps(unittest.TestCase):
       status=200,
     )
 
-    self.lh.aspirate_plate(self.plate, 10)
+    await self.lh.aspirate_plate(self.plate, 10)
 
   @responses.activate
-  def test_dispense96(self):
+  async def test_dispense96(self):
     # FIXME: pick up tips first, but make nicer.
     responses.add(
       responses.POST,
@@ -277,12 +283,13 @@ class TestHTTPBackendOps(unittest.TestCase):
         header_match,
         matchers.json_params_matcher({
           "resource_name": "tiprack",
+          "offset": {"x": 0, "y": 0, "z": 0},
         })
       ],
       json={"status": "ok"},
       status=200,
     )
-    self.lh.pick_up_tips96(self.tip_rack)
+    await self.lh.pick_up_tips96(self.tip_rack)
 
     responses.add(
       responses.POST,
@@ -295,9 +302,9 @@ class TestHTTPBackendOps(unittest.TestCase):
             "volume": 10,
             "flow_rate": "default",
             "offset": "default",
-            "liquid_height": 0,
+            "liquid_height": "default",
             "blow_out_air_volume": 0,
-            "tip": self.tip_rack.get_tip("A1").serialize(),
+            "tips": [tip.serialize() for tip in self.tip_rack.get_all_tips()],
             "liquid_class": "WATER"
           }
         })
@@ -306,4 +313,4 @@ class TestHTTPBackendOps(unittest.TestCase):
       status=200,
     )
 
-    self.lh.dispense_plate(self.plate, 10)
+    await self.lh.dispense_plate(self.plate, 10)

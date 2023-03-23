@@ -1,3 +1,4 @@
+import time
 from typing import cast
 import unittest
 
@@ -18,7 +19,7 @@ from pylabrobot.liquid_handling.standard import (
   Aspiration,
   Dispense,
 )
-from pylabrobot.server.server import create_app
+from pylabrobot.server.liquid_handling_server import create_app
 
 
 def build_layout() -> HamiltonDeck:
@@ -36,13 +37,13 @@ def build_layout() -> HamiltonDeck:
   return deck
 
 
-class LiquidHandlingApiGeneralTests(unittest.TestCase):
+class LiquidHandlingApiGeneralTests(unittest.IsolatedAsyncioTestCase):
   def setUp(self):
     self.backend = SerializingSavingBackend(num_channels=8)
     self.deck = STARLetDeck()
     self.lh = LiquidHandler(backend=self.backend, deck=self.deck)
     self.app = create_app(lh=self.lh)
-    self.base_url = "/api/v1/liquid_handling"
+    self.base_url = ""
 
   def test_get_index(self):
     with self.app.test_client() as client:
@@ -54,7 +55,8 @@ class LiquidHandlingApiGeneralTests(unittest.TestCase):
     with self.app.test_client() as client:
       response = client.post(self.base_url + "/setup")
       self.assertEqual(response.status_code, 200)
-      self.assertEqual(response.json, {"status": "running"})
+
+      self.assertIn(response.json.get("status"), {"running", "succeeded"})
 
       assert self.lh.setup_finished
 
@@ -62,20 +64,20 @@ class LiquidHandlingApiGeneralTests(unittest.TestCase):
     with self.app.test_client() as client:
       response = client.post(self.base_url + "/stop")
       self.assertEqual(response.status_code, 200)
-      self.assertEqual(response.json, {"status": "stopped"})
+      self.assertIn(response.json.get("status"), {"running", "succeeded"})
 
       assert not self.lh.setup_finished
 
-  def test_status(self):
+  async def test_status(self):
     with self.app.test_client() as client:
       response = client.get(self.base_url + "/status")
       self.assertEqual(response.status_code, 200)
       self.assertEqual(response.json, {"status": "stopped"})
 
-      self.lh.setup()
+      await self.lh.setup()
       response = client.get(self.base_url + "/status")
       self.assertEqual(response.status_code, 200)
-      self.assertEqual(response.json, {"status": "running"})
+      self.assertIn(response.json.get("status"), {"running", "succeeded"})
 
   def test_load_labware(self):
     with self.app.test_client() as client:
@@ -91,7 +93,7 @@ class LiquidHandlingApiGeneralTests(unittest.TestCase):
 
       # Post with valid data
       deck = build_layout()
-      response = client.post(self.base_url + "/labware", json=dict(deck=deck.serialize()))
+      response = client.post(self.base_url + "/labware", json={"deck": deck.serialize()})
       self.assertEqual(response.json, {"status": "ok"})
       self.assertEqual(response.status_code, 200)
       self.assertEqual(self.lh.deck, deck)
@@ -103,11 +105,11 @@ class LiquidHandlingApiOpsTests(unittest.TestCase):
     self.deck = STARLetDeck()
     self.lh = LiquidHandler(backend=self.backend, deck=self.deck)
     self.app = create_app(lh=self.lh)
-    self.base_url = "/api/v1/liquid_handling"
+    self.base_url = ""
 
     deck = build_layout()
     with self.app.test_client() as client:
-      response = client.post(self.base_url + "/labware", json=dict(deck=deck.serialize()))
+      response = client.post(self.base_url + "/labware", json={"deck": deck.serialize()})
       assert response.status_code == 200
       assert self.lh.deck == deck
       assert self.lh.deck.resources == deck.resources
@@ -122,8 +124,8 @@ class LiquidHandlingApiOpsTests(unittest.TestCase):
       pickup = Pickup(resource=tip_spot, tip=tip)
       response = client.post(
         self.base_url + "/pick-up-tips",
-        json=dict(channels=[pickup.serialize()], use_channels=[0]))
-      self.assertEqual(response.json, {"status": "ok"})
+        json={"channels": [pickup.serialize()], "use_channels": [0]})
+      self.assertIn(response.json.get("status"), {"running", "succeeded"})
       self.assertEqual(response.status_code, 200)
 
   def test_drop_tip(self):
@@ -137,8 +139,8 @@ class LiquidHandlingApiOpsTests(unittest.TestCase):
       drop = Drop(resource=tip_spot, tip=tip)
       response = client.post(
         self.base_url + "/drop-tips",
-        json=dict(channels=[drop.serialize()], use_channels=[0]))
-      self.assertEqual(response.json, {"status": "ok"})
+        json={"channels": [drop.serialize()], "use_channels": [0]})
+      self.assertIn(response.json.get("status"), {"running", "succeeded"})
       self.assertEqual(response.status_code, 200)
 
   def test_aspirate(self):
@@ -149,8 +151,8 @@ class LiquidHandlingApiOpsTests(unittest.TestCase):
       aspirate = Aspiration(resource=well, volume=10, tip=tip)
       response = client.post(
         self.base_url + "/aspirate",
-        json=dict(channels=[aspirate.serialize()], use_channels=[0]))
-      self.assertEqual(response.json, {"status": "ok"})
+        json={"channels": [aspirate.serialize()], "use_channels": [0]})
+      self.assertIn(response.json.get("status"), {"running", "succeeded"})
       self.assertEqual(response.status_code, 200)
 
   def test_dispense(self):
@@ -161,6 +163,6 @@ class LiquidHandlingApiOpsTests(unittest.TestCase):
       dispense = Dispense(resource=well, volume=10, tip=tip)
       response = client.post(
         self.base_url + "/dispense",
-        json=dict(channels=[dispense.serialize()], use_channels=[0]))
-      self.assertEqual(response.json, {"status": "ok"})
+        json={"channels": [dispense.serialize()], "use_channels": [0]})
+      self.assertIn(response.json.get("status"), {"running", "succeeded"})
       self.assertEqual(response.status_code, 200)

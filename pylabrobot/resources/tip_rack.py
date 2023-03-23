@@ -6,8 +6,8 @@ from abc import ABCMeta
 from typing import List, Union, Optional, Sequence
 
 from pylabrobot import utils
-from pylabrobot.liquid_handling.tip import Tip, TipCreator
-from pylabrobot.liquid_handling.tip_tracker import SpotTipTracker, does_tip_tracking
+from pylabrobot.resources.tip import Tip, TipCreator
+from pylabrobot.resources.tip_tracker import SpotTipTracker, does_tip_tracking
 
 from .itemized_resource import ItemizedResource
 from .resource import Resource
@@ -99,10 +99,11 @@ class TipRack(ItemizedResource[TipSpot], metaclass=ABCMeta):
     num_items_x: Optional[int] = None,
     num_items_y: Optional[int] = None,
     category: str = "tip_rack",
+    model: Optional[str] = None,
     with_tips: bool = True,
   ):
-    super().__init__(name, size_x, size_y, size_z, items=items,
-                     num_items_x=num_items_x, num_items_y=num_items_y, category=category)
+    super().__init__(name, size_x, size_y, size_z, items=items, num_items_x=num_items_x,
+      num_items_y=num_items_y, category=category, model=model)
 
     if items is not None and len(items) > 0:
       if with_tips:
@@ -167,3 +168,7 @@ class TipRack(ItemizedResource[TipSpot], metaclass=ABCMeta):
     """ Fill the tip rack. This is useful when tip tracking is enabled and you are modifying
     the state manually (without the robot). """
     self.set_tip_state([[True] * self.num_items_x] * self.num_items_y)
+
+  def get_all_tips(self) -> List[Tip]:
+    """ Get all tips in the tip rack. """
+    return [ts.get_tip() for ts in self.get_all_items()]

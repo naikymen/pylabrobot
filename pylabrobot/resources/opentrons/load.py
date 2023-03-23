@@ -1,15 +1,14 @@
 import math
 import json
-from typing import Union, List, cast
+from typing import Union, List, TYPE_CHECKING, cast
 
 try:
   import opentrons_shared_data.labware
-  from opentrons_shared_data.labware.dev_types import LabwareDefinition
   USE_OT = True
 except ImportError:
   USE_OT = False
 
-from pylabrobot.liquid_handling.tip import Tip, TipCreator
+from pylabrobot.resources.tip import Tip, TipCreator
 from pylabrobot.resources import (
   Coordinate,
   Plate,
@@ -18,13 +17,16 @@ from pylabrobot.resources import (
   TipSpot,
 )
 
+if TYPE_CHECKING:
+  from opentrons_shared_data.labware.dev_types import LabwareDefinition
+
 
 class UnknownResourceType(Exception):
   pass
 
 
 def ot_definition_to_resource(
-  data: LabwareDefinition,
+  data: "LabwareDefinition",
   name: str) -> Union[Plate, TipRack]:
   """ Convert an Opentrons definition file to a PyLabRobot resource file. """
 
@@ -106,7 +108,8 @@ def ot_definition_to_resource(
         size_y=size_y,
         size_z=size_z,
         items=cast(List[List[Well]], wells),
-        one_dot_max=None
+        one_dot_max=None,
+        model=data["metadata"]["displayName"]
       )
     elif display_category == "tipRack":
       return TipRack(
@@ -115,6 +118,7 @@ def ot_definition_to_resource(
         size_y=size_y,
         size_z=size_z,
         items=cast(List[List[TipSpot]], wells),
+        model=data["metadata"]["displayName"]
       )
   raise UnknownResourceType(f"Unknown resource type '{display_category}'.")
 
@@ -126,7 +130,7 @@ def load_opentrons_resource(fn: str, name: str) -> Union[Plate, TipRack]:
     fn: path to the file.
 
   Returns:
-    A :class:`~pylabrobot.resources.abstract.Resource`.
+    A :class:`~pylabrobot.resources.Resource`.
 
   Raises:
     ValueError: if the file is not a valid opentrons definition file.
@@ -161,10 +165,10 @@ def load_shared_opentrons_resource(
     definition: name of the labware definition.
     version: version of the labware definition.
     name: desired name of the PyLabRobot
-      :class:`~pylabrobot.resources.abstract.Resource`
+      :class:`~pylabrobot.resources.Resource`
 
   Returns:
-    A :class:`~pylabrobot.resources.abstract.Resource`.
+    A :class:`~pylabrobot.resources.Resource`.
 
   Raises:
     ValueError: if the file is not a valid opentrons definition file.

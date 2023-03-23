@@ -1,13 +1,37 @@
-import asyncio
-from typing import List, cast
+import functools
+import sys
+from typing import Callable, List, cast
 
-from pylabrobot.resources.abstract import Coordinate, Resource, Plate
+from pylabrobot.resources import Coordinate, Resource, Plate
 from pylabrobot.plate_reading.backend import PlateReaderBackend
-from pylabrobot.utils import run_with_timeout
+
+if sys.version_info >= (3, 8):
+  from typing import Literal
+else:
+  from typing_extensions import Literal
 
 
 class NoPlateError(Exception):
   pass
+
+
+# copied from LiquidHandler.py, maybe we need a shared base class?
+
+def need_setup_finished(func: Callable): # pylint: disable=no-self-argument
+  """ Decorator for methods that require the plate reader to be set up.
+
+  Checked by verifying `self.setup_finished` is `True`.
+
+  Raises:
+    RuntimeError: If the liquid handler is not set up.
+  """
+
+  @functools.wraps(func)
+  async def wrapper(self, *args, **kwargs):
+    if not self.setup_finished:
+      raise RuntimeError("The setup has not finished. See `PlateReader.setup`.")
+    await func(self, *args, **kwargs) # pylint: disable=not-callable
+  return wrapper
 
 
 class PlateReader(Resource):
@@ -39,6 +63,7 @@ class PlateReader(Resource):
   def __init__(self, name: str, backend: PlateReaderBackend) -> None:
     super().__init__(name=name, size_x=0, size_y=0, size_z=0, category="plate_reader")
     self.backend = backend
+    self.setup_finished = False
 
   def assign_child_resource(self, resource):
     if len(self.children) >= 1:
@@ -54,9 +79,11 @@ class PlateReader(Resource):
 
   async def setup(self) -> None:
     await self.backend.setup()
+    self.setup_finished = True
 
   async def stop(self) -> None:
     await self.backend.stop()
+    self.setup_finished = False
 
   async def open(self) -> None:
     await self.backend.open()
@@ -64,55 +91,29 @@ class PlateReader(Resource):
   async def close(self) -> None:
     await self.backend.close()
 
-  async def read_luminescence(self) -> List[List[float]]:
-    return await self.backend.read_luminescence()
+  @need_setup_finished
+  async def read_luminescence(self, focal_height: float) -> List[List[float]]:
+    """ Read the luminescence from the plate.
 
+    Args:
+      focal_height: The focal height to read the luminescence at, in micrometers.
+    """
 
-class SyncPlateReader(Resource):
-  """ The front end for plate readers. This is a synchronous version of PlateReader, meaning
-  that its methods will block until they return.
+    return await self.backend.read_luminescence(focal_height=focal_height)
 
-  Here's an example of how to use this class:
+  @need_setup_finished
+  async def read_absorbance(
+    self,
+    wavelength: int,
+    report: Literal["OD", "transmittance"]
+  ) -> List[List[float]]:
+    """ Read the absorbance from the plate.
 
-  >>> from pylabrobot.plate_reading.clario_star import CLARIOStar
-  >>> pr = SyncPlateReader(backend=CLARIOStar())
-  >>> pr.setup()
-  >>> pr.read_luminescence()
-  [[value1, value2, value3, ...], [value1, value2, value3, ...], ...
+    Args:
+      wavelength: The wavelength to read the absorbance at, in nanometers.
+    """
 
-  .. warning:: This class cannot be used in a jupyter notebook, until IPython allows the synchronous
-    foreground task to submit asyncio tasks and block while waiting. Currently, it does not
-    (https://ipython.readthedocs.io/en/stable/interactive/autoawait.html#difference-between-terminal
-    -ipython-and-ipykernel). I think this is a bug. Luckily, you can the asynchronous PlateReader
-    instead. It's actually pretty nice in a jupyter notebook, because you can use `await` anywhere
-    to wait for the plate reader to finish reading.
-  """
+    if report not in {"OD", "transmittance"}:
+      raise ValueError("report must be either 'OD' or 'transmittance'.")
 
-  def __init__(self, name: str, backend: PlateReaderBackend) -> None:
-    super().__init__(name=name, size_x=0, size_y=0, size_z=0, category="plate_reader")
-
-    try:
-      _ = get_ipython() # type: ignore
-      raise RuntimeError("SyncPlateReader cannot be used in a jupyter notebook. Use PlateReader "
-        "instead.")
-    except NameError:
-      pass
-
-    self.pr = PlateReader(name=name, backend=backend)
-    self._loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(self._loop)
-
-  def assign_child_resource(self, resource):
-    self.pr.assign_child_resource(resource)
-
-  def get_plate(self) -> Plate:
-    return self.pr.get_plate()
-
-  def setup(self) -> None:
-    run_with_timeout(self.pr.setup(), loop=self._loop)
-
-  def stop(self) -> None:
-    run_with_timeout(self.pr.stop(), loop=self._loop)
-
-  def read_luminescence(self, timeout=None) -> List[List[float]]:
-    return run_with_timeout(coro=self.pr.read_luminescence(), timeout=timeout, loop=self._loop)
+    return await self.backend.read_absorbance(wavelength=wavelength, report=report)

@@ -3,7 +3,7 @@ import json
 import logging
 import threading
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 try:
   import websockets
@@ -16,7 +16,11 @@ except ImportError:
   HAS_WEBSOCKETS = False
 
 from pylabrobot.liquid_handling.backends import SerializingBackend
+from pylabrobot.resources import Resource
 from pylabrobot.__version__ import STANDARD_FORM_JSON_VERSION
+
+if TYPE_CHECKING:
+  import websockets.legacy
 
 
 logger = logging.getLogger(__name__) # TODO: get from somewhere else?
@@ -59,31 +63,31 @@ class WebSocketBackend(SerializingBackend):
     self._id = 0
 
   @property
-  def websocket(self) -> websockets.legacy.server.WebSocketServerProtocol:
+  def websocket(self) -> "websockets.legacy.server.WebSocketServerProtocol":
     """ The websocket connection. """
     if self._websocket is None:
-      raise ValueError("No websocket connection has been established.")
+      raise RuntimeError("No websocket connection has been established.")
     return self._websocket
 
   @property
   def loop(self) -> asyncio.AbstractEventLoop:
     """ The event loop. """
     if self._loop is None:
-      raise ValueError("Event loop has not been started.")
+      raise RuntimeError("Event loop has not been started.")
     return self._loop
 
   @property
   def t(self) -> threading.Thread:
     """ The thread that runs the event loop. """
     if self._t is None:
-      raise ValueError("Event loop has not been started.")
+      raise RuntimeError("Event loop has not been started.")
     return self._t
 
   @property
   def stop_(self) -> asyncio.Future:
     """ The future that is set when the simulation is stopped. """
     if self._stop_ is None:
-      raise ValueError("Event loop has not been started.")
+      raise RuntimeError("Event loop has not been started.")
     return self._stop_
 
   def _generate_id(self):
@@ -138,7 +142,7 @@ class WebSocketBackend(SerializingBackend):
   def _assemble_command(self, event: str, data) -> Tuple[str, str]:
     """ Assemble a command into standard JSON form. """
     id_ = self._generate_id()
-    command_data = dict(event=event, id=id_, version=STANDARD_FORM_JSON_VERSION, **data)
+    command_data = {"event": event, "id": id_, "version": STANDARD_FORM_JSON_VERSION, **data}
     return json.dumps(command_data), id_
 
   def has_connection(self) -> bool:
@@ -157,7 +161,20 @@ class WebSocketBackend(SerializingBackend):
     while not self.has_connection():
       time.sleep(0.1)
 
-  def send_command(
+  async def assigned_resource_callback(self, resource: Resource):
+    # override SerializingBackend so we don't wait for a response
+    await self.send_command(command="resource_assigned", data={
+      "resource": resource.serialize(),
+      "parent_name": (resource.parent.name if resource.parent else None)
+      },
+      wait_for_response=False)
+
+  async def unassigned_resource_callback(self, name: str):
+    # override SerializingBackend so we don't wait for a response
+    await self.send_command(command="resource_unassigned", data={"resource_name": name,
+      "wait_for_response": False})
+
+  async def send_command(
     self,
     command: str,
     data: Optional[Dict[str, Any]] = None,
@@ -203,7 +220,7 @@ class WebSocketBackend(SerializingBackend):
 
         if not message["success"]:
           error = message.get("error", "unknown error")
-          raise ValueError(f"Error during event {command}: " + error)
+          raise RuntimeError(f"Error during event {command}: " + error)
 
         return message
 
@@ -218,7 +235,7 @@ class WebSocketBackend(SerializingBackend):
     for message in self._sent_messages:
       asyncio.run_coroutine_threadsafe(self.websocket.send(message), self.loop)
 
-  def setup(self):
+  async def setup(self):
     """ Setup the simulation.
 
     Sets up the websocket server. This will run in a separate thread.
@@ -232,7 +249,7 @@ class WebSocketBackend(SerializingBackend):
       while True:
         try:
           async with websockets.server.serve(self._socket_handler, self.ws_host, self.ws_port):
-            print(f"Simulation server started at http://{self.ws_host}:{self.ws_port}")
+            print(f"Websocket server started at http://{self.ws_host}:{self.ws_port}")
             lock.release()
             await self.stop_
             break
@@ -257,14 +274,14 @@ class WebSocketBackend(SerializingBackend):
 
     self.setup_finished = True
 
-  def stop(self):
+  async def stop(self):
     """ Stop the simulation. """
 
     if self.loop is None:
       raise ValueError("Cannot stop simulation when it has not been started.")
 
     # send stop event to the browser
-    self.send_command("stop", wait_for_response=False)
+    await self.send_command("stop", wait_for_response=False)
 
     # must be thread safe, because event loop is running in a separate thread
     self.loop.call_soon_threadsafe(self.stop_.set_result, "done")

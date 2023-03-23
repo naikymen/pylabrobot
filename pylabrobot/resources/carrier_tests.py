@@ -3,10 +3,10 @@
 
 import unittest
 
-from pylabrobot.resources.abstract.itemized_resource import create_equally_spaced
+from pylabrobot.resources.itemized_resource import create_equally_spaced
 from pylabrobot.resources.ml_star.tip_creators import standard_volume_tip_with_filter
 
-from .carrier import Carrier, TipCarrier
+from .carrier import Carrier, TipCarrier, create_homogenous_carrier_sites
 from .coordinate import Coordinate
 from .deck import Deck
 from .resource import Resource
@@ -42,21 +42,21 @@ class CarrierTests(unittest.TestCase):
     self.tip_car = TipCarrier(
       "tip_car",
       size_x=135.0, size_y=497.0, size_z=13.0,
-      sites=[
-        Coordinate(10,   20, 30),
-        Coordinate(10,   50, 30),
-        Coordinate(10,   80, 30),
-        Coordinate(10,  130, 30),
-        Coordinate(10,  160, 30),
-      ],
-      site_size_x=10, site_size_y=10
+      sites=create_homogenous_carrier_sites([
+          Coordinate(10,   20, 30),
+          Coordinate(10,   50, 30),
+          Coordinate(10,   80, 30),
+          Coordinate(10,  130, 30),
+          Coordinate(10,  160, 30),
+        ],
+        site_size_x=10, site_size_y=10)
     )
 
   def test_assign_in_order(self):
     carrier = Carrier(
       name="carrier",
       size_x=200, size_y=200, size_z=50,
-      sites=[Coordinate(5, 5, 5)], site_size_x=10, site_size_y=10
+      sites=create_homogenous_carrier_sites([Coordinate(5, 5, 5)], site_size_x=10, site_size_y=10)
     )
     plate = Resource("plate", size_x=10, size_y=10, size_z=10)
     carrier.assign_resource_to_site(plate, spot=0)
@@ -71,7 +71,7 @@ class CarrierTests(unittest.TestCase):
     carrier = Carrier(
       name="carrier",
       size_x=200, size_y=200, size_z=50,
-      sites=[Coordinate(5, 5, 5)], site_size_x=10, site_size_y=10
+      sites=create_homogenous_carrier_sites([Coordinate(5, 5, 5)], site_size_x=10, site_size_y=10)
     )
     plate = Resource("plate", size_x=10, size_y=10, size_z=10)
     carrier.assign_resource_to_site(plate, spot=0)
@@ -87,7 +87,7 @@ class CarrierTests(unittest.TestCase):
     carrier = Carrier(
       name="carrier",
       size_x=200, size_y=200, size_z=50,
-      sites=[Coordinate(5, 5, 5)], site_size_x=10, site_size_y=10
+      sites=create_homogenous_carrier_sites([Coordinate(5, 5, 5)], site_size_x=10, site_size_y=10)
     )
     plate = Resource("plate", size_x=10, size_y=10, size_z=10)
     carrier.assign_resource_to_site(plate, spot=0)
@@ -105,7 +105,7 @@ class CarrierTests(unittest.TestCase):
     carrier = Carrier(
       name="carrier",
       size_x=200, size_y=200, size_z=50,
-      sites=[Coordinate(5, 5, 5)], site_size_x=10, site_size_y=10
+      sites=create_homogenous_carrier_sites([Coordinate(5, 5, 5)], site_size_x=10, site_size_y=10)
     )
     plate = Resource("plate", size_x=10, size_y=10, size_z=10)
     with self.assertRaises(IndexError):
@@ -115,7 +115,7 @@ class CarrierTests(unittest.TestCase):
     carrier = Carrier(
       name="carrier",
       size_x=200, size_y=200, size_z=50,
-      sites=[Coordinate(5, 5, 5)], site_size_x=10, site_size_y=10
+      sites=create_homogenous_carrier_sites([Coordinate(5, 5, 5)], site_size_x=10, site_size_y=10)
     )
     carrier.location = Coordinate(10, 10, 10)
     plate = Resource("plate", size_x=10, size_y=10, size_z=10)
@@ -186,13 +186,13 @@ class CarrierTests(unittest.TestCase):
       "size_z": 13.0,
       "location": None,
       "category": "tip_carrier",
+      "model": None,
       "parent_name": None,
       "children": [
         {
           "spot": 0,
           "name": "carrier-tip_car-spot-0",
           "type": "CarrierSite",
-          "resource": None,
           "size_x": 10,
           "size_y": 10,
           "size_z": 0,
@@ -203,13 +203,13 @@ class CarrierTests(unittest.TestCase):
           },
           "category": "carrier_site",
           "children": [],
-          "parent_name": "tip_car"
+          "parent_name": "tip_car",
+          "model": None
         },
         {
           "spot": 1,
           "name": "carrier-tip_car-spot-1",
           "type": "CarrierSite",
-          "resource": None,
           "size_x": 10,
           "size_y": 10,
           "size_z": 0,
@@ -220,13 +220,13 @@ class CarrierTests(unittest.TestCase):
           },
           "category": "carrier_site",
           "children": [],
-          "parent_name": "tip_car"
+          "parent_name": "tip_car",
+          "model": None
         },
         {
           "spot": 2,
           "name": "carrier-tip_car-spot-2",
           "type": "CarrierSite",
-          "resource": None,
           "size_x": 10,
           "size_y": 10,
           "size_z": 0,
@@ -237,13 +237,13 @@ class CarrierTests(unittest.TestCase):
           },
           "category": "carrier_site",
           "children": [],
-          "parent_name": "tip_car"
+          "parent_name": "tip_car",
+          "model": None
         },
         {
           "spot": 3,
           "name": "carrier-tip_car-spot-3",
           "type": "CarrierSite",
-          "resource": None,
           "size_x": 10,
           "size_y": 10,
           "size_z": 0,
@@ -254,13 +254,13 @@ class CarrierTests(unittest.TestCase):
           },
           "category": "carrier_site",
           "children": [],
-          "parent_name": "tip_car"
+          "parent_name": "tip_car",
+          "model": None
         },
         {
           "spot": 4,
           "name": "carrier-tip_car-spot-4",
           "type": "CarrierSite",
-          "resource": None,
           "size_x": 10,
           "size_y": 10,
           "size_z": 0,
@@ -271,20 +271,18 @@ class CarrierTests(unittest.TestCase):
           },
           "category": "carrier_site",
           "children": [],
-          "parent_name": "tip_car"
+          "parent_name": "tip_car",
+          "model": None
         }
       ]
     })
 
   def test_deserialization(self):
     self.maxDiff = None
+    # sites are not deserialized here)
     tip_car = TipCarrier(
       "tip_car",
       size_x=135.0, size_y=497.0, size_z=13.0,
-      sites=[], # sites are not deserialized here
-      site_size_x=10, site_size_y=10
+      sites=[]
     )
     self.assertEqual(tip_car, TipCarrier.deserialize(tip_car.serialize()))
-
-if __name__ == "__main__":
-  unittest.main()

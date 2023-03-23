@@ -117,11 +117,18 @@ class TestResource(unittest.TestCase):
       "type": "Resource",
       "children": [],
       "category": None,
-      "parent_name": None
+      "parent_name": None,
+      "model": None,
     })
 
   def test_deserialize(self):
     r = Resource("test", size_x=10, size_y=10, size_z=10)
+    self.assertEqual(Resource.deserialize(r.serialize()), r)
+
+  def test_deserialize_location_none(self):
+    r = Resource("test", size_x=10, size_y=10, size_z=10)
+    c = Resource("child", size_x=1, size_y=1, size_z=1)
+    r.assign_child_resource(c, location=None)
     self.assertEqual(Resource.deserialize(r.serialize()), r)
 
   def test_get_center_offsets(self):
@@ -131,6 +138,7 @@ class TestResource(unittest.TestCase):
 
   def test_rotation90(self):
     r = Resource("parent", size_x=200, size_y=100, size_z=100)
+    r.location = Coordinate.zero()
     c = Resource("child", size_x=10, size_y=20, size_z=10)
     r.assign_child_resource(c, location=Coordinate(20, 10, 10))
 
@@ -143,6 +151,7 @@ class TestResource(unittest.TestCase):
 
   def test_rotation180(self):
     r = Resource("parent", size_x=200, size_y=100, size_z=100)
+    r.location = Coordinate.zero()
     c = Resource("child", size_x=10, size_y=20, size_z=10)
     r.assign_child_resource(c, location=Coordinate(20, 10, 10))
 
@@ -155,6 +164,7 @@ class TestResource(unittest.TestCase):
 
   def test_rotation270(self):
     r = Resource("parent", size_x=200, size_y=100, size_z=100)
+    r.location = Coordinate.zero()
     c = Resource("child", size_x=10, size_y=20, size_z=10)
     r.assign_child_resource(c, location=Coordinate(20, 10, 10))
 
@@ -179,6 +189,7 @@ class TestResource(unittest.TestCase):
 
   def test_multiple_rotations(self):
     r = Resource("parent", size_x=200, size_y=100, size_z=100)
+    r.location = Coordinate.zero()
     c = Resource("child", size_x=10, size_y=20, size_z=10)
     r.assign_child_resource(c, location=Coordinate(20, 10, 10))
 
@@ -197,7 +208,3 @@ class TestResource(unittest.TestCase):
     self.assertEqual(r.get_size_x(), 200)
     self.assertEqual(r.get_size_y(), 100)
     self.assertEqual(c.get_absolute_location(), Coordinate(20, 10, 10))
-
-
-if __name__ == "__main__":
-  unittest.main()

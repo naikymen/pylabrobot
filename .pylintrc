@@ -89,7 +89,6 @@ disable=abstract-method,
         long-suffix,
         map-builtin-not-iterating,
         misplaced-comparison-constant,
-        missing-function-docstring,
         metaclass-assignment,
         next-method-called,
         next-method-defined,
@@ -438,9 +437,9 @@ valid-metaclass-classmethod-first-arg=mcs
 
 # Exceptions that will emit a warning when being caught. Defaults to
 # "Exception"
-overgeneral-exceptions=StandardError,
-                       Exception,
-                       BaseException
+overgeneral-exceptions=builtins.StandardError,
+                       builtins.Exception,
+                       builtins.BaseException
 
 
 
