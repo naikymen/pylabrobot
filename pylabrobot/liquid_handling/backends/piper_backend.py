@@ -1,42 +1,9 @@
 """
-Klipper backend for PLR.
+Piper backend for PLR.
 
-It relies on the websocket API provided by the Moonkraker program.
+It relies on the pipettin piper module, which uses the the websocket API provided by the Moonkraker program.
 
-From CONTRIBUTING.md:
-
-> Writing a new backend
->
-> Backends are the primary objects used to communicate with hardware. If you want to integrate a new piece of hardware into PyLabRobot, writing a new backend is the way to go. Here's, very generally, how you'd do it:
->
-> 1. Copy the `pylabrobot/liquid_handling/backends/backend.py` file to a new file, and rename the class to `<BackendName>Backend`.
-> 2. Remove all `abc` (abstract base class) imports and decorators from the class.
-> 3. Implement the methods in the class.
-
-Options:
-
-- subclass LiquidHandlerBackend: "Abstract base class for liquid handling robot backends", as suggested in CONTRIBUTING.md.
-- subclass SerializingBackend: "A backend that serializes all commands received, and sends them to `self.send_command` for
-  processing. The implementation of `send_command` is left to the subclasses.".
-
-SerializingBackend makes more sense as it has the serializing feature; it is also a subclass of LiquidHandlerBackend.
-The chatterbox and opentrons backends use only LiquidHandlerBackend. Sticking to that for now...
-
-To-do:
-
-- Find out what "assigned_resource_callback" and "unassigned_resource_callback" are for.
-- It is becomeing clear to me that backends delegate all movement/pipetting logic to the robot.
-  This means that a "Klipper backend" would not be useful directly. For example: ¿how should Klipper
-  react to a "drop tip" command? The straightforward way would be to pass values from PLR to Klipper
-  (Jinja2) macros, which can be tuned to a specific robot by the user, using Klipper config files.
-
-Klipper accepts parameters for macros, see: https://www.klipper3d.org/Command_Templates.html?h=macro#macro-parameters
-
-There are at least some important unknowns:
-
-- Tool-changing: ¿should this be managed by this backend? ¿or in a klipper macro?
-- Would it be better to instead write a backend for pipettin piper instead?
-
+See "klipper_backend.py" for a discussion on "Klipper macro" v.s. "Piper" as possible backends.
 """
 
 # pylint: disable=unused-argument
@@ -58,7 +25,7 @@ from pylabrobot.liquid_handling.standard import (
 )
 
 
-class KlipperBackend(LiquidHandlerBackend):
+class PiperBackend(LiquidHandlerBackend):
     """ Chatter box backend for 'How to Open Source' """
 
     async def setup(self):
