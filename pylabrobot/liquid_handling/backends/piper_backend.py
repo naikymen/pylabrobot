@@ -102,9 +102,16 @@ class PiperBackend(LiquidHandlerBackend):
 
         # TODO: send the home command to moonraker.
 
-    async def stop(self):
-        await super().stop()
+    async def stop(self, timeout=2.0):
         print("Stopping the robot.")
+        
+        cmd_id = await self.moon.send_gcode_cmd("M84", wait=True, check=True, timeout=timeout)
+        
+        if not await self.moon.check_command_result_ok(cmd_id=cmd_id, timeout=timeout, loop_delay=0.2):
+            self.moon.firmware_restart()
+        
+        await super().stop()
+        
         await self.moon.stop()
 
     @property
