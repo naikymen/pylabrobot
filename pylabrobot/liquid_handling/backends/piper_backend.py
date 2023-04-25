@@ -38,6 +38,8 @@ class PiperBackend(LiquidHandlerBackend):
     def __init__(self,
                  num_channels: int = 1,
                  mongo_url: str = "mongodb://localhost:27017/",
+                 sio_address: str = "http://localhost:3333", # Pipettin GUI node server.
+                 ws_address: str = "ws://localhost:7125/websocket", # Moonraker server.
                  verbose: bool = True,
                  protocol_name=None,
                  workspace=None):
@@ -51,31 +53,41 @@ class PiperBackend(LiquidHandlerBackend):
 
         self.verbose = verbose
 
-        # Setup database tools.
-        self.mo = MongoObjects(mongo_url=mongo_url, verbose=verbose)
-
-        # List protocols (will print possible protocol names).
-        self.protocols = self.mo.listProtocols()
+        self.mongo_url = mongo_url
+        if self.mongo_url:
+            # Setup database connection and tools.
+            self.mo = MongoObjects(mongo_url=self.mongo_url, verbose=self.verbose)
+            # List protocols (will print possible protocol names).
+            self.protocols = self.mo.listProtocols()
+        else:
+            self.mo = None
+            self.protocols = None
 
         # Get workspace info (i.e. the "deck" in PLR terms).
-        if not protocol_name:
-            protocol_name = self.protocols[-1]["name"]
-        protocol, workspace, platforms_in_workspace = self.mo.getProtocolObjects(
-            protocol_name=protocol_name)
-        # workspace = self.mo.getWorkspaceByName(workspace_name="asdasd")
-        # platforms_in_workspace = self.mo.getPlatformsInWorkspace(workspace=workspace)
-        # workspace, platforms_in_workspace = None, None
+        protocol, workspace, platforms_in_workspace = None, None, None
+        if self.mo:
+            if not protocol_name:
+                # Get the name of the newest protocol by default.
+                protocol_name = self.protocols[-1]["name"]
+            # Get the main objects from the protocol's name.
+            protocol, workspace, platforms_in_workspace = self.mo.getProtocolObjects(protocol_name=protocol_name)
+            # Other options:
+            # workspace = self.mo.getWorkspaceByName(workspace_name="asdasd")
+            # platforms_in_workspace = self.mo.getPlatformsInWorkspace(workspace=workspace)
+            # workspace, platforms_in_workspace = None, None
 
-        # Instatiate the builder class
+        # Instatiate the GCODE builder class
         self.builder = GcodeBuilder(protocol=protocol,
                                     workspace=workspace,
                                     platformsInWorkspace=platforms_in_workspace,
-                                    verbose=verbose)
+                                    verbose=self.verbose)
 
         # Setup
         # Connection to Moonraker
         self.moon = moonControl(commands=self.commands,
-                                tracker=self.tracker, verbose=verbose)
+                                sio_address=sio_address, # "http://localhost:3333", # Pipettin GUI node server.
+                                ws_address=ws_address, # "ws://localhost:7125/websocket", # Moonraker server.
+                                tracker=self.tracker, verbose=self.verbose)
 
     async def setup(self):
         await super().setup()
