@@ -28,7 +28,8 @@ from pylabrobot.liquid_handling.standard import (
 from piper.commander_utils_mongo import MongoObjects
 from piper.gcode import GcodeBuilder
 from piper.coroutines_moon import moonControl
-
+# Load newt module.
+# import newt
 
 class PiperBackend(LiquidHandlerBackend):
     """ Chatter box backend for 'How to Open Source' """
@@ -129,13 +130,47 @@ class PiperBackend(LiquidHandlerBackend):
     # Atomic implemented in hardware ####
 
     async def pick_up_tips(self, ops: List[Pickup], use_channels: List[int], **backend_kwargs):
-        print(f"Picking up tips {ops}.")
+        """_summary_
+        
+        The action can also provide the tip's coordinates directly, but must provide "tip" data explicitly:
+            'args': {'coords': {"x": 20, "y": 200, "z": 30}, 
+                    'tool': 'P200',
+                    'tip': tip_definition},  # Note the tip data passed here (described below).
+            'cmd': 'PICK_TIP'
 
-        # Make GCODE
-        # TODO: customize parameters.
+        Example "tip_definition" for "coords" type args:
+            'maxVolume': 160,
+            'tipLength': 50.0,
+            'volume': 0
+        """
+        print(f"Picking up tips {ops}.")
+        
+        # TODO: Handle multi-channel pick-up operations.
+        pick_up_op = pick_up_ops[0]
+        coordinate = pick_up_op.get_absolute_location()
+        coordinate_dict = coordinate.serialize()
+
+        # TODO: Customize action parameters from the arguments above.
+        
+        # NOTE: Using the platformless content definition.
+        # TODO: Ask Rick how to choose a pipette (or channel from a multichanel pipette).
+        #       The OT module has a "select_tip_pipette" method.
         pick_up_tip_action = {
-            'args': {'item': '200ul_tip_rack_MULTITOOL 1', 'tool': 'P200'},
-            'cmd': 'PICK_TIP'}
+            'cmd': 'PICK_TIP',
+            'args': {'coords': coordinate_dict, 
+                     'tool': 'P200',
+                     'tip': {'maxVolume': pick_up_op.tip.maximal_volume,
+                             'tipLength': pick_up_op.tip.total_tip_length,
+                             'volume': 0}}}
+        
+        # TODO: Add validation through "jsonschema.validate" (maybe in piper, maybe here).
+        
+        # NOTE: The platform version of the content definition is not useful for now.
+        # pick_up_tip_action = {
+        #     'args': {'item': '200ul_tip_rack_MULTITOOL 1', 'tool': 'P200'},
+        #     'cmd': 'PICK_TIP'}
+        
+        # Make GCODE
         gcode = self.builder.addAction(action=pick_up_tip_action)
 
         # Send commands.
