@@ -43,8 +43,13 @@ class PiperBackend(LiquidHandlerBackend):
                  ws_address: str = "ws://localhost:7125/websocket", # Moonraker server.
                  verbose: bool = True,
                  protocol_name=None,
-                 workspace=None):
-        """Init method for the PiperBackend."""
+                 protocol=None, 
+                 workspace=None,
+                 platforms_in_workspace=None):
+        """Init method for the PiperBackend.
+        
+        Note: 'protocol_name' will override the other parameters if a MongoDB address is given.
+        """
 
         print(
             f"Instantiating the PiperBackend with num_channels={num_channels}")
@@ -64,12 +69,13 @@ class PiperBackend(LiquidHandlerBackend):
             self.mo = None
             self.protocols = None
 
-        # Get workspace info (i.e. the "deck" in PLR terms).
-        protocol, workspace, platforms_in_workspace = None, None, None
-        if self.mo:
-            if not protocol_name:
-                # Get the name of the newest protocol by default.
-                protocol_name = self.protocols[-1]["name"]
+        # Get workspace info (i.e. the "deck" in PLR terms) from MongoDB if up.
+        if self.mo and protocol_name:
+            
+            # if not protocol_name:
+            #     # Get the name of the newest protocol by default.
+            #     protocol_name = self.protocols[-1]["name"]
+            
             # Get the main objects from the protocol's name.
             protocol, workspace, platforms_in_workspace = self.mo.getProtocolObjects(protocol_name=protocol_name)
             # Other options:
@@ -77,6 +83,9 @@ class PiperBackend(LiquidHandlerBackend):
             # platforms_in_workspace = self.mo.getPlatformsInWorkspace(workspace=workspace)
             # workspace, platforms_in_workspace = None, None
 
+        # Save objects
+        self.protocol, self.workspace, self.platforms_in_workspace = protocol, workspace, platforms_in_workspace
+        
         # Instatiate the GCODE builder class
         self.builder = GcodeBuilder(protocol=protocol,
                                     workspace=workspace,
