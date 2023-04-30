@@ -108,9 +108,13 @@ class PiperBackend(LiquidHandlerBackend):
 
         # TODO: customize parameters.
         home_action = {'cmd': 'HOME'}
-        gcode = self.builder.addAction(action=home_action)
+        gcode = self.builder.parseAction(action=home_action)
 
-        # TODO: send the home command to moonraker.
+        # Send commands.
+        cmd_id = await self.moon.send_gcode_script(gcode, wait=True, check=True, timeout=1.0)
+
+        # Wait for idle printer.
+        await self.moon.wait_for_idle_printer()
 
     async def stop(self, timeout=2.0):
         print("Stopping the robot.")
