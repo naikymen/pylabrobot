@@ -97,6 +97,7 @@ class PiperBackend(LiquidHandlerBackend):
         self.moon = moonControl(commands=self.commands,
                                 sio_address=sio_address, # "http://localhost:3333", # Pipettin GUI node server.
                                 ws_address=ws_address, # "ws://localhost:7125/websocket", # Moonraker server.
+                                background_writer=False,
                                 tracker=self.tracker, verbose=self.verbose)
 
     async def setup(self):
