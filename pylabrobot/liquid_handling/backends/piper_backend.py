@@ -140,6 +140,50 @@ class PiperBackend(LiquidHandlerBackend):
         print(f"Resource {name} was unassigned from the robot.")
         # TODO: should this update the workspace?
 
+    # Helpers
+    @staticmethod
+    def get_coords(operation):
+        # pick_up_op
+        coordinate = operation.get_absolute_location()
+        coordinate_dict = coordinate.serialize()
+        return coordinate_dict
+    
+    def make_tip_pickup_action(self, operation: Pickup, tool_id: str):
+        # TODO: Add validation through "jsonschema.validate" (maybe in piper, maybe here).
+        # NOTE: The platform version of the content definition is not useful for now.
+        # pick_up_tip_action = {
+        #     'args': {'item': '200ul_tip_rack_MULTITOOL 1', 'tool': 'P200'},
+        #     'cmd': 'PICK_TIP'}
+        # NOTE: Using the platformless content definition.
+        action = {
+            'cmd': 'PICK_TIP',
+            'args': {'coords': self.get_coords(operation), 
+                     'tool': tool_id,
+                     'tip': {'maxVolume': pick_up_op.tip.maximal_volume,
+                             'tipLength': pick_up_op.tip.total_tip_length,
+                             'volume': 0}}}
+        
+        return action
+
+    def make_aspirate_action(self, operation: Aspiration, tool_id: str):
+        # TODO: Add validation through "jsonschema.validate" (maybe in piper, maybe here).
+        # NOTE: The platform version of the content definition is not useful for now.
+        # aspirate_liquid_action = {
+        #     'args': {'item': '5x16_1.5_rack 1', 'selector': {'by': 'name', 'value': 'tube1'}, 'volume': 100},
+        #     'cmd': 'LOAD_LIQUID'}
+        # NOTE: Using the platformless content definition.
+        action = {
+                "cmd": "LOAD_LIQUID",
+                "args": {
+                    "coords": self.get_coords(operation),
+                    "tube": {"volume": operation.resource.tracker.get_used_volume()},
+                    "volume": operation.volume,
+                    "tool": tool_id
+                }
+            }
+
+        return action
+
     # Atomic implemented in hardware ####
 
     async def pick_up_tips(self, ops: List[Pickup], use_channels: List[int], **backend_kwargs):
@@ -157,34 +201,16 @@ class PiperBackend(LiquidHandlerBackend):
             'volume': 0
         """
         print(f"Picking up tips {ops}.")
-        
-        # TODO: Handle multi-channel pick-up operations.
-        pick_up_op = pick_up_ops[0]
-        coordinate = pick_up_op.get_absolute_location()
-        coordinate_dict = coordinate.serialize()
 
-        # TODO: Customize action parameters from the arguments above.
-        
-        # NOTE: Using the platformless content definition.
         # TODO: Ask Rick how to choose a pipette (or channel from a multichanel pipette).
         #       The OT module has a "select_tip_pipette" method.
-        pick_up_tip_action = {
-            'cmd': 'PICK_TIP',
-            'args': {'coords': coordinate_dict, 
-                     'tool': 'P200',
-                     'tip': {'maxVolume': pick_up_op.tip.maximal_volume,
-                             'tipLength': pick_up_op.tip.total_tip_length,
-                             'volume': 0}}}
-        
-        # TODO: Add validation through "jsonschema.validate" (maybe in piper, maybe here).
-        
-        # NOTE: The platform version of the content definition is not useful for now.
-        # pick_up_tip_action = {
-        #     'args': {'item': '200ul_tip_rack_MULTITOOL 1', 'tool': 'P200'},
-        #     'cmd': 'PICK_TIP'}
+        tool_id = "P200"
+
+        # TODO: Handle multi-channel pick-up operations.
+        action = self.make_tip_pickup_action(pick_up_ops[0], tool_id)
         
         # Make GCODE
-        gcode = self.builder.addAction(action=pick_up_tip_action)
+        gcode = self.builder.parseAction(action=action)
 
         # Send commands.
         cmd_id = await self.moon.send_gcode_script(gcode, wait=True, check=True, timeout=1.0)
@@ -195,12 +221,19 @@ class PiperBackend(LiquidHandlerBackend):
     async def drop_tips(self, ops: List[Drop], use_channels: List[int], **backend_kwargs):
         print(f"Dropping tips {ops}.")
 
+        # TODO: Ask Rick how to choose a pipette (or channel from a multichanel pipette).
+        #       The OT module has a "select_tip_pipette" method.
+        tool_id = None
+
         # TODO: customize parameters.
         drop_tip_action = {
-            'args': {'item': 'descarte 1'}, 'cmd': 'DISCARD_TIP'}
-        gcode = self.builder.addAction(action=drop_tip_action)
+            'args': {'tool': tool_id}, 
+            'cmd': 'DISCARD_TIP'
+            }
+        gcode = self.builder.parseAction(action=drop_tip_action)
 
         # Send commands.
+        # TODO: customize timeout.
         cmd_id = await self.moon.send_gcode_script(gcode, wait=True, check=True, timeout=1.0)
 
         # Wait for idle printer.
@@ -209,11 +242,15 @@ class PiperBackend(LiquidHandlerBackend):
     async def aspirate(self, ops: List[Aspiration], use_channels: List[int], **backend_kwargs):
         print(f"Aspirating {ops}.")
 
+        # TODO: Ask Rick how to choose a pipette (or channel from a multichanel pipette).
+        #       The OT module has a "select_tip_pipette" method.
+        tool_id = None
+
+        # Make action
+        action = self.make_aspirate_action(ops[0], tool_id)
+        
         # Make GCODE
-        aspirate_liquid_action = {
-            'args': {'item': '5x16_1.5_rack 1', 'selector': {'by': 'name', 'value': 'tube1'}, 'volume': 100},
-            'cmd': 'LOAD_LIQUID'}
-        gcode = self.builder.addAction(action=aspirate_liquid_action)
+        gcode = self.builder.parseAction(action=action)
 
         # Send commands.
         cmd_id = await self.moon.send_gcode_script(gcode, wait=True, check=True, timeout=1.0)
@@ -224,11 +261,22 @@ class PiperBackend(LiquidHandlerBackend):
     async def dispense(self, ops: List[Dispense], use_channels: List[int], **backend_kwargs):
         print(f"Dispensing {ops}.")
 
+        # TODO: Ask Rick how to choose a pipette (or channel from a multichanel pipette).
+        #       The OT module has a "select_tip_pipette" method.
+        tool_id = None
+        
+        # Make action:
+        # dispense_liquid_action = {
+        #     'args': {'item': '5x16_1.5_rack 1', 'selector': {'by': 'name', 'value': 'tube2'}, 'volume': 100},
+        #     'cmd': 'DROP_LIQUID'}
+        
+        # Make action
+        # TODO: ask Rick if the "Dispense" operation is really the same as "Aspirate" (see standard.py).
+        action = self.make_aspirate_action(ops[0], tool_id)
+        action['cmd'] = 'DROP_LIQUID'
+
         # Make GCODE
-        dispense_liquid_action = {
-            'args': {'item': '5x16_1.5_rack 1', 'selector': {'by': 'name', 'value': 'tube2'}, 'volume': 100},
-            'cmd': 'DROP_LIQUID'}
-        gcode = self.builder.addAction(action=dispense_liquid_action)
+        gcode = self.builder.parseAction(action=action)
 
         # Send commands.
         cmd_id = await self.moon.send_gcode_script(gcode, wait=True, check=True, timeout=1.0)
