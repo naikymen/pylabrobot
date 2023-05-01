@@ -8,6 +8,8 @@ See "klipper_backend.py" for a discussion on "Klipper macro" v.s. "Piper" as pos
 
 # pylint: disable=unused-argument
 
+from pprint import pprint, pformat
+
 from typing import List
 
 from pylabrobot.liquid_handling.backends import LiquidHandlerBackend
@@ -100,22 +102,39 @@ class PiperBackend(LiquidHandlerBackend):
                                 background_writer=False,
                                 tracker=self.tracker, verbose=self.verbose)
 
-    async def setup(self):
+    async def setup(self, reset_firmware_on_error=True, timeout=10.0):
         await super().setup()
         print("Setting up the robot.")
 
         # TODO: connect to Moonraker
         self.moon.start_as_task()
+        ws_ready = await self.moon.wait_for_setup(timeout=timeout, raise_error=True)
+        printer_ready = await self.moon.wait_for_ready(reset=reset_firmware_on_error, wait_time=1.1, timeout=timeout)
+        if not ws_ready:
+            raise Exception("Moonraker is not ready, check its logs.")
+        elif not printer_ready:
+            raise Exception("Klipper is not ready, check its logs.")
+        else:
+            print("Connections successfully setup.")
 
         # TODO: customize parameters.
         home_action = {'cmd': 'HOME'}
         gcode = self.builder.parseAction(action=home_action)
-
         # Send commands.
-        cmd_id = await self.moon.send_gcode_script(gcode, wait=True, check=True, timeout=1.0)
-
+        print("Homing the machine's axes...")
+        cmd_id = await self.moon.send_gcode_script(gcode, wait=False, check=False, cmd_id="PLR setup", timeout=0.0)
         # Wait for idle printer.
-        await self.moon.wait_for_idle_printer()
+        print("Waiting for homing completion (idle machine)...")
+        result = await self.moon.wait_for_idle_printer(timeout=timeout)
+        if not result:
+            print(f"The homing process timed out. Try increasing the value of 'timeout' (currently at {timeout}), or check the logs for errors.")
+        # Check for homing success
+        print("Checking for homing success...")
+        result = await self.moon.check_command_result_ok(cmd_id=cmd_id, timeout=timeout/2, loop_delay=0.2)
+        if not result:
+            await super().stop()
+            response = self.moon.get_response_by_id(cmd_id)
+            raise Exception("Failed to HOME Klipper. Response:\n" + pformat(response) + "\n")
 
     async def stop(self, timeout=2.0):
         print("Stopping the robot.")
