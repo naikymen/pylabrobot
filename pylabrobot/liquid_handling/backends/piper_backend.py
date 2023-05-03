@@ -47,7 +47,8 @@ class PiperBackend(LiquidHandlerBackend):
                  protocol_name=None,
                  protocol=None, 
                  workspace=None,
-                 platforms_in_workspace=None):
+                 platforms_in_workspace=None,
+                 dry=False):
         """Init method for the PiperBackend.
         
         Note: 'protocol_name' will override the other parameters if a MongoDB address is given.
@@ -60,6 +61,7 @@ class PiperBackend(LiquidHandlerBackend):
         self._num_channels = num_channels
 
         self.verbose = verbose
+        self.dry = dry
 
         self.mongo_url = mongo_url
         if self.mongo_url:
@@ -102,11 +104,23 @@ class PiperBackend(LiquidHandlerBackend):
                                 background_writer=False,
                                 tracker=self.tracker, verbose=self.verbose)
 
+    # Setup/Stop methods ####
+
     async def setup(self, reset_firmware_on_error=True, timeout=10.0):
         await super().setup()
-        print("Setting up the robot.")
 
-        # TODO: connect to Moonraker
+        # Connect to Moonraker.
+        await self._setup_moonraker()
+
+        # Home the robot.
+        await self._home_machine()
+
+    async def _setup_moonraker(self):
+        if self.dry:
+            print("Dry mode enabled, skipping Moonraker connection.")
+            return
+        
+        print("Setting up connection to the robot...")
         self.moon.start_as_task()
         ws_ready = await self.moon.wait_for_setup(timeout=timeout, raise_error=True)
         printer_ready = await self.moon.wait_for_ready(reset=reset_firmware_on_error, wait_time=1.1, timeout=timeout)
@@ -116,9 +130,14 @@ class PiperBackend(LiquidHandlerBackend):
             raise Exception("Klipper is not ready, check its logs.")
         else:
             print("Connections successfully setup.")
+    
+    async def _home_machine(self):
+        if self.dry:
+            print("Dry mode enabled, skipping Homing routine.")
+            return
 
         # TODO: customize parameters.
-        home_action = {'cmd': 'HOME'}
+        home_action = self.make_home_action()
         gcode = self.builder.parseAction(action=home_action)
         # Send commands.
         print("Homing the machine's axes...")
@@ -135,38 +154,71 @@ class PiperBackend(LiquidHandlerBackend):
             await super().stop()
             response = self.moon.get_response_by_id(cmd_id)
             raise Exception("Failed to HOME Klipper. Response:\n" + pformat(response) + "\n")
+        print("Homing done!")
 
     async def stop(self, timeout=2.0):
-        print("Stopping the robot.")
-        
-        cmd_id = await self.moon.send_gcode_cmd("M84", wait=True, check=True, timeout=timeout)
-        
-        if not await self.moon.check_command_result_ok(cmd_id=cmd_id, timeout=timeout, loop_delay=0.2):
-            self.moon.firmware_restart()
-        
-        await super().stop()
-        
-        await self.moon.stop()
+        if self.dry:
+            print("Dry mode enabled, skipping Backend cleanup.")
+            await super().stop()
+            return
+        else:
+            print("Stopping the robot.")
+            
+            # Try sending a "motors-off" command.
+            cmd_id = await self.moon.send_gcode_cmd("M84", wait=True, check=True, timeout=timeout)
+            
+            # Send an "emergency stop" command if M84 failed.
+            if not await self.moon.check_command_result_ok(cmd_id=cmd_id, timeout=timeout, loop_delay=0.2):
+                self.moon.firmware_restart()
+            
+            # TODO: comment on what this does.
+            await super().stop()
+            
+            # Close the connection to moonraker.
+            await self.moon.stop()
+
+    # Resource callback methods ####
+
+    async def assigned_resource_callback(self, resource: Resource):
+        print(f"piper_backend: Resource with name='{resource.name}' was assigned to the robot.")
+        # TODO: should this update the workspace?
+
+    async def unassigned_resource_callback(self, name: str):
+        print(f"piper_backend: Resource with name='{name}' was unassigned from the robot.")
+        # TODO: should this update the workspace?
+
+    # Helper methods ####
 
     @property
     def num_channels(self) -> int:
         return self._num_channels
-
-    async def assigned_resource_callback(self, resource: Resource):
-        print(f"Resource {resource.name} was assigned to the robot.")
-        # TODO: should this update the workspace?
-
-    async def unassigned_resource_callback(self, name: str):
-        print(f"Resource {name} was unassigned from the robot.")
-        # TODO: should this update the workspace?
-
-    # Helpers
+    
     @staticmethod
     def get_coords(operation):
         # pick_up_op
         coordinate = operation.get_absolute_location()
         coordinate_dict = coordinate.serialize()
         return coordinate_dict
+    
+    async def _send_command_wait_and_check(self, gcode, timeout):
+        # TODO: customize timeout.
+        # Send gcode commands.
+        if not self.dry:
+            # Send commands.
+            cmd_id = await self.moon.send_gcode_script(gcode, wait=True, check=True, timeout=timeout)
+
+            # Wait for idle printer.
+            return await self.moon.wait_for_idle_printer(timeout=1.0)
+        else:
+            print(f"Backend in dry mode, commands ignored:\n{pformat(gcode)}")
+    
+    # Pipetting action generators ####
+
+    def make_home_action(self, axes=None):
+        home_action = {'cmd': 'HOME'}
+        if axes:
+            home_action["args"] = {"axis": axes}
+        return home_action
     
     def make_tip_pickup_action(self, operation: Pickup, tool_id: str):
         # TODO: Add validation through "jsonschema.validate" (maybe in piper, maybe here).
@@ -179,13 +231,20 @@ class PiperBackend(LiquidHandlerBackend):
             'cmd': 'PICK_TIP',
             'args': {'coords': self.get_coords(operation), 
                      'tool': tool_id,
-                     'tip': {'maxVolume': pick_up_op.tip.maximal_volume,
-                             'tipLength': pick_up_op.tip.total_tip_length,
+                     'tip': {'maxVolume': operation.tip.maximal_volume,
+                             'tipLength': operation.tip.total_tip_length,
                              'volume': 0}}}
         
         return action
 
-    def make_aspirate_action(self, operation: Aspiration, tool_id: str):
+    def make_discard_tip_action(self, operation: Pickup, tool_id: str = None):
+        # TODO: The tip ejection coordinates are configured in the tool definition,
+        #       and are unaffected by the location defined in the "deck" object.
+        #       See "drop_tips" for more details.
+        action = {'args': {'tool': tool_id}, 'cmd': 'DISCARD_TIP'}
+        return action
+
+    def make_pipetting_action(self, operation: Aspiration, tool_id: str):
         # TODO: Add validation through "jsonschema.validate" (maybe in piper, maybe here).
         # NOTE: The platform version of the content definition is not useful for now.
         # aspirate_liquid_action = {
@@ -227,37 +286,37 @@ class PiperBackend(LiquidHandlerBackend):
         tool_id = "P200"
 
         # TODO: Handle multi-channel pick-up operations.
-        action = self.make_tip_pickup_action(pick_up_ops[0], tool_id)
+        action = self.make_tip_pickup_action(ops[0], tool_id)
         
         # Make GCODE
         gcode = self.builder.parseAction(action=action)
+        
+        # TODO: have the timeout based on an estimation.
+        timeout = 10.0
 
-        # Send commands.
-        cmd_id = await self.moon.send_gcode_script(gcode, wait=True, check=True, timeout=1.0)
-
-        # Wait for idle printer.
-        await self.moon.wait_for_idle_printer()
+        # Send and check for success
+        await self._send_command_wait_and_check(gcode, timeout=timeout)
 
     async def drop_tips(self, ops: List[Drop], use_channels: List[int], **backend_kwargs):
         print(f"Dropping tips {ops}.")
+        # TODO: reject operations which are not "discard to trash" using "NotImplementedError".
+        # This is because the Pipettin robot (2023/03) ejects tips using a fixed "post" and not a regular ejector.
 
         # TODO: Ask Rick how to choose a pipette (or channel from a multichanel pipette).
         #       The OT module has a "select_tip_pipette" method.
         tool_id = None
 
-        # TODO: customize parameters.
-        drop_tip_action = {
-            'args': {'tool': tool_id}, 
-            'cmd': 'DISCARD_TIP'
-            }
+        # TODO: Handle multi-channel pick-up operations.
+        drop_tip_action = self.make_discard_tip_action(ops[0], tool_id=tool_id)
+
+        # Make GCODE
         gcode = self.builder.parseAction(action=drop_tip_action)
+        
+        # TODO: have the timeout based on an estimation.
+        timeout = 10.0
 
-        # Send commands.
-        # TODO: customize timeout.
-        cmd_id = await self.moon.send_gcode_script(gcode, wait=True, check=True, timeout=1.0)
-
-        # Wait for idle printer.
-        await self.moon.wait_for_idle_printer()
+        # Send and check for success
+        await self._send_command_wait_and_check(gcode, timeout=timeout)
 
     async def aspirate(self, ops: List[Aspiration], use_channels: List[int], **backend_kwargs):
         print(f"Aspirating {ops}.")
@@ -267,16 +326,16 @@ class PiperBackend(LiquidHandlerBackend):
         tool_id = None
 
         # Make action
-        action = self.make_aspirate_action(ops[0], tool_id)
+        action = self.make_pipetting_action(ops[0], tool_id)
         
         # Make GCODE
         gcode = self.builder.parseAction(action=action)
+        
+        # TODO: have the timeout based on an estimation.
+        timeout = 10.0
 
-        # Send commands.
-        cmd_id = await self.moon.send_gcode_script(gcode, wait=True, check=True, timeout=1.0)
-
-        # Wait for idle printer.
-        await self.moon.wait_for_idle_printer()
+        # Send and check for success
+        await self._send_command_wait_and_check(gcode, timeout=timeout)
 
     async def dispense(self, ops: List[Dispense], use_channels: List[int], **backend_kwargs):
         print(f"Dispensing {ops}.")
@@ -292,17 +351,17 @@ class PiperBackend(LiquidHandlerBackend):
         
         # Make action
         # TODO: ask Rick if the "Dispense" operation is really the same as "Aspirate" (see standard.py).
-        action = self.make_aspirate_action(ops[0], tool_id)
+        action = self.make_pipetting_action(ops[0], tool_id)
         action['cmd'] = 'DROP_LIQUID'
 
         # Make GCODE
         gcode = self.builder.parseAction(action=action)
 
-        # Send commands.
-        cmd_id = await self.moon.send_gcode_script(gcode, wait=True, check=True, timeout=1.0)
+        # TODO: have the timeout based on an estimation.
+        timeout = 10.0
 
-        # Wait for idle printer.
-        await self.moon.wait_for_idle_printer()
+        # Send and check for success
+        await self._send_command_wait_and_check(gcode, timeout=timeout)
 
     # Atomic actions not implemented in hardware  ####
     # TODO: implement these methods as a required human intervention.
