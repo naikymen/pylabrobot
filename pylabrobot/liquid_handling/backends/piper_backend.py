@@ -39,6 +39,7 @@ class PiperBackend(LiquidHandlerBackend):
     tracker: dict = {}
 
     def __init__(self,
+                 clearance,
                  num_channels: int = 1,
                  mongo_url: str = "mongodb://localhost:27017/",
                  sio_address: str = "http://localhost:3333", # Pipettin GUI node server.
@@ -95,6 +96,8 @@ class PiperBackend(LiquidHandlerBackend):
                                     workspace=workspace,
                                     platformsInWorkspace=platforms_in_workspace,
                                     verbose=self.verbose)
+        # TODO: Get clearance from the deck object.
+        self.builder.clearance = clearance
 
         # Setup
         # Connection to Moonraker
