@@ -31,7 +31,7 @@ from piper.commander_utils_mongo import MongoObjects
 from piper.gcode import GcodeBuilder
 from piper.coroutines_moon import moonControl
 # Load newt module.
-# import newt
+import newt
 
 class PiperBackend(LiquidHandlerBackend):
     """ Chatter box backend for 'How to Open Source' """
@@ -105,11 +105,14 @@ class PiperBackend(LiquidHandlerBackend):
                                 sio_address=sio_address, # "http://localhost:3333", # Pipettin GUI node server.
                                 ws_address=ws_address, # "ws://localhost:7125/websocket", # Moonraker server.
                                 background_writer=False,
-                                tracker=self.tracker, verbose=self.verbose)
+                                tracker=self.tracker, verbose=self.verbose, dry=self.dry)
 
     # Setup/Stop methods ####
 
-    async def setup(self, reset_firmware_on_error=True, timeout=10.0):
+    async def setup(self, reset_firmware_on_error=True, timeout=10.0, dry=False):
+        if dry:
+            self.dry = True
+
         await super().setup()
 
         # Connect to Moonraker.
@@ -218,9 +221,10 @@ class PiperBackend(LiquidHandlerBackend):
     # Pipetting action generators ####
 
     def make_home_action(self, axes=None):
-        home_action = {'cmd': 'HOME'}
-        if axes:
-            home_action["args"] = {"axis": axes}
+        # home_action = {'cmd': 'HOME'}
+        # if axes:
+        #     home_action["args"] = {"axis": axes}
+        home_action = newt.protocol_actions.action_home(axis=axes)
         return home_action
 
     def make_tip_pickup_action(self, operation: Pickup, tool_id: str):
@@ -230,41 +234,69 @@ class PiperBackend(LiquidHandlerBackend):
         #     'args': {'item': '200ul_tip_rack_MULTITOOL 1', 'tool': 'P200'},
         #     'cmd': 'PICK_TIP'}
         # NOTE: Using the platformless content definition.
-        action = {
-            'cmd': 'PICK_TIP',
-            'args': {'coords': self.get_coords(operation),
-                     'tool': tool_id,
-                     'tip': {'maxVolume': operation.tip.maximal_volume,
-                             'tipLength': operation.tip.total_tip_length,
-                             'volume': 0}}}
+        # pick_up_tip_action = {
+        #     'cmd': 'PICK_TIP',
+        #     'args': {'coords': self.get_coords(operation),
+        #              'tool': tool_id,
+        #              'tip': {'maxVolume': operation.tip.maximal_volume,
+        #                      'tipLength': operation.tip.total_tip_length,
+        #                      'volume': 0}}}
+        pick_up_tip_action = newt.protocol_actions.action_pick_tip_coords(
+            coords=self.get_coords(operation),
+            tool=tool_id,
+            volume=0.0, # TODO: Does an initial volume make sense here?
+            tip_max_volume=operation.tip.maximal_volume,
+            tip_length=operation.tip.total_tip_length
+        )
 
-        return action
+        return pick_up_tip_action
 
     def make_discard_tip_action(self, operation: Pickup, tool_id: str = None):
         # TODO: The tip ejection coordinates are configured in the tool definition,
         #       and are unaffected by the location defined in the "deck" object.
         #       See "drop_tips" for more details.
-        action = {'args': {'tool': tool_id}, 'cmd': 'DISCARD_TIP'}
-        return action
+        # discard_tip_action = {'args': {'tool': tool_id}, 'cmd': 'DISCARD_TIP'}
 
-    def make_pipetting_action(self, operation: Aspiration, tool_id: str):
+        # Use newt.
+        discard_tip_action = newt.protocol_actions.action_discard_tip(
+            item=None, tool=tool_id
+            # TODO: Check if piper needs any of the stuff in "operation".
+        )
+        return discard_tip_action
+
+    def make_pipetting_action(self, operation: Aspiration, tool_id: str, dispense:bool=False):
         # TODO: Add validation through "jsonschema.validate" (maybe in piper, maybe here).
         # NOTE: The platform version of the content definition is not useful for now.
-        # aspirate_liquid_action = {
+        # pipetting_action = {
         #     'args': {'item': '5x16_1.5_rack 1', 'selector': {'by': 'name', 'value': 'tube1'}, 'volume': 100},
         #     'cmd': 'LOAD_LIQUID'}
         # NOTE: Using the platformless content definition.
-        action = {
-                "cmd": "LOAD_LIQUID",
-                "args": {
-                    "coords": self.get_coords(operation),
-                    "tube": {"volume": operation.resource.tracker.get_used_volume()},
-                    "volume": operation.volume,
-                    "tool": tool_id
-                }
-            }
+        # pipetting_action = {
+        #         "cmd": "LOAD_LIQUID",
+        #         "args": {
+        #             "coords": self.get_coords(operation),
+        #             "tube": {"volume": operation.resource.tracker.get_used_volume()},
+        #             "volume": operation.volume,
+        #             "tool": tool_id
+        #         }
+        #     }
 
-        return action
+        if dispense:
+            pipetting_action = newt.protocol_actions.action_drop_liquid_coords(
+                coords=self.get_coords(operation),
+                volume=operation.volume,
+                tool=tool_id,
+                used_volume=operation.resource.tracker.get_used_volume()
+            )
+        else:
+            pipetting_action = newt.protocol_actions.action_load_liquid_coords(
+                coords=self.get_coords(operation),
+                volume=operation.volume,
+                tool=tool_id,
+                used_volume=operation.resource.tracker.get_used_volume()
+            )
+
+        return pipetting_action
 
     # Atomic implemented in hardware ####
 
@@ -354,8 +386,7 @@ class PiperBackend(LiquidHandlerBackend):
 
         # Make action
         # TODO: ask Rick if the "Dispense" operation is really the same as "Aspirate" (see standard.py).
-        action = self.make_pipetting_action(ops[0], tool_id)
-        action['cmd'] = 'DROP_LIQUID'
+        action = self.make_pipetting_action(ops[0], tool_id, dispense=True)
 
         # Make GCODE
         gcode = self.builder.parseAction(action=action)
