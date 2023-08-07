@@ -138,13 +138,14 @@ class PiperBackend(LiquidHandlerBackend):
             print("Connections successfully setup.")
 
     async def _home_machine(self, timeout):
+        # TODO: customize parameters.
+        home_action = self.make_home_action()
+        gcode = self.builder.parseAction(action=home_action)
+
         if self.dry:
             print("Dry mode enabled, skipping Homing routine.")
             return
 
-        # TODO: customize parameters.
-        home_action = self.make_home_action()
-        gcode = self.builder.parseAction(action=home_action)
         # Send commands.
         print("Homing the machine's axes...")
         cmd_id = await self.moon.send_gcode_script(gcode, wait=False, check=False, cmd_id="PLR setup", timeout=0.0)
@@ -162,7 +163,11 @@ class PiperBackend(LiquidHandlerBackend):
             raise Exception("Failed to HOME Klipper. Response:\n" + pformat(response) + "\n")
         print("Homing done!")
 
-    async def stop(self, timeout=2.0):
+    async def stop(self, timeout=2.0, home=True):
+        if home:
+            # Home the robot.
+            await self._home_machine(timeout)
+
         if self.dry:
             print("Dry mode enabled, skipping Backend cleanup.")
             await super().stop()
