@@ -1,0 +1,311 @@
+{
+
+  "platforms": [
+    {
+      "name": "5x16_1.5_rack",
+      "description": "Standard microtube rack",
+      "type": "TUBE_RACK",
+      "color": "#fc4b0c",
+      "width": 215,
+      "length": 72,
+      "height": 80,
+      "firstWellCenterX": 10,
+      "firstWellCenterY": 10,
+      "wellDiameter": 10,
+      "wellSeparationX": 13.2,
+      "wellSeparationY": 13.2,
+      "wellsColumns": 16,
+      "wellsRows": 5,
+      "defaultTopPosition": 0,
+      "defaultBottomPosition": -20,
+      "defaultLoadBottom": 0,
+      "defaultMaxVolume": 1500,
+      "rotation": 0,
+      "tipLength": 50
+    },
+    {
+      "name": "200ul_tip_rack_MULTITOOL",
+      "description": "Rack de tips",
+      "type": "TIP_RACK",
+      "color": "#8a1eF6",
+      "width": 122,
+      "length": 86,
+      "height": 80,
+      "firstWellCenterX": 12,
+      "firstWellCenterY": 10,
+      "wellDiameter": 4.5,
+      "wellSeparationX": 8.87,
+      "wellSeparationY": 8.87,
+      "wellsColumns": 12,
+      "wellsRows": 8,
+      "defaultTopPosition": 80,
+      "defaultMaxVolume": 160,
+      "defaultLoadBottom": 0,
+      "tipLength": 50,
+      "rotation": 0,
+      "defaulBottomPosition": 27,
+      "defaultBottomPosition": 27
+    },
+    {
+      "name": "Petri dish 90x15",
+      "description": "Petri dish 90x15",
+      "type": "PETRI_DISH",
+      "diameter": 90,
+      "height": 15,
+      "color": "#c3c3c3",
+      "defaultTopPosition": 10,
+      "defaultBottomPosition": 5
+    },
+    {
+      "name": "Standard 96-well plate",
+      "description": "SBS compliant 96-well plate",
+      "type": "TUBE_RACK",
+      "width": 121,
+      "length": 86,
+      "height": 20,
+      "color": "#dcdcdc",
+      "firstWellCenterX": 12,
+      "firstWellCenterY": 10,
+      "wellDiameter": 6,
+      "wellSeparationX": 9,
+      "wellSeparationY": 9,
+      "wellsColumns": 12,
+      "wellsRows": 8,
+      "defaultTopPosition": 20,
+      "defaultBottomPosition": 5,
+      "defaultMaxVolume": 150,
+      "defaultLoadBottom": 0,
+      "rotation": 0
+    },
+    {
+      "name": "trash_bucket",
+      "description": "Generic recipient",
+      "type": "BUCKET",
+      "color": "#cf947a",
+      "width": 130,
+      "length": 100,
+      "height": 80,
+      "defaultTopPosition": 60,
+      "rotation": 0
+    }
+  ],
+  "workspace": {
+    "name": "Basic Workspace",
+    "width": 380,
+    "length": 350,
+    "height": 150,
+    "items": [
+      {
+        "platform": "trash_bucket",
+        "name": "trash_bucket 1",
+        "position": {
+          "x": 179,
+          "y": 233
+        },
+        "content": []
+      },
+      {
+        "platform": "200ul_tip_rack_MULTITOOL",
+        "name": "200ul_tip_rack_MULTITOOL 1",
+        "position": {
+          "x": 20,
+          "y": 23
+        },
+        "content": [
+          {
+            "index": 12,
+            "maxVolume": 160,
+            "name": "tip1",
+            "position": {
+              "col": 12,
+              "row": 1
+            },
+            "tags": [],
+            "type": "tip",
+            "volume": 0
+          },
+          {
+            "index": 24,
+            "maxVolume": 160,
+            "name": "tip2",
+            "position": {
+              "col": 12,
+              "row": 2
+            },
+            "tags": [],
+            "type": "tip",
+            "volume": 0
+          }
+        ]
+      },
+      {
+        "platform": "5x16_1.5_rack",
+        "name": "5x16_1.5_rack 1",
+        "position": {
+          "x": 150,
+          "y": 23
+        },
+        "content": [
+          {
+            "index": 1,
+            "maxVolume": 1500,
+            "name": "loading_buffer_5x",
+            "position": {
+              "col": 1,
+              "row": 1
+            },
+            "tags": [
+              "buffer"
+            ],
+            "type": "tube",
+            "volume": 500
+          },
+          {
+            "index": 33,
+            "maxVolume": 1500,
+            "name": "sample1",
+            "position": {
+              "col": 1,
+              "row": 3
+            },
+            "tags": [
+              "sample"
+            ],
+            "type": "tube",
+            "volume": 40
+          },
+          {
+            "index": 35,
+            "maxVolume": 1500,
+            "name": "sample2",
+            "position": {
+              "col": 3,
+              "row": 3
+            },
+            "tags": [
+              "sample"
+            ],
+            "type": "tube",
+            "volume": 40
+          }
+        ]
+      },
+      {
+        "platform": "Petri dish 90x15",
+        "name": "Petri dish 90x15 1",
+        "position": {
+          "x": 71,
+          "y": 179
+        },
+        "content": [
+          {
+            "index": 1,
+            "maxVolume": 0,
+            "name": "colony1",
+            "position": {
+              "col": -16,
+              "row": -19
+            },
+            "tags": [],
+            "type": "colony",
+            "volume": 1
+          },
+          {
+            "index": 2,
+            "maxVolume": 0,
+            "name": "colony2",
+            "position": {
+              "col": -19,
+              "row": 4
+            },
+            "tags": [],
+            "type": "colony",
+            "volume": 1
+          },
+          {
+            "index": 3,
+            "maxVolume": 0,
+            "name": "colony3",
+            "position": {
+              "col": 13,
+              "row": 0
+            },
+            "tags": [],
+            "type": "colony",
+            "volume": 1
+          },
+          {
+            "index": 4,
+            "maxVolume": 0,
+            "name": "colony4",
+            "position": {
+              "col": 2,
+              "row": 13
+            },
+            "tags": [],
+            "type": "colony",
+            "volume": 1
+          },
+          {
+            "index": 5,
+            "maxVolume": 0,
+            "name": "colony5",
+            "position": {
+              "col": 5,
+              "row": 0
+            },
+            "tags": [],
+            "type": "colony",
+            "volume": 1
+          }
+        ]
+      },
+      {
+        "platform": "Standard 96-well plate",
+        "name": "Standard 96-well plate 1",
+        "position": {
+          "x": 150,
+          "y": 135
+        },
+        "content": [
+          {
+            "index": 1,
+            "maxVolume": 0,
+            "name": "tube1",
+            "position": {
+              "col": 1,
+              "row": 1
+            },
+            "tags": [],
+            "type": "tube",
+            "volume": 0
+          },
+          {
+            "index": 13,
+            "maxVolume": 0,
+            "name": "tube2",
+            "position": {
+              "col": 1,
+              "row": 2
+            },
+            "tags": [],
+            "type": "tube",
+            "volume": 0
+          },
+          {
+            "index": 25,
+            "maxVolume": 0,
+            "name": "tube3",
+            "position": {
+              "col": 1,
+              "row": 3
+            },
+            "tags": [],
+            "type": "tube",
+            "volume": 0
+          }
+        ]
+      }
+    ]
+  }
+}
