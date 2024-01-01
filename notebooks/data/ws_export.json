@@ -89,223 +89,1466 @@
       "rotation": 0
     }
   ],
-  "workspace": {
-    "name": "Basic Workspace",
-    "width": 380,
-    "length": 350,
-    "height": 150,
-    "items": [
-      {
-        "platform": "trash_bucket",
-        "name": "trash_bucket 1",
-        "position": {
-          "x": 179,
-          "y": 233
+  "workspace":     {
+        "padding": {
+            "top": 20,
+            "bottom": 20,
+            "left": 20,
+            "right": 20
         },
-        "content": []
-      },
-      {
-        "platform": "200ul_tip_rack_MULTITOOL",
-        "name": "200ul_tip_rack_MULTITOOL 1",
-        "position": {
-          "x": 20,
-          "y": 23
-        },
-        "content": [
-          {
-            "index": 12,
-            "maxVolume": 160,
-            "name": "tip1",
-            "position": {
-              "col": 12,
-              "row": 1
+        "name": "Basic Workspace",
+        "width": 380,
+        "length": 350,
+        "height": 150,
+        "items": [
+            {
+                "position": {
+                    "x": 179,
+                    "y": 233
+                },
+                "platform": "trash_bucket",
+                "name": "trash_bucket 1",
+                "content": [],
+                "platformData": {
+                    "name": "trash_bucket",
+                    "description": "Generic recipient",
+                    "type": "BUCKET",
+                    "color": "#cf947a",
+                    "width": 130,
+                    "length": 100,
+                    "height": 80,
+                    "defaultTopPosition": 60,
+                    "rotation": 0,
+                    "slots": [],
+                    "__v": 0,
+                    "createdAt": "2023-12-24T17:01:43.413Z",
+                    "updatedAt": "2023-12-24T17:01:43.413Z"
+                }
             },
-            "tags": [],
-            "type": "tip",
-            "volume": 0
-          },
-          {
-            "index": 24,
-            "maxVolume": 160,
-            "name": "tip2",
-            "position": {
-              "col": 12,
-              "row": 2
+            {
+                "position": {
+                    "x": 20,
+                    "y": 23
+                },
+                "platform": "200ul_tip_rack_MULTITOOL",
+                "name": "200ul_tip_rack_MULTITOOL 1",
+                "content": [
+                    {
+                        "position": {
+                            "col": 12,
+                            "row": 1
+                        },
+                        "type": "tip",
+                        "index": 12,
+                        "name": "tip1",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 12,
+                            "row": 2
+                        },
+                        "type": "tip",
+                        "index": 24,
+                        "name": "tip2",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 12,
+                            "row": 3
+                        },
+                        "type": "tip",
+                        "index": 36,
+                        "name": "tip3",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 12,
+                            "row": 4
+                        },
+                        "type": "tip",
+                        "index": 48,
+                        "name": "tip4",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 12,
+                            "row": 5
+                        },
+                        "type": "tip",
+                        "index": 60,
+                        "name": "tip5",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 12,
+                            "row": 6
+                        },
+                        "type": "tip",
+                        "index": 72,
+                        "name": "tip6",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 12,
+                            "row": 7
+                        },
+                        "type": "tip",
+                        "index": 84,
+                        "name": "tip7",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 1,
+                            "row": 8
+                        },
+                        "type": "tip",
+                        "index": 85,
+                        "name": "tip8",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 2,
+                            "row": 8
+                        },
+                        "type": "tip",
+                        "index": 86,
+                        "name": "tip9",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 3,
+                            "row": 8
+                        },
+                        "type": "tip",
+                        "index": 87,
+                        "name": "tip10",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 4,
+                            "row": 8
+                        },
+                        "type": "tip",
+                        "index": 88,
+                        "name": "tip11",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 5,
+                            "row": 8
+                        },
+                        "type": "tip",
+                        "index": 89,
+                        "name": "tip12",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 6,
+                            "row": 8
+                        },
+                        "type": "tip",
+                        "index": 90,
+                        "name": "tip13",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 7,
+                            "row": 8
+                        },
+                        "type": "tip",
+                        "index": 91,
+                        "name": "tip14",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 8,
+                            "row": 8
+                        },
+                        "type": "tip",
+                        "index": 92,
+                        "name": "tip15",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 9,
+                            "row": 8
+                        },
+                        "type": "tip",
+                        "index": 93,
+                        "name": "tip16",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 10,
+                            "row": 8
+                        },
+                        "type": "tip",
+                        "index": 94,
+                        "name": "tip17",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 11,
+                            "row": 8
+                        },
+                        "type": "tip",
+                        "index": 95,
+                        "name": "tip18",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 12,
+                            "row": 8
+                        },
+                        "type": "tip",
+                        "index": 96,
+                        "name": "tip19",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 1,
+                            "row": 1
+                        },
+                        "type": "tip",
+                        "index": 1,
+                        "name": "tip20",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 2,
+                            "row": 1
+                        },
+                        "type": "tip",
+                        "index": 2,
+                        "name": "tip21",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 3,
+                            "row": 1
+                        },
+                        "type": "tip",
+                        "index": 3,
+                        "name": "tip22",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 4,
+                            "row": 1
+                        },
+                        "type": "tip",
+                        "index": 4,
+                        "name": "tip23",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 5,
+                            "row": 1
+                        },
+                        "type": "tip",
+                        "index": 5,
+                        "name": "tip24",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 6,
+                            "row": 1
+                        },
+                        "type": "tip",
+                        "index": 6,
+                        "name": "tip25",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 7,
+                            "row": 1
+                        },
+                        "type": "tip",
+                        "index": 7,
+                        "name": "tip26",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 8,
+                            "row": 1
+                        },
+                        "type": "tip",
+                        "index": 8,
+                        "name": "tip27",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 9,
+                            "row": 1
+                        },
+                        "type": "tip",
+                        "index": 9,
+                        "name": "tip28",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 10,
+                            "row": 1
+                        },
+                        "type": "tip",
+                        "index": 10,
+                        "name": "tip29",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 11,
+                            "row": 1
+                        },
+                        "type": "tip",
+                        "index": 11,
+                        "name": "tip30",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 1,
+                            "row": 2
+                        },
+                        "type": "tip",
+                        "index": 13,
+                        "name": "tip31",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 2,
+                            "row": 2
+                        },
+                        "type": "tip",
+                        "index": 14,
+                        "name": "tip32",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 3,
+                            "row": 2
+                        },
+                        "type": "tip",
+                        "index": 15,
+                        "name": "tip33",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 4,
+                            "row": 2
+                        },
+                        "type": "tip",
+                        "index": 16,
+                        "name": "tip34",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 5,
+                            "row": 2
+                        },
+                        "type": "tip",
+                        "index": 17,
+                        "name": "tip35",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 6,
+                            "row": 2
+                        },
+                        "type": "tip",
+                        "index": 18,
+                        "name": "tip36",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 7,
+                            "row": 2
+                        },
+                        "type": "tip",
+                        "index": 19,
+                        "name": "tip37",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 8,
+                            "row": 2
+                        },
+                        "type": "tip",
+                        "index": 20,
+                        "name": "tip38",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 9,
+                            "row": 2
+                        },
+                        "type": "tip",
+                        "index": 21,
+                        "name": "tip39",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 10,
+                            "row": 2
+                        },
+                        "type": "tip",
+                        "index": 22,
+                        "name": "tip40",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 11,
+                            "row": 2
+                        },
+                        "type": "tip",
+                        "index": 23,
+                        "name": "tip41",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 1,
+                            "row": 3
+                        },
+                        "type": "tip",
+                        "index": 25,
+                        "name": "tip42",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 2,
+                            "row": 3
+                        },
+                        "type": "tip",
+                        "index": 26,
+                        "name": "tip43",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 3,
+                            "row": 3
+                        },
+                        "type": "tip",
+                        "index": 27,
+                        "name": "tip44",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 4,
+                            "row": 3
+                        },
+                        "type": "tip",
+                        "index": 28,
+                        "name": "tip45",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 5,
+                            "row": 3
+                        },
+                        "type": "tip",
+                        "index": 29,
+                        "name": "tip46",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 6,
+                            "row": 3
+                        },
+                        "type": "tip",
+                        "index": 30,
+                        "name": "tip47",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 7,
+                            "row": 3
+                        },
+                        "type": "tip",
+                        "index": 31,
+                        "name": "tip48",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 8,
+                            "row": 3
+                        },
+                        "type": "tip",
+                        "index": 32,
+                        "name": "tip49",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 9,
+                            "row": 3
+                        },
+                        "type": "tip",
+                        "index": 33,
+                        "name": "tip50",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 10,
+                            "row": 3
+                        },
+                        "type": "tip",
+                        "index": 34,
+                        "name": "tip51",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 11,
+                            "row": 3
+                        },
+                        "type": "tip",
+                        "index": 35,
+                        "name": "tip52",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 1,
+                            "row": 4
+                        },
+                        "type": "tip",
+                        "index": 37,
+                        "name": "tip53",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 2,
+                            "row": 4
+                        },
+                        "type": "tip",
+                        "index": 38,
+                        "name": "tip54",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 3,
+                            "row": 4
+                        },
+                        "type": "tip",
+                        "index": 39,
+                        "name": "tip55",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 4,
+                            "row": 4
+                        },
+                        "type": "tip",
+                        "index": 40,
+                        "name": "tip56",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 5,
+                            "row": 4
+                        },
+                        "type": "tip",
+                        "index": 41,
+                        "name": "tip57",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 6,
+                            "row": 4
+                        },
+                        "type": "tip",
+                        "index": 42,
+                        "name": "tip58",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 7,
+                            "row": 4
+                        },
+                        "type": "tip",
+                        "index": 43,
+                        "name": "tip59",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 8,
+                            "row": 4
+                        },
+                        "type": "tip",
+                        "index": 44,
+                        "name": "tip60",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 9,
+                            "row": 4
+                        },
+                        "type": "tip",
+                        "index": 45,
+                        "name": "tip61",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 10,
+                            "row": 4
+                        },
+                        "type": "tip",
+                        "index": 46,
+                        "name": "tip62",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 11,
+                            "row": 4
+                        },
+                        "type": "tip",
+                        "index": 47,
+                        "name": "tip63",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 1,
+                            "row": 5
+                        },
+                        "type": "tip",
+                        "index": 49,
+                        "name": "tip64",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 2,
+                            "row": 5
+                        },
+                        "type": "tip",
+                        "index": 50,
+                        "name": "tip65",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 3,
+                            "row": 5
+                        },
+                        "type": "tip",
+                        "index": 51,
+                        "name": "tip66",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 4,
+                            "row": 5
+                        },
+                        "type": "tip",
+                        "index": 52,
+                        "name": "tip67",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 5,
+                            "row": 5
+                        },
+                        "type": "tip",
+                        "index": 53,
+                        "name": "tip68",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 6,
+                            "row": 5
+                        },
+                        "type": "tip",
+                        "index": 54,
+                        "name": "tip69",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 7,
+                            "row": 5
+                        },
+                        "type": "tip",
+                        "index": 55,
+                        "name": "tip70",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 8,
+                            "row": 5
+                        },
+                        "type": "tip",
+                        "index": 56,
+                        "name": "tip71",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 9,
+                            "row": 5
+                        },
+                        "type": "tip",
+                        "index": 57,
+                        "name": "tip72",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 10,
+                            "row": 5
+                        },
+                        "type": "tip",
+                        "index": 58,
+                        "name": "tip73",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 11,
+                            "row": 5
+                        },
+                        "type": "tip",
+                        "index": 59,
+                        "name": "tip74",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 1,
+                            "row": 6
+                        },
+                        "type": "tip",
+                        "index": 61,
+                        "name": "tip75",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 2,
+                            "row": 6
+                        },
+                        "type": "tip",
+                        "index": 62,
+                        "name": "tip76",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 3,
+                            "row": 6
+                        },
+                        "type": "tip",
+                        "index": 63,
+                        "name": "tip77",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 4,
+                            "row": 6
+                        },
+                        "type": "tip",
+                        "index": 64,
+                        "name": "tip78",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 5,
+                            "row": 6
+                        },
+                        "type": "tip",
+                        "index": 65,
+                        "name": "tip79",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 6,
+                            "row": 6
+                        },
+                        "type": "tip",
+                        "index": 66,
+                        "name": "tip80",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 7,
+                            "row": 6
+                        },
+                        "type": "tip",
+                        "index": 67,
+                        "name": "tip81",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 8,
+                            "row": 6
+                        },
+                        "type": "tip",
+                        "index": 68,
+                        "name": "tip82",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 9,
+                            "row": 6
+                        },
+                        "type": "tip",
+                        "index": 69,
+                        "name": "tip83",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 10,
+                            "row": 6
+                        },
+                        "type": "tip",
+                        "index": 70,
+                        "name": "tip84",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 11,
+                            "row": 6
+                        },
+                        "type": "tip",
+                        "index": 71,
+                        "name": "tip85",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 1,
+                            "row": 7
+                        },
+                        "type": "tip",
+                        "index": 73,
+                        "name": "tip86",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 2,
+                            "row": 7
+                        },
+                        "type": "tip",
+                        "index": 74,
+                        "name": "tip87",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 3,
+                            "row": 7
+                        },
+                        "type": "tip",
+                        "index": 75,
+                        "name": "tip88",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 4,
+                            "row": 7
+                        },
+                        "type": "tip",
+                        "index": 76,
+                        "name": "tip89",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 5,
+                            "row": 7
+                        },
+                        "type": "tip",
+                        "index": 77,
+                        "name": "tip90",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 6,
+                            "row": 7
+                        },
+                        "type": "tip",
+                        "index": 78,
+                        "name": "tip91",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 7,
+                            "row": 7
+                        },
+                        "type": "tip",
+                        "index": 79,
+                        "name": "tip92",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 8,
+                            "row": 7
+                        },
+                        "type": "tip",
+                        "index": 80,
+                        "name": "tip93",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 9,
+                            "row": 7
+                        },
+                        "type": "tip",
+                        "index": 81,
+                        "name": "tip94",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 10,
+                            "row": 7
+                        },
+                        "type": "tip",
+                        "index": 82,
+                        "name": "tip95",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 11,
+                            "row": 7
+                        },
+                        "type": "tip",
+                        "index": 83,
+                        "name": "tip96",
+                        "tags": [],
+                        "maxVolume": 160,
+                        "volume": 0
+                    }
+                ],
+                "platformData": {
+                    "name": "200ul_tip_rack_MULTITOOL",
+                    "description": "Rack de tips",
+                    "type": "TIP_RACK",
+                    "color": "#8a1eF6",
+                    "width": 122,
+                    "length": 86,
+                    "height": 80,
+                    "firstWellCenterX": 12,
+                    "firstWellCenterY": 10,
+                    "wellDiameter": 4.5,
+                    "wellSeparationX": 8.87,
+                    "wellSeparationY": 8.87,
+                    "wellsColumns": 12,
+                    "wellsRows": 8,
+                    "defaultTopPosition": 80,
+                    "defaultBottomPosition": 27,
+                    "defaultMaxVolume": 160,
+                    "defaultLoadBottom": 0,
+                    "rotation": 0,
+                    "tipLength": 50,
+                    "slots": [],
+                    "__v": 0,
+                    "createdAt": "2023-12-24T17:01:43.412Z",
+                    "updatedAt": "2023-12-24T17:01:43.412Z"
+                }
             },
-            "tags": [],
-            "type": "tip",
-            "volume": 0
-          }
-        ]
-      },
-      {
-        "platform": "5x16_1.5_rack",
-        "name": "5x16_1.5_rack 1",
-        "position": {
-          "x": 150,
-          "y": 23
-        },
-        "content": [
-          {
-            "index": 1,
-            "maxVolume": 1500,
-            "name": "loading_buffer_5x",
-            "position": {
-              "col": 1,
-              "row": 1
+            {
+                "position": {
+                    "x": 150,
+                    "y": 23
+                },
+                "platform": "5x16_1.5_rack",
+                "name": "5x16_1.5_rack 1",
+                "content": [
+                    {
+                        "position": {
+                            "col": 1,
+                            "row": 1
+                        },
+                        "type": "tube",
+                        "index": 1,
+                        "name": "loading_buffer_5x",
+                        "tags": [
+                            "buffer"
+                        ],
+                        "maxVolume": 1500,
+                        "volume": 500
+                    },
+                    {
+                        "position": {
+                            "col": 1,
+                            "row": 3
+                        },
+                        "type": "tube",
+                        "index": 33,
+                        "name": "sample1",
+                        "tags": [
+                            "sample"
+                        ],
+                        "maxVolume": 1500,
+                        "volume": 40
+                    },
+                    {
+                        "position": {
+                            "col": 3,
+                            "row": 3
+                        },
+                        "type": "tube",
+                        "index": 35,
+                        "name": "sample2",
+                        "tags": [
+                            "sample"
+                        ],
+                        "maxVolume": 1500,
+                        "volume": 40
+                    }
+                ],
+                "platformData": {
+                    "name": "5x16_1.5_rack",
+                    "description": "Standard microtube rack",
+                    "type": "TUBE_RACK",
+                    "color": "#fc4b0c",
+                    "width": 215,
+                    "length": 72,
+                    "height": 80,
+                    "firstWellCenterX": 10,
+                    "firstWellCenterY": 10,
+                    "wellDiameter": 10,
+                    "wellSeparationX": 13.2,
+                    "wellSeparationY": 13.2,
+                    "wellsColumns": 16,
+                    "wellsRows": 5,
+                    "defaultTopPosition": 0,
+                    "defaultBottomPosition": -20,
+                    "defaultMaxVolume": 1500,
+                    "defaultLoadBottom": 0,
+                    "rotation": 0,
+                    "tipLength": 50,
+                    "slots": [],
+                    "__v": 0,
+                    "createdAt": "2023-12-24T17:01:43.411Z",
+                    "updatedAt": "2023-12-24T17:01:43.411Z"
+                }
             },
-            "tags": [
-              "buffer"
-            ],
-            "type": "tube",
-            "volume": 500
-          },
-          {
-            "index": 33,
-            "maxVolume": 1500,
-            "name": "sample1",
-            "position": {
-              "col": 1,
-              "row": 3
+            {
+                "position": {
+                    "x": 71,
+                    "y": 179
+                },
+                "platform": "Petri dish 90x15",
+                "name": "Petri dish 90x15 1",
+                "content": [
+                    {
+                        "position": {
+                            "col": -16,
+                            "row": -19
+                        },
+                        "type": "colony",
+                        "index": 1,
+                        "name": "colony1",
+                        "tags": [],
+                        "maxVolume": 0,
+                        "volume": 1
+                    },
+                    {
+                        "position": {
+                            "col": -19,
+                            "row": 4
+                        },
+                        "type": "colony",
+                        "index": 2,
+                        "name": "colony2",
+                        "tags": [],
+                        "maxVolume": 0,
+                        "volume": 1
+                    },
+                    {
+                        "position": {
+                            "col": 13,
+                            "row": 0
+                        },
+                        "type": "colony",
+                        "index": 3,
+                        "name": "colony3",
+                        "tags": [],
+                        "maxVolume": 0,
+                        "volume": 1
+                    },
+                    {
+                        "position": {
+                            "col": 2,
+                            "row": 13
+                        },
+                        "type": "colony",
+                        "index": 4,
+                        "name": "colony4",
+                        "tags": [],
+                        "maxVolume": 0,
+                        "volume": 1
+                    },
+                    {
+                        "position": {
+                            "col": 5,
+                            "row": 0
+                        },
+                        "type": "colony",
+                        "index": 5,
+                        "name": "colony5",
+                        "tags": [],
+                        "maxVolume": 0,
+                        "volume": 1
+                    }
+                ],
+                "platformData": {
+                    "name": "Petri dish 90x15",
+                    "description": "Petri dish 90x15",
+                    "type": "PETRI_DISH",
+                    "color": "#c3c3c3",
+                    "height": 15,
+                    "diameter": 90,
+                    "defaultTopPosition": 10,
+                    "defaultBottomPosition": 5,
+                    "slots": [],
+                    "__v": 0,
+                    "createdAt": "2023-12-24T17:01:43.412Z",
+                    "updatedAt": "2023-12-24T17:01:43.412Z"
+                }
             },
-            "tags": [
-              "sample"
-            ],
-            "type": "tube",
-            "volume": 40
-          },
-          {
-            "index": 35,
-            "maxVolume": 1500,
-            "name": "sample2",
-            "position": {
-              "col": 3,
-              "row": 3
-            },
-            "tags": [
-              "sample"
-            ],
-            "type": "tube",
-            "volume": 40
-          }
-        ]
-      },
-      {
-        "platform": "Petri dish 90x15",
-        "name": "Petri dish 90x15 1",
-        "position": {
-          "x": 71,
-          "y": 179
-        },
-        "content": [
-          {
-            "index": 1,
-            "maxVolume": 0,
-            "name": "colony1",
-            "position": {
-              "col": -16,
-              "row": -19
-            },
-            "tags": [],
-            "type": "colony",
-            "volume": 1
-          },
-          {
-            "index": 2,
-            "maxVolume": 0,
-            "name": "colony2",
-            "position": {
-              "col": -19,
-              "row": 4
-            },
-            "tags": [],
-            "type": "colony",
-            "volume": 1
-          },
-          {
-            "index": 3,
-            "maxVolume": 0,
-            "name": "colony3",
-            "position": {
-              "col": 13,
-              "row": 0
-            },
-            "tags": [],
-            "type": "colony",
-            "volume": 1
-          },
-          {
-            "index": 4,
-            "maxVolume": 0,
-            "name": "colony4",
-            "position": {
-              "col": 2,
-              "row": 13
-            },
-            "tags": [],
-            "type": "colony",
-            "volume": 1
-          },
-          {
-            "index": 5,
-            "maxVolume": 0,
-            "name": "colony5",
-            "position": {
-              "col": 5,
-              "row": 0
-            },
-            "tags": [],
-            "type": "colony",
-            "volume": 1
-          }
-        ]
-      },
-      {
-        "platform": "Standard 96-well plate",
-        "name": "Standard 96-well plate 1",
-        "position": {
-          "x": 150,
-          "y": 135
-        },
-        "content": [
-          {
-            "index": 1,
-            "maxVolume": 0,
-            "name": "tube1",
-            "position": {
-              "col": 1,
-              "row": 1
-            },
-            "tags": [],
-            "type": "tube",
-            "volume": 0
-          },
-          {
-            "index": 13,
-            "maxVolume": 0,
-            "name": "tube2",
-            "position": {
-              "col": 1,
-              "row": 2
-            },
-            "tags": [],
-            "type": "tube",
-            "volume": 0
-          },
-          {
-            "index": 25,
-            "maxVolume": 0,
-            "name": "tube3",
-            "position": {
-              "col": 1,
-              "row": 3
-            },
-            "tags": [],
-            "type": "tube",
-            "volume": 0
-          }
-        ]
-      }
-    ]
-  }
+            {
+                "position": {
+                    "x": 150,
+                    "y": 135
+                },
+                "platform": "Standard 96-well plate",
+                "name": "Standard 96-well plate 1",
+                "content": [
+                    {
+                        "position": {
+                            "col": 1,
+                            "row": 1
+                        },
+                        "type": "tube",
+                        "index": 1,
+                        "name": "tube1",
+                        "tags": [],
+                        "maxVolume": 0,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 1,
+                            "row": 2
+                        },
+                        "type": "tube",
+                        "index": 13,
+                        "name": "tube2",
+                        "tags": [],
+                        "maxVolume": 0,
+                        "volume": 0
+                    },
+                    {
+                        "position": {
+                            "col": 1,
+                            "row": 3
+                        },
+                        "type": "tube",
+                        "index": 25,
+                        "name": "tube3",
+                        "tags": [],
+                        "maxVolume": 0,
+                        "volume": 0
+                    }
+                ],
+                "platformData": {
+                    "name": "Standard 96-well plate",
+                    "description": "SBS compliant 96-well plate",
+                    "type": "TUBE_RACK",
+                    "color": "#dcdcdc",
+                    "width": 121,
+                    "length": 86,
+                    "height": 20,
+                    "firstWellCenterX": 12,
+                    "firstWellCenterY": 10,
+                    "wellDiameter": 6,
+                    "wellSeparationX": 9,
+                    "wellSeparationY": 9,
+                    "wellsColumns": 12,
+                    "wellsRows": 8,
+                    "defaultTopPosition": 20,
+                    "defaultBottomPosition": 5,
+                    "defaultMaxVolume": 150,
+                    "defaultLoadBottom": 0,
+                    "rotation": 0,
+                    "slots": [],
+                    "__v": 0,
+                    "createdAt": "2023-12-24T17:01:43.412Z",
+                    "updatedAt": "2023-12-24T17:01:43.412Z"
+                }
+            }
+        ],
+        "__v": 14,
+        "createdAt": "2023-12-24T17:01:43.480Z",
+        "updatedAt": "2024-01-01T20:54:28.292Z"
+    }
 }
