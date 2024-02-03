@@ -1,0 +1,1282 @@
+[
+    {
+        "name": "Petri dish 90x15",
+        "description": "Petri dish 90x15",
+        "type": "PETRI_DISH",
+        "color": "#c3c3c3",
+        "height": 15,
+        "diameter": 90,
+        "activeHeight": 5,
+        "rotation": 0,
+        "slots": [],
+        "containers": [],
+        "createdAt": "2024-02-02T00:07:35.249Z",
+        "updatedAt": "2024-02-02T00:07:35.249Z",
+        "__v": 0
+    },
+    {
+        "name": "trash_bucket",
+        "description": "Generic recipient",
+        "type": "BUCKET",
+        "color": "#cf947a",
+        "width": 130,
+        "length": 100,
+        "height": 80,
+        "activeHeight": 60,
+        "rotation": 0,
+        "slots": [],
+        "containers": [],
+        "createdAt": "2024-02-02T00:07:35.249Z",
+        "updatedAt": "2024-02-02T00:07:35.249Z",
+        "__v": 0
+    },
+    {
+        "name": "Anchor 1",
+        "description": "Example platform anchor",
+        "type": "ANCHOR",
+        "color": "#000000",
+        "width": 40,
+        "length": 40,
+        "height": 4,
+        "rotation": 0,
+        "anchorOffsetX": 10,
+        "anchorOffsetY": 10,
+        "anchorOffsetZ": 0,
+        "slots": [],
+        "containers": [],
+        "createdAt": "2024-02-02T00:07:35.252Z",
+        "updatedAt": "2024-02-02T00:07:35.252Z",
+        "__v": 0
+    },
+    {
+        "name": "5x16_1.5_rack",
+        "description": "Standard microtube rack",
+        "type": "TUBE_RACK",
+        "color": "#fc4b0c",
+        "width": 215,
+        "length": 72,
+        "height": 80,
+        "activeHeight": 0,
+        "firstWellCenterX": 10,
+        "firstWellCenterY": 10,
+        "wellDiameter": 10,
+        "wellSeparationX": 13.2,
+        "wellSeparationY": 13.2,
+        "wellsColumns": 16,
+        "wellsRows": 5,
+        "rotation": 0,
+        "slots": [],
+        "containers": [
+            {
+                "container": "1.5 mL tube",
+                "containerOffsetZ": 0,
+                "_id": "65bc3247eac28c4e3a21a330"
+            },
+            {
+                "container": "2.0 mL tube",
+                "containerOffsetZ": 0,
+                "_id": "65bc3247eac28c4e3a21a331"
+            }
+        ],
+        "createdAt": "2024-02-02T00:07:35.255Z",
+        "updatedAt": "2024-02-02T00:07:35.255Z",
+        "__v": 0
+    },
+    {
+        "name": "200ul_tip_rack_MULTITOOL",
+        "description": "Rack de tips",
+        "type": "TIP_RACK",
+        "color": "#8a1eF6",
+        "width": 122,
+        "length": 86,
+        "height": 80,
+        "activeHeight": 0,
+        "firstWellCenterX": 12,
+        "firstWellCenterY": 10,
+        "wellDiameter": 4.5,
+        "wellSeparationX": 8.87,
+        "wellSeparationY": 8.87,
+        "wellsColumns": 12,
+        "wellsRows": 8,
+        "rotation": 0,
+        "slots": [],
+        "containers": [
+            {
+                "container": "200 uL Tip",
+                "containerOffsetZ": 0,
+                "_id": "65bc3247eac28c4e3a21a333"
+            }
+        ],
+        "createdAt": "2024-02-02T00:07:35.255Z",
+        "updatedAt": "2024-02-02T00:07:35.255Z",
+        "__v": 0
+    },
+    {
+        "name": "Standard 96-well plate",
+        "description": "SBS compliant 96-well plate",
+        "type": "TUBE_RACK",
+        "color": "#dcdcdc",
+        "width": 121,
+        "length": 86,
+        "height": 20,
+        "activeHeight": 0,
+        "firstWellCenterX": 12,
+        "firstWellCenterY": 10,
+        "wellDiameter": 6,
+        "wellSeparationX": 9,
+        "wellSeparationY": 9,
+        "wellsColumns": 12,
+        "wellsRows": 8,
+        "rotation": 0,
+        "containers": [
+            {
+                "container": "Well #96",
+                "containerOffsetZ": 0,
+                "_id": "65bc3247eac28c4e3a21a336"
+            }
+        ],
+        "slots": [],
+        "createdAt": "2024-02-02T00:07:35.255Z",
+        "updatedAt": "2024-02-02T00:07:35.255Z",
+        "__v": 0
+    },
+    {
+        "name": "Hybrid 48/12 well plate",
+        "description": "Custom well plate with hybrid well types (https://www.slas.org/education/ansi-slas-microplate-standards/).",
+        "type": "CUSTOM",
+        "color": "#4cabe0",
+        "width": 127.76,
+        "length": 85.48,
+        "height": 14.35,
+        "activeHeight": 2,
+        "rotation": 0,
+        "slots": [
+            {
+                "slotPosition": {
+                    "slotX": 14.38,
+                    "slotY": 11.24
+                },
+                "slotName": "Well1/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a33a"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a339"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 23.380000000000003,
+                    "slotY": 11.24
+                },
+                "slotName": "Well2/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a33c"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a33b"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 32.38,
+                    "slotY": 11.24
+                },
+                "slotName": "Well3/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a33e"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a33d"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 41.38,
+                    "slotY": 11.24
+                },
+                "slotName": "Well4/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a340"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a33f"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 50.38,
+                    "slotY": 11.24
+                },
+                "slotName": "Well5/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a342"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a341"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 59.38,
+                    "slotY": 11.24
+                },
+                "slotName": "Well6/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a344"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a343"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 14.38,
+                    "slotY": 20.240000000000002
+                },
+                "slotName": "Well7/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a346"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a345"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 23.380000000000003,
+                    "slotY": 20.240000000000002
+                },
+                "slotName": "Well8/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a348"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a347"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 32.38,
+                    "slotY": 20.240000000000002
+                },
+                "slotName": "Well9/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a34a"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a349"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 41.38,
+                    "slotY": 20.240000000000002
+                },
+                "slotName": "Well10/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a34c"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a34b"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 50.38,
+                    "slotY": 20.240000000000002
+                },
+                "slotName": "Well11/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a34e"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a34d"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 59.38,
+                    "slotY": 20.240000000000002
+                },
+                "slotName": "Well12/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a350"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a34f"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 14.38,
+                    "slotY": 29.240000000000002
+                },
+                "slotName": "Well13/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a352"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a351"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 23.380000000000003,
+                    "slotY": 29.240000000000002
+                },
+                "slotName": "Well14/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a354"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a353"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 32.38,
+                    "slotY": 29.240000000000002
+                },
+                "slotName": "Well15/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a356"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a355"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 41.38,
+                    "slotY": 29.240000000000002
+                },
+                "slotName": "Well16/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a358"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a357"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 50.38,
+                    "slotY": 29.240000000000002
+                },
+                "slotName": "Well17/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a35a"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a359"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 59.38,
+                    "slotY": 29.240000000000002
+                },
+                "slotName": "Well18/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a35c"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a35b"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 14.38,
+                    "slotY": 38.24
+                },
+                "slotName": "Well19/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a35e"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a35d"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 23.380000000000003,
+                    "slotY": 38.24
+                },
+                "slotName": "Well20/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a360"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a35f"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 32.38,
+                    "slotY": 38.24
+                },
+                "slotName": "Well21/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a362"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a361"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 41.38,
+                    "slotY": 38.24
+                },
+                "slotName": "Well22/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a364"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a363"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 50.38,
+                    "slotY": 38.24
+                },
+                "slotName": "Well23/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a366"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a365"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 59.38,
+                    "slotY": 38.24
+                },
+                "slotName": "Well24/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a368"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a367"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 14.38,
+                    "slotY": 47.24
+                },
+                "slotName": "Well25/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a36a"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a369"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 23.380000000000003,
+                    "slotY": 47.24
+                },
+                "slotName": "Well26/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a36c"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a36b"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 32.38,
+                    "slotY": 47.24
+                },
+                "slotName": "Well27/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a36e"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a36d"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 41.38,
+                    "slotY": 47.24
+                },
+                "slotName": "Well28/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a370"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a36f"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 50.38,
+                    "slotY": 47.24
+                },
+                "slotName": "Well29/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a372"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a371"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 59.38,
+                    "slotY": 47.24
+                },
+                "slotName": "Well30/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a374"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a373"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 14.38,
+                    "slotY": 56.24
+                },
+                "slotName": "Well31/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a376"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a375"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 23.380000000000003,
+                    "slotY": 56.24
+                },
+                "slotName": "Well32/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a378"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a377"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 32.38,
+                    "slotY": 56.24
+                },
+                "slotName": "Well33/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a37a"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a379"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 41.38,
+                    "slotY": 56.24
+                },
+                "slotName": "Well34/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a37c"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a37b"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 50.38,
+                    "slotY": 56.24
+                },
+                "slotName": "Well35/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a37e"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a37d"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 59.38,
+                    "slotY": 56.24
+                },
+                "slotName": "Well36/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a380"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a37f"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 14.38,
+                    "slotY": 65.24
+                },
+                "slotName": "Well37/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a382"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a381"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 23.380000000000003,
+                    "slotY": 65.24
+                },
+                "slotName": "Well38/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a384"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a383"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 32.38,
+                    "slotY": 65.24
+                },
+                "slotName": "Well39/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a386"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a385"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 41.38,
+                    "slotY": 65.24
+                },
+                "slotName": "Well40/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a388"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a387"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 50.38,
+                    "slotY": 65.24
+                },
+                "slotName": "Well41/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a38a"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a389"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 59.38,
+                    "slotY": 65.24
+                },
+                "slotName": "Well42/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a38c"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a38b"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 14.38,
+                    "slotY": 74.24
+                },
+                "slotName": "Well43/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a38e"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a38d"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 23.380000000000003,
+                    "slotY": 74.24
+                },
+                "slotName": "Well44/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a390"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a38f"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 32.38,
+                    "slotY": 74.24
+                },
+                "slotName": "Well45/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a392"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a391"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 41.38,
+                    "slotY": 74.24
+                },
+                "slotName": "Well46/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a394"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a393"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 50.38,
+                    "slotY": 74.24
+                },
+                "slotName": "Well47/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a396"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a395"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 59.38,
+                    "slotY": 74.24
+                },
+                "slotName": "Well48/48",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #96",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a398"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a397"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 72.88,
+                    "slotY": 15.74
+                },
+                "slotName": "Well1/24",
+                "slotSize": 18,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #24",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a39a"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a399"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 90.88,
+                    "slotY": 15.74
+                },
+                "slotName": "Well2/24",
+                "slotSize": 18,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #24",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a39c"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a39b"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 108.88,
+                    "slotY": 15.74
+                },
+                "slotName": "Well3/24",
+                "slotSize": 18,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #24",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a39e"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a39d"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 72.88,
+                    "slotY": 33.74
+                },
+                "slotName": "Well4/24",
+                "slotSize": 18,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #24",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a3a0"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a39f"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 90.88,
+                    "slotY": 33.74
+                },
+                "slotName": "Well5/24",
+                "slotSize": 18,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #24",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a3a2"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a3a1"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 108.88,
+                    "slotY": 33.74
+                },
+                "slotName": "Well6/24",
+                "slotSize": 18,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #24",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a3a4"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a3a3"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 72.88,
+                    "slotY": 51.74
+                },
+                "slotName": "Well7/24",
+                "slotSize": 18,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #24",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a3a6"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a3a5"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 90.88,
+                    "slotY": 51.74
+                },
+                "slotName": "Well8/24",
+                "slotSize": 18,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #24",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a3a8"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a3a7"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 108.88,
+                    "slotY": 51.74
+                },
+                "slotName": "Well9/24",
+                "slotSize": 18,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #24",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a3aa"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a3a9"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 72.88,
+                    "slotY": 69.74
+                },
+                "slotName": "Well10/24",
+                "slotSize": 18,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #24",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a3ac"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a3ab"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 90.88,
+                    "slotY": 69.74
+                },
+                "slotName": "Well11/24",
+                "slotSize": 18,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #24",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a3ae"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a3ad"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 108.88,
+                    "slotY": 69.74
+                },
+                "slotName": "Well12/24",
+                "slotSize": 18,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "Well #24",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a3b0"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a3af"
+            }
+        ],
+        "containers": [],
+        "createdAt": "2024-02-02T00:07:35.257Z",
+        "updatedAt": "2024-02-02T00:07:35.257Z",
+        "__v": 0
+    },
+    {
+        "name": "Pocket PCR",
+        "description": "Pocket-size thermocycler (https://gaudi.ch/PocketPCR/).",
+        "type": "CUSTOM",
+        "color": "#89e04c",
+        "width": 120,
+        "length": 40,
+        "height": 50,
+        "activeHeight": 2,
+        "rotation": 0,
+        "slots": [
+            {
+                "slotPosition": {
+                    "slotX": 20,
+                    "slotY": 30
+                },
+                "slotName": "Tube1",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "0.2 mL tube",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a3b3"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a3b2"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 29.51057,
+                    "slotY": 23.09017
+                },
+                "slotName": "Tube2",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "0.2 mL tube",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a3b5"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a3b4"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 25.87785,
+                    "slotY": 11.90983
+                },
+                "slotName": "Tube3",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "0.2 mL tube",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a3b7"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a3b6"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 14.12215,
+                    "slotY": 11.90983
+                },
+                "slotName": "Tube4",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "0.2 mL tube",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a3b9"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a3b8"
+            },
+            {
+                "slotPosition": {
+                    "slotX": 10.48943,
+                    "slotY": 23.09017
+                },
+                "slotName": "Tube5",
+                "slotSize": 9,
+                "slotHeight": 10,
+                "containers": [
+                    {
+                        "container": "0.2 mL tube",
+                        "containerOffsetZ": 0,
+                        "_id": "65bc3247eac28c4e3a21a3bb"
+                    }
+                ],
+                "_id": "65bc3247eac28c4e3a21a3ba"
+            }
+        ],
+        "containers": [],
+        "createdAt": "2024-02-02T00:07:35.257Z",
+        "updatedAt": "2024-02-02T00:07:35.257Z",
+        "__v": 0
+    }
+]
