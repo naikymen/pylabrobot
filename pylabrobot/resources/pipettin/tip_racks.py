@@ -42,8 +42,9 @@ def create_tip_rack(platform_item, platform_data, tip_container):
         # XY distance between adjacent items in the grid.
         item_size_x=platform_data["wellSeparationX"],
         item_size_y=platform_data["wellSeparationY"],
-        # TODO: This function should be replaced.
-        # make_tip=standard_volume_tip_with_filter,
+        # The TipSpot class will receive this argument (through kwargs) to create its tips.
+        # Note that this is not needed for "wells", as there are no "well spots" in PLR.
+        # There are however, "tube spots" in pipettin, which I don't know how to accomodate.
         make_tip=make_pew_tip
       ),
       with_tips=False
@@ -52,7 +53,7 @@ def create_tip_rack(platform_item, platform_data, tip_container):
   return tip_rack_item
 
 
-if __name__ == "main":
+if __name__ == "__main__":
   import json
 
   # 'data/ws_export.json'

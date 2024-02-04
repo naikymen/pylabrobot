@@ -213,6 +213,9 @@ class Tube(Container):
     height = self.shape.level(volume) + self.shape.wall_width
     return height
 
+# TODO: Consider writing a "TubeSpot" class.
+#       Issues: probably requires a "SpotTubeTracker" tracker class,
+#       which I don't know how to implement.
 
 class TubeRack(ItemizedResource[Tube]):
   """ Base class for Rack resources.
