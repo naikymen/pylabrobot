@@ -3,7 +3,8 @@
 # pylint: disable=invalid-name
 # pylint: disable=line-too-long
 
-from pylabrobot.resources import TipCarrier, Coordinate, create_homogenous_carrier_sites
+from pylabrobot.resources.carrier import TipCarrier, create_homogeneous_carrier_sites
+from pylabrobot.resources.coordinate import Coordinate
 
 
 def TIP_CAR_120BC_4mlTF_A00(name: str) -> TipCarrier:
@@ -13,7 +14,7 @@ def TIP_CAR_120BC_4mlTF_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -34,7 +35,7 @@ def TIP_CAR_120BC_5mlT_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -55,7 +56,7 @@ def TIP_CAR_288_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(26.3, 36.3, 114.9),
         Coordinate(26.3, 182.213, 114.9),
         Coordinate(26.3, 328.213, 114.9)
@@ -74,7 +75,7 @@ def TIP_CAR_288_B00(name: str) -> TipCarrier:
     size_x=112.5,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(17.1, 36.25, 115.15),
         Coordinate(17.1, 182.25, 115.15),
         Coordinate(17.1, 328.25, 115.15)
@@ -93,7 +94,7 @@ def TIP_CAR_288_C00(name: str) -> TipCarrier:
     size_x=90.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(3.7, 36.3, 114.7),
         Coordinate(3.7, 182.3, 114.7),
         Coordinate(3.7, 328.3, 114.7)
@@ -112,7 +113,7 @@ def TIP_CAR_288_HTF_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(26.3, 36.3, 114.95),
         Coordinate(26.3, 182.213, 114.95),
         Coordinate(26.3, 328.213, 114.95)
@@ -131,7 +132,7 @@ def TIP_CAR_288_HTF_B00(name: str) -> TipCarrier:
     size_x=112.5,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(17.1, 36.25, 115.15),
         Coordinate(17.1, 182.25, 115.15),
         Coordinate(17.1, 328.25, 115.15)
@@ -150,7 +151,7 @@ def TIP_CAR_288_HTF_C00(name: str) -> TipCarrier:
     size_x=90.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(3.7, 36.3, 114.7),
         Coordinate(3.7, 182.3, 114.7),
         Coordinate(3.7, 328.3, 114.7)
@@ -169,7 +170,7 @@ def TIP_CAR_288_HT_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(26.3, 36.3, 114.95),
         Coordinate(26.3, 182.213, 114.95),
         Coordinate(26.3, 328.213, 114.95)
@@ -188,7 +189,7 @@ def TIP_CAR_288_HT_B00(name: str) -> TipCarrier:
     size_x=112.5,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(17.1, 36.25, 115.15),
         Coordinate(17.1, 182.25, 115.15),
         Coordinate(17.1, 328.25, 115.15)
@@ -207,7 +208,7 @@ def TIP_CAR_288_HT_C00(name: str) -> TipCarrier:
     size_x=90.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(3.7, 36.3, 114.7),
         Coordinate(3.7, 182.3, 114.7),
         Coordinate(3.7, 328.3, 114.7)
@@ -226,7 +227,7 @@ def TIP_CAR_288_LTF_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(26.3, 36.3, 114.95),
         Coordinate(26.3, 182.213, 114.95),
         Coordinate(26.3, 328.213, 114.95)
@@ -245,7 +246,7 @@ def TIP_CAR_288_LTF_B00(name: str) -> TipCarrier:
     size_x=112.5,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(17.1, 36.25, 115.15),
         Coordinate(17.1, 182.25, 115.15),
         Coordinate(17.1, 328.25, 115.15)
@@ -264,7 +265,7 @@ def TIP_CAR_288_LTF_C00(name: str) -> TipCarrier:
     size_x=90.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(3.7, 36.3, 114.7),
         Coordinate(3.7, 182.3, 114.7),
         Coordinate(3.7, 328.3, 114.7)
@@ -283,7 +284,7 @@ def TIP_CAR_288_LT_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(26.3, 36.3, 114.9),
         Coordinate(26.3, 182.213, 114.95),
         Coordinate(26.3, 328.213, 114.95)
@@ -302,7 +303,7 @@ def TIP_CAR_288_LT_B00(name: str) -> TipCarrier:
     size_x=112.5,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(17.1, 36.25, 115.15),
         Coordinate(17.1, 182.25, 115.15),
         Coordinate(17.1, 328.25, 115.15)
@@ -321,7 +322,7 @@ def TIP_CAR_288_LT_C00(name: str) -> TipCarrier:
     size_x=90.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(3.7, 36.3, 114.7),
         Coordinate(3.7, 182.3, 114.7),
         Coordinate(3.7, 328.3, 114.7)
@@ -340,7 +341,7 @@ def TIP_CAR_288_STF_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(26.3, 36.3, 114.95),
         Coordinate(26.3, 182.213, 114.95),
         Coordinate(26.3, 328.213, 114.95)
@@ -359,7 +360,7 @@ def TIP_CAR_288_STF_B00(name: str) -> TipCarrier:
     size_x=112.5,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(17.1, 36.25, 115.15),
         Coordinate(17.1, 182.25, 115.15),
         Coordinate(17.1, 328.25, 115.15)
@@ -378,7 +379,7 @@ def TIP_CAR_288_STF_C00(name: str) -> TipCarrier:
     size_x=90.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(3.7, 36.3, 114.7),
         Coordinate(3.7, 182.3, 114.7),
         Coordinate(3.7, 328.3, 114.7)
@@ -397,7 +398,7 @@ def TIP_CAR_288_ST_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(26.3, 36.3, 114.95),
         Coordinate(26.3, 182.213, 114.95),
         Coordinate(26.3, 328.213, 114.95)
@@ -416,7 +417,7 @@ def TIP_CAR_288_ST_B00(name: str) -> TipCarrier:
     size_x=112.5,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(17.1, 36.25, 115.15),
         Coordinate(17.1, 182.25, 115.15),
         Coordinate(17.1, 328.25, 115.15)
@@ -435,7 +436,7 @@ def TIP_CAR_288_ST_C00(name: str) -> TipCarrier:
     size_x=90.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(3.7, 36.3, 114.7),
         Coordinate(3.7, 182.3, 114.7),
         Coordinate(3.7, 328.3, 114.7)
@@ -454,7 +455,7 @@ def TIP_CAR_288_TIP_50ulF_C00(name: str) -> TipCarrier:
     size_x=90.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(3.7, 36.3, 114.7),
         Coordinate(3.7, 182.3, 114.7),
         Coordinate(3.7, 328.3, 114.7)
@@ -473,7 +474,7 @@ def TIP_CAR_288_TIP_50ul_C00(name: str) -> TipCarrier:
     size_x=90.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(3.7, 36.3, 114.7),
         Coordinate(3.7, 182.3, 114.7),
         Coordinate(3.7, 328.3, 114.7)
@@ -492,7 +493,7 @@ def TIP_CAR_384BC_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.3, 78.2, 114.8),
         Coordinate(6.3, 163.1, 114.8),
         Coordinate(6.3, 248.1, 114.8),
@@ -512,7 +513,7 @@ def TIP_CAR_384BC_HTF_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.3, 78.2, 114.8),
         Coordinate(6.3, 163.1, 114.8),
         Coordinate(6.3, 248.1, 114.8),
@@ -532,7 +533,7 @@ def TIP_CAR_384BC_HT_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.3, 78.2, 114.8),
         Coordinate(6.3, 163.1, 114.8),
         Coordinate(6.3, 248.1, 114.8),
@@ -552,7 +553,7 @@ def TIP_CAR_384BC_LTF_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.3, 78.2, 114.8),
         Coordinate(6.3, 163.1, 114.8),
         Coordinate(6.3, 248.1, 114.8),
@@ -572,7 +573,7 @@ def TIP_CAR_384BC_LT_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.3, 78.2, 114.8),
         Coordinate(6.3, 163.1, 114.8),
         Coordinate(6.3, 248.1, 114.8),
@@ -592,7 +593,7 @@ def TIP_CAR_384BC_STF_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.3, 78.2, 114.8),
         Coordinate(6.3, 163.1, 114.8),
         Coordinate(6.3, 248.1, 114.8),
@@ -612,7 +613,7 @@ def TIP_CAR_384BC_ST_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.3, 78.2, 114.8),
         Coordinate(6.3, 163.1, 114.8),
         Coordinate(6.3, 248.1, 114.8),
@@ -632,7 +633,7 @@ def TIP_CAR_384BC_TIP_50ulF_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.3, 78.2, 114.8),
         Coordinate(6.3, 163.1, 114.8),
         Coordinate(6.3, 248.1, 114.8),
@@ -652,7 +653,7 @@ def TIP_CAR_384BC_TIP_50ul_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.3, 78.2, 114.8),
         Coordinate(6.3, 163.1, 114.8),
         Coordinate(6.3, 248.1, 114.8),
@@ -672,7 +673,7 @@ def TIP_CAR_384_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.3, 78.2, 114.8),
         Coordinate(6.3, 163.1, 114.8),
         Coordinate(6.3, 248.1, 114.8),
@@ -692,7 +693,7 @@ def TIP_CAR_384_HT_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.3, 78.2, 114.8),
         Coordinate(6.3, 163.1, 114.8),
         Coordinate(6.3, 248.1, 114.8),
@@ -712,7 +713,7 @@ def TIP_CAR_384_LTF_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.3, 78.2, 114.8),
         Coordinate(6.3, 163.1, 114.8),
         Coordinate(6.3, 248.1, 114.8),
@@ -732,7 +733,7 @@ def TIP_CAR_384_LT_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.3, 78.2, 114.8),
         Coordinate(6.3, 163.1, 114.8),
         Coordinate(6.3, 248.1, 114.8),
@@ -752,7 +753,7 @@ def TIP_CAR_384_STF_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.3, 78.2, 114.8),
         Coordinate(6.3, 163.1, 114.8),
         Coordinate(6.3, 248.1, 114.8),
@@ -772,7 +773,7 @@ def TIP_CAR_384_ST_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.3, 78.2, 114.8),
         Coordinate(6.3, 163.1, 114.8),
         Coordinate(6.3, 248.1, 114.8),
@@ -792,7 +793,7 @@ def TIP_CAR_384_TIP_50ulF_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.3, 78.2, 114.8),
         Coordinate(6.3, 163.1, 114.8),
         Coordinate(6.3, 248.1, 114.8),
@@ -812,7 +813,7 @@ def TIP_CAR_384_TIP_50ul_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.3, 78.2, 114.8),
         Coordinate(6.3, 163.1, 114.8),
         Coordinate(6.3, 248.1, 114.8),
@@ -832,7 +833,7 @@ def TIP_CAR_480(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -853,7 +854,7 @@ def TIP_CAR_480BC_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -874,7 +875,7 @@ def TIP_CAR_480BC_HTF_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -895,7 +896,7 @@ def TIP_CAR_480BC_HT_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -916,7 +917,7 @@ def TIP_CAR_480BC_LTF_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -937,7 +938,7 @@ def TIP_CAR_480BC_LT_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -958,7 +959,7 @@ def TIP_CAR_480BC_PiercingTip150ulFilter_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -979,7 +980,7 @@ def TIP_CAR_480BC_PiercingTips_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -1000,7 +1001,7 @@ def TIP_CAR_480BC_STF_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -1021,7 +1022,7 @@ def TIP_CAR_480BC_ST_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -1042,7 +1043,7 @@ def TIP_CAR_480BC_SlimTips300ulFilter_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -1063,7 +1064,7 @@ def TIP_CAR_480BC_SlimTips_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -1084,7 +1085,7 @@ def TIP_CAR_480BC_TIP_50ulF_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -1105,7 +1106,7 @@ def TIP_CAR_480BC_TIP_50ul_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -1126,7 +1127,7 @@ def TIP_CAR_480_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -1147,7 +1148,7 @@ def TIP_CAR_480_HTF_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -1168,7 +1169,7 @@ def TIP_CAR_480_HT_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -1189,7 +1190,7 @@ def TIP_CAR_480_LTF_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -1210,7 +1211,7 @@ def TIP_CAR_480_LT_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -1231,7 +1232,7 @@ def TIP_CAR_480_STF_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -1252,7 +1253,7 @@ def TIP_CAR_480_ST_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -1273,7 +1274,7 @@ def TIP_CAR_480_TIP_50ulF_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -1294,7 +1295,7 @@ def TIP_CAR_480_TIP_50ul_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 114.95),
         Coordinate(6.2, 106.0, 114.95),
         Coordinate(6.2, 202.0, 114.95),
@@ -1315,7 +1316,7 @@ def TIP_CAR_72_4mlTF_C00(name: str) -> TipCarrier:
     size_x=90.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(3.7, 36.3, 114.7),
         Coordinate(3.7, 182.3, 114.7),
         Coordinate(3.7, 328.3, 114.7)
@@ -1334,7 +1335,7 @@ def TIP_CAR_72_5mlT_C00(name: str) -> TipCarrier:
     size_x=90.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(3.7, 36.3, 114.7),
         Coordinate(3.7, 182.3, 114.7),
         Coordinate(3.7, 328.3, 114.7)
@@ -1353,7 +1354,7 @@ def TIP_CAR_96BC_4mlTF_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.3, 78.2, 114.8),
         Coordinate(6.3, 163.1, 114.8),
         Coordinate(6.3, 248.1, 114.8),
@@ -1373,7 +1374,7 @@ def TIP_CAR_96BC_5mlT_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.3, 78.2, 114.8),
         Coordinate(6.3, 163.1, 114.8),
         Coordinate(6.3, 248.1, 114.8),
@@ -1393,7 +1394,7 @@ def TIP_CAR_NTR_A00(name: str) -> TipCarrier:
     size_x=135.0,
     size_y=497.0,
     size_z=130.0,
-    sites=create_homogenous_carrier_sites([
+    sites=create_homogeneous_carrier_sites([
         Coordinate(6.2, 10.0, 29.0),
         Coordinate(6.2, 106.0, 29.0),
         Coordinate(6.2, 202.0, 29.0),

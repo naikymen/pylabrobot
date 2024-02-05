@@ -5,7 +5,7 @@ import logging
 import time
 from typing import List, Optional, TYPE_CHECKING
 
-from pylabrobot.liquid_handling.backends import LiquidHandlerBackend
+from pylabrobot.liquid_handling.backends.backend import LiquidHandlerBackend
 
 try:
   import usb.core
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
   import usb.core
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("pylabrobot")
 
 
 class USBBackend(LiquidHandlerBackend, metaclass=ABCMeta):
@@ -63,7 +63,6 @@ class USBBackend(LiquidHandlerBackend, metaclass=ABCMeta):
     self.packet_read_timeout = packet_read_timeout
     self.read_timeout = read_timeout
     self.write_timeout = write_timeout
-    self.id_ = 0
 
     self.dev: Optional["usb.core.Device"] = None # TODO: make this a property
     self.read_endpoint: Optional[usb.core.Endpoint] = None

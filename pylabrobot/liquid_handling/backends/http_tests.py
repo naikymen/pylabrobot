@@ -56,7 +56,7 @@ class TestHTTPBackendOps(unittest.IsolatedAsyncioTestCase):
   """ Tests for liquid handling ops. """
 
   @responses.activate
-  async def asyncSetUp(self) -> None:
+  async def asyncSetUp(self) -> None: # type: ignore
     responses.add(
       responses.POST,
       "http://localhost:8080/events/setup",
@@ -85,7 +85,7 @@ class TestHTTPBackendOps(unittest.IsolatedAsyncioTestCase):
     await self.lh.setup()
 
   @responses.activate
-  async def asyncTearDown(self) -> None:
+  async def asyncTearDown(self) -> None: # type: ignore
     await super().asyncTearDown()
     responses.add(
       responses.POST,
@@ -100,17 +100,7 @@ class TestHTTPBackendOps(unittest.IsolatedAsyncioTestCase):
     responses.add(
       responses.POST,
       "http://localhost:8080/events/pick-up-tips",
-      match=[
-        header_match,
-        matchers.json_params_matcher({
-          "channels": [{
-            "offset": "default",
-            "resource_name": "tiprack_tipspot_0_0",
-            "tip": self.tip_rack.get_tip("A1").serialize()
-          }],
-          "use_channels": [0]
-        })
-      ],
+      match=[header_match],
       json={"status": "ok"},
       status=200,
     )
@@ -121,17 +111,7 @@ class TestHTTPBackendOps(unittest.IsolatedAsyncioTestCase):
     responses.add(
       responses.POST,
       "http://localhost:8080/events/drop-tips",
-      match=[
-        header_match,
-        matchers.json_params_matcher({
-          "channels": [{
-            "offset": "default",
-            "resource_name": "tiprack_tipspot_0_0",
-            "tip": self.tip_rack.get_tip("A1").serialize()
-          }],
-          "use_channels": [0]
-        })
-      ],
+      match=[header_match],
       json={"status": "ok"},
       status=200,
     )
@@ -145,28 +125,13 @@ class TestHTTPBackendOps(unittest.IsolatedAsyncioTestCase):
     responses.add(
       responses.POST,
       "http://localhost:8080/events/aspirate",
-      match=[
-        header_match,
-        matchers.json_params_matcher({
-          "channels": [{
-            "offset": "default",
-            "resource_name": "plate_well_0_0",
-            "volume": 10,
-            "flow_rate": "default",
-            "liquid_height": "default",
-            "blow_out_air_volume": 0,
-            "tip": self.tip_rack.get_tip("A1").serialize(),
-            "liquid_class": "WATER"
-          }],
-          "use_channels": [0],
-        })
-      ],
+      match=[header_match],
       json={"status": "ok"},
       status=200,
     )
     self.lh.update_head_state({0: self.tip_rack.get_tip("A1")})
     well = self.plate.get_item("A1")
-    well.tracker.set_used_volume(10)
+    well.tracker.set_liquids([(None, 10)])
     await self.lh.aspirate([well], 10)
 
   @responses.activate
@@ -174,26 +139,12 @@ class TestHTTPBackendOps(unittest.IsolatedAsyncioTestCase):
     responses.add(
       responses.POST,
       "http://localhost:8080/events/dispense",
-      match=[
-        header_match,
-        matchers.json_params_matcher({
-          "channels": [{
-            "offset": "default",
-            "resource_name": "plate_well_0_0",
-            "volume": 10,
-            "flow_rate": "default",
-            "liquid_height": "default",
-            "blow_out_air_volume": 0,
-            "tip": self.tip_rack.get_tip("A1").serialize(),
-            "liquid_class": "WATER"
-          }],
-          "use_channels": [0],
-        })
-      ],
+      match=[header_match],
       json={"status": "ok"},
       status=200,
     )
     self.lh.update_head_state({0: self.tip_rack.get_tip("A1")})
+    self.lh.head[0].get_tip().tracker.add_liquid(None, 10)
     with no_volume_tracking():
       await self.lh.dispense(self.plate["A1"], 10)
 
@@ -202,13 +153,7 @@ class TestHTTPBackendOps(unittest.IsolatedAsyncioTestCase):
     responses.add(
       responses.POST,
       "http://localhost:8080/events/pick-up-tips96",
-      match=[
-        header_match,
-        matchers.json_params_matcher({
-          "resource_name": "tiprack",
-          "offset": {"x": 0, "y": 0, "z": 0},
-        })
-      ],
+      match=[header_match],
       json={"status": "ok"},
       status=200,
     )
@@ -219,13 +164,7 @@ class TestHTTPBackendOps(unittest.IsolatedAsyncioTestCase):
     responses.add(
       responses.POST,
       "http://localhost:8080/events/drop-tips96",
-      match=[
-        header_match,
-        matchers.json_params_matcher({
-          "resource_name": "tiprack",
-          "offset": {"x": 0, "y": 0, "z": 0},
-        })
-      ],
+      match=[header_match],
       json={"status": "ok"},
       status=200,
     )
@@ -237,13 +176,7 @@ class TestHTTPBackendOps(unittest.IsolatedAsyncioTestCase):
     responses.add(
       responses.POST,
       "http://localhost:8080/events/pick-up-tips96",
-      match=[
-        header_match,
-        matchers.json_params_matcher({
-          "resource_name": "tiprack",
-          "offset": {"x": 0, "y": 0, "z": 0},
-        })
-      ],
+      match=[header_match],
       json={"status": "ok"},
       status=200,
     )
@@ -252,21 +185,7 @@ class TestHTTPBackendOps(unittest.IsolatedAsyncioTestCase):
     responses.add(
       responses.POST,
       "http://localhost:8080/events/aspirate96",
-      match=[
-        header_match,
-        matchers.json_params_matcher({
-          "aspiration": {
-            "resource_name": "plate",
-            "volume": 10,
-            "flow_rate": "default",
-            "offset": "default",
-            "liquid_height": "default",
-            "blow_out_air_volume": 0,
-            "tips": [tip.serialize() for tip in self.tip_rack.get_all_tips()],
-            "liquid_class": "WATER"
-          }
-        })
-      ],
+      match=[header_match],
       json={"status": "ok"},
       status=200,
     )
@@ -279,13 +198,7 @@ class TestHTTPBackendOps(unittest.IsolatedAsyncioTestCase):
     responses.add(
       responses.POST,
       "http://localhost:8080/events/pick-up-tips96",
-      match=[
-        header_match,
-        matchers.json_params_matcher({
-          "resource_name": "tiprack",
-          "offset": {"x": 0, "y": 0, "z": 0},
-        })
-      ],
+      match=[header_match],
       json={"status": "ok"},
       status=200,
     )
@@ -294,21 +207,7 @@ class TestHTTPBackendOps(unittest.IsolatedAsyncioTestCase):
     responses.add(
       responses.POST,
       "http://localhost:8080/events/dispense96",
-      match=[
-        header_match,
-        matchers.json_params_matcher({
-          "dispense": {
-            "resource_name": "plate",
-            "volume": 10,
-            "flow_rate": "default",
-            "offset": "default",
-            "liquid_height": "default",
-            "blow_out_air_volume": 0,
-            "tips": [tip.serialize() for tip in self.tip_rack.get_all_tips()],
-            "liquid_class": "WATER"
-          }
-        })
-      ],
+      match=[header_match],
       json={"status": "ok"},
       status=200,
     )

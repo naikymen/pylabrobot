@@ -7,7 +7,6 @@ pyhamilton/LAY-BACKUP
 .ipynb_checkpoints
 *.egg-info
 *.log
-/venv/*
+build/lib
 *.directory
 .venv/*
-/build/*

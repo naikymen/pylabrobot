@@ -15,7 +15,7 @@ try:
 except ImportError:
   HAS_WEBSOCKETS = False
 
-from pylabrobot.liquid_handling.backends import SerializingBackend
+from pylabrobot.liquid_handling.backends.serializing_backend import SerializingBackend
 from pylabrobot.resources import Resource
 from pylabrobot.__version__ import STANDARD_FORM_JSON_VERSION
 
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
   import websockets.legacy
 
 
-logger = logging.getLogger(__name__) # TODO: get from somewhere else?
+logger = logging.getLogger("pylabrobot")
 
 
 class WebSocketBackend(SerializingBackend):
@@ -47,7 +47,7 @@ class WebSocketBackend(SerializingBackend):
       raise RuntimeError("The simulator requires websockets to be installed.")
 
     super().__init__(num_channels=num_channels)
-    self._websocket: Optional[websockets.legacy.server.WebSocketServerProtocol] = None
+    self._websocket: Optional["websockets.legacy.server.WebSocketServerProtocol"] = None
     self._loop: Optional[asyncio.AbstractEventLoop] = None
     self._t: Optional[threading.Thread] = None
     self._stop_: Optional[asyncio.Future] = None
@@ -111,7 +111,7 @@ class WebSocketBackend(SerializingBackend):
     if event == "ping":
       await self.websocket.send(json.dumps({"event": "pong"}))
 
-  async def _socket_handler(self, websocket: websockets.legacy.server.WebSocketServerProtocol):
+  async def _socket_handler(self, websocket: "websockets.legacy.server.WebSocketServerProtocol"):
     """ Handle a new websocket connection. Save the websocket connection store received
     messages in `self.received`. """
 
@@ -266,7 +266,7 @@ class WebSocketBackend(SerializingBackend):
     lock = threading.Lock()
     lock.acquire() # pylint: disable=consider-using-with
     self._loop = asyncio.new_event_loop()
-    self._t = threading.Thread(target=start_loop)
+    self._t = threading.Thread(target=start_loop, daemon=True)
     self.t.start()
 
     while lock.locked():

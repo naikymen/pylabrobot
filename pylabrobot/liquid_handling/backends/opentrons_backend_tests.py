@@ -1,10 +1,11 @@
+import sys
 import unittest
 from unittest.mock import patch
 
 from pylabrobot.liquid_handling import LiquidHandler
 from pylabrobot.liquid_handling.backends.opentrons_backend import OpentronsBackend
-from pylabrobot.liquid_handling.channel_tip_tracker import ChannelHasNoTipError
 from pylabrobot.resources import no_volume_tracking
+from pylabrobot.resources.errors import NoTipError
 from pylabrobot.resources.opentrons import (
   OTDeck,
   opentrons_96_filtertiprack_20ul,
@@ -12,6 +13,7 @@ from pylabrobot.resources.opentrons import (
 )
 
 
+@unittest.skipIf(sys.version_info >= (3, 11), "requires Python 3.10 or lower")
 class OpentronsBackendSetupTests(unittest.IsolatedAsyncioTestCase):
   """ Tests for setup and stop """
   @patch("ot_api.runs.create")
@@ -47,6 +49,7 @@ def _mock_add(load_name, namespace, slot, version, labware_id, display_name):
   return labware_id
 
 
+@unittest.skipIf(sys.version_info >= (3, 11), "requires Python 3.10 or lower")
 class OpentronsBackendDefinitionTests(unittest.IsolatedAsyncioTestCase):
   """ Test for the callback when assigning labware to the deck. """
 
@@ -78,6 +81,7 @@ class OpentronsBackendDefinitionTests(unittest.IsolatedAsyncioTestCase):
     self.deck.assign_child_at_slot(self.plate, slot=11)
 
 
+@unittest.skipIf(sys.version_info >= (3, 11), "requires Python 3.10 or lower")
 class OpentronsBackendCommandTests(unittest.IsolatedAsyncioTestCase):
   """ Tests Opentrons commands """
 
@@ -147,7 +151,7 @@ class OpentronsBackendCommandTests(unittest.IsolatedAsyncioTestCase):
     mock_aspirate.side_effect = assert_parameters
 
     await self.test_tip_pick_up()
-    self.plate.get_well("A1").tracker.set_used_volume(10)
+    self.plate.get_well("A1").tracker.set_liquids([(None, 10)])
     await self.lh.aspirate(self.plate["A1"], vols=[10])
 
   @patch("ot_api.lh.dispense")
@@ -177,9 +181,9 @@ class OpentronsBackendCommandTests(unittest.IsolatedAsyncioTestCase):
       await self.lh.drop_tips96(self.tip_rack)
 
   async def test_aspirate96(self):
-    with self.assertRaises(ChannelHasNoTipError): # FIXME: NotImplementedError?
+    with self.assertRaises(NoTipError): # FIXME: NotImplementedError?
       await self.lh.aspirate_plate(self.plate, volume=100)
 
   async def test_dispense96(self):
-    with self.assertRaises(ChannelHasNoTipError): # FIXME: NotImplementedError?
+    with self.assertRaises(NoTipError): # FIXME: NotImplementedError?
       await self.lh.dispense_plate(self.plate, volume=100)

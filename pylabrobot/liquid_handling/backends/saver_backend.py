@@ -1,6 +1,6 @@
 from typing import Any, Dict, List
 
-from pylabrobot.liquid_handling.backends import LiquidHandlerBackend
+from pylabrobot.liquid_handling.backends.backend import LiquidHandlerBackend
 
 
 class SaverBackend(LiquidHandlerBackend):
@@ -18,6 +18,9 @@ class SaverBackend(LiquidHandlerBackend):
   async def setup(self):
     await super().setup()
     self.commands_received = []
+
+  async def stop(self):
+    await super().stop()
 
   async def send_command(self, command: str, data: Dict[str, Any]):
     self.commands_received.append({"command": command, "data": data})

@@ -1,7 +1,7 @@
-import functools
 import sys
-from typing import Callable, List, cast
+from typing import List, cast
 
+from pylabrobot.machine import MachineFrontend, need_setup_finished
 from pylabrobot.resources import Coordinate, Resource, Plate
 from pylabrobot.plate_reading.backend import PlateReaderBackend
 
@@ -15,55 +15,26 @@ class NoPlateError(Exception):
   pass
 
 
-# copied from LiquidHandler.py, maybe we need a shared base class?
-
-def need_setup_finished(func: Callable): # pylint: disable=no-self-argument
-  """ Decorator for methods that require the plate reader to be set up.
-
-  Checked by verifying `self.setup_finished` is `True`.
-
-  Raises:
-    RuntimeError: If the liquid handler is not set up.
-  """
-
-  @functools.wraps(func)
-  async def wrapper(self, *args, **kwargs):
-    if not self.setup_finished:
-      raise RuntimeError("The setup has not finished. See `PlateReader.setup`.")
-    await func(self, *args, **kwargs) # pylint: disable=not-callable
-  return wrapper
-
-
-class PlateReader(Resource):
+class PlateReader(Resource, MachineFrontend):
   """ The front end for plate readers. Plate readers are devices that can read luminescence,
   absorbance, or fluorescence from a plate.
 
   Plate readers are asynchronous, meaning that their methods will return immediately and
-  will not block. If you want to use a plate reader in a synchronous context, use SyncPlateReader
-  instead.
+  will not block.
 
-  Here's an example of how to use this class in a Juptyer Notebook:
+  Here's an example of how to use this class in a Jupyter Notebook:
 
   >>> from pylabrobot.plate_reading.clario_star import CLARIOStar
   >>> pr = PlateReader(backend=CLARIOStar())
   >>> pr.setup()
   >>> await pr.read_luminescence()
   [[value1, value2, value3, ...], [value1, value2, value3, ...], ...
-
-  In a synchronous context, use asyncio.run() to run the asynchronous methods:
-
-  >>> import asyncio
-  >>> from pylabrobot.plate_reading.clario_star import CLARIOStar
-  >>> pr = SyncPlateReader(backend=CLARIOStar())
-  >>> pr.setup()
-  >>> asyncio.run(pr.read_luminescence())
-  [[value1, value2, value3, ...], [value1, value2, value3, ...], ...
   """
 
   def __init__(self, name: str, backend: PlateReaderBackend) -> None:
-    super().__init__(name=name, size_x=0, size_y=0, size_z=0, category="plate_reader")
-    self.backend = backend
-    self.setup_finished = False
+    MachineFrontend.__init__(self, backend=backend)
+    self.backend: PlateReaderBackend = backend
+    Resource.__init__(self, name=name, size_x=0, size_y=0, size_z=0, category="plate_reader")
 
   def assign_child_resource(self, resource):
     if len(self.children) >= 1:
@@ -76,14 +47,6 @@ class PlateReader(Resource):
     if len(self.children) == 0:
       raise NoPlateError("There is no plate in the plate reader.")
     return cast(Plate, self.children[0])
-
-  async def setup(self) -> None:
-    await self.backend.setup()
-    self.setup_finished = True
-
-  async def stop(self) -> None:
-    await self.backend.stop()
-    self.setup_finished = False
 
   async def open(self) -> None:
     await self.backend.open()
@@ -107,10 +70,11 @@ class PlateReader(Resource):
     wavelength: int,
     report: Literal["OD", "transmittance"]
   ) -> List[List[float]]:
-    """ Read the absorbance from the plate.
+    """ Read the absorbance from the plate in either OD or transmittance.
 
     Args:
       wavelength: The wavelength to read the absorbance at, in nanometers.
+      report: Whether to report the absorbance in OD or transmittance.
     """
 
     if report not in {"OD", "transmittance"}:

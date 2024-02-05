@@ -9,7 +9,8 @@ Subpackages
 .. toctree::
     :maxdepth: 1
 
-    pylabrobot.default
     pylabrobot.liquid_handling
+    pylabrobot.plate_reading
+    pylabrobot.pumps
     pylabrobot.resources
     pylabrobot.utils

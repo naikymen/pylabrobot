@@ -3,20 +3,17 @@
 from __future__ import annotations
 
 import asyncio
-import functools
 import inspect
 import json
 import logging
 import numbers
 import threading
 import time
-from typing import Any, Callable, Dict, Union, Optional, List, Sequence, Set
+from typing import Any, Callable, Dict, Union, Optional, List, Sequence, Set, Tuple, Protocol
 import warnings
 
-from pylabrobot.default import Defaultable, Default
-from pylabrobot.liquid_handling.channel_tip_tracker import ChannelHasNoTipError
+from pylabrobot.machine import MachineFrontend, need_setup_finished
 from pylabrobot.liquid_handling.strictness import Strictness, get_strictness
-from pylabrobot.liquid_handling.channel_tip_tracker import ChannelTipTracker
 from pylabrobot.plate_reading import PlateReader
 from pylabrobot.resources import (
   Container,
@@ -31,9 +28,12 @@ from pylabrobot.resources import (
   TipRack,
   TipSpot,
   Well,
+  TipTracker,
   does_tip_tracking,
   does_volume_tracking
 )
+from pylabrobot.resources.liquid import Liquid
+from pylabrobot.resources.errors import NoTipError
 from pylabrobot.utils.list import expand
 
 from .backends import LiquidHandlerBackend
@@ -53,34 +53,26 @@ from .standard import (
 logger = logging.getLogger("pylabrobot")
 
 
-def need_setup_finished(func: Callable): # pylint: disable=no-self-argument
-  """ Decorator for methods that require the liquid handler to be set up.
-
-  Checked by verifying `self.setup_finished` is `True`.
-
-  Raises:
-    RuntimeError: If the liquid handler is not set up.
-  """
-
-  @functools.wraps(func)
-  async def wrapper(self, *args, **kwargs):
-    if not self.setup_finished:
-      raise RuntimeError("The setup has not finished. See `LiquidHandler.setup`.")
-    await func(self, *args, **kwargs) # pylint: disable=not-callable
-  return wrapper
-
-
-class LiquidHandler:
+class LiquidHandler(MachineFrontend):
   """
   Front end for liquid handlers.
 
   This class is the front end for liquid handlers; it provides a high-level interface for
   interacting with liquid handlers. In the background, this class uses the low-level backend (
   defined in `pyhamilton.liquid_handling.backends`) to communicate with the liquid handler.
-
-  Attributes:
-    setup_finished: Whether the liquid handler has been setup.
   """
+
+  ALLOWED_CALLBACKS = {
+    "aspirate",
+    "aspirate_plate",
+    "dispense",
+    "dispense_plate",
+    "drop_tips",
+    "drop_tips96",
+    "move_resource",
+    "pick_up_tips",
+    "pick_up_tips96",
+  }
 
   def __init__(self, backend: LiquidHandlerBackend, deck: Deck):
     """ Initialize a LiquidHandler.
@@ -90,15 +82,18 @@ class LiquidHandler:
       deck: Deck to use.
     """
 
-    self.backend = backend
-    self.setup_finished = False
+    super().__init__(backend=backend)
+
+    self.backend: LiquidHandlerBackend = backend
     self._picked_up_tips96: Optional[TipRack] = None # TODO: replace with tracker.
+    self._callbacks: Dict[str, OperationCallback] = {}
 
     self.deck = deck
     self.deck.resource_assigned_callback_callback = self.resource_assigned_callback
     self.deck.resource_unassigned_callback_callback = self.resource_unassigned_callback
 
-    self.head: Dict[int, ChannelTipTracker] = {}
+    self.head: Dict[int, TipTracker] = {}
+
 
   async def setup(self):
     """ Prepare the robot for use. """
@@ -106,14 +101,35 @@ class LiquidHandler:
     if self.setup_finished:
       raise RuntimeError("The setup has already finished. See `LiquidHandler.stop`.")
 
-    await self.backend.setup()
-    self.setup_finished = True
+    await super().setup()
 
-    self.head = {c: ChannelTipTracker() for c in range(self.backend.num_channels)}
+    self.head = {c: TipTracker(thing=f"Channel {c}") for c in range(self.backend.num_channels)}
 
     self.resource_assigned_callback(self.deck)
     for resource in self.deck.children:
       self.resource_assigned_callback(resource)
+
+  def save_state(self, filename: str):
+    """ Save the state of the liquid handler (including the deck) to a file. """
+
+    head_state = {channel: tracker.serialize() for channel, tracker in self.head.items()}
+    deck_state = self.deck.serialize_state()
+    state = {"head_state": head_state, "deck_state": deck_state}
+    with open(filename, "w", encoding="utf-8") as f:
+      f.write(json.dumps(state, indent=2))
+
+  def load_state(self, filename: str):
+    """ Load the liquid handler state from a file. """
+
+    with open(filename, "r", encoding="utf-8") as f:
+      state = json.load(f)
+    head_state = state["head_state"]
+    deck_state = state["deck_state"]
+
+    for channel_id, state in head_state.items():
+      # convert head state keys (channel ids) back to integers.
+      self.head[int(channel_id)].load_state(state)
+    self.deck.load_state(deck_state)
 
   def update_head_state(self, state: Dict[int, Optional[Tip]]):
     """ Update the state of the liquid handler head.
@@ -129,16 +145,16 @@ class LiquidHandler:
     assert set(state.keys()).issubset(set(self.head.keys())), "Invalid channel."
 
     for channel, tip in state.items():
-      self.head[channel].set_tip(tip)
+      if tip is None:
+        if self.head[channel].has_tip:
+          self.head[channel].remove_tip()
+      else:
+        self.head[channel].add_tip(tip)
 
   def clear_head_state(self):
     """ Clear the state of the liquid handler head. """
 
     self.update_head_state({c: None for c in self.head.keys()})
-
-  async def stop(self):
-    await self.backend.stop()
-    self.setup_finished = False
 
   def _run_async_in_thread(self, func, *args, **kwargs):
     def callback(*args, **kwargs):
@@ -244,7 +260,7 @@ class LiquidHandler:
     args = {arg: param for arg, param in sig.parameters.items() if arg not in default_args}
     vars_keyword = {arg for arg, param in sig.parameters.items() # **kwargs
                     if param.kind == inspect.Parameter.VAR_KEYWORD}
-    args = {arg: param for arg, param in args.items() # filter *args and **kwargs
+    args = {arg: param for arg, param in args.items() # keep only *args and **kwargs
             if param.kind not in {inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD}}
     non_default = {arg for arg, param in args.items() if param.default == inspect.Parameter.empty}
 
@@ -256,7 +272,8 @@ class LiquidHandler:
     if len(missing) > 0:
       raise TypeError(f"Missing arguments to backend.{method.__name__}: {missing}")
 
-    extra = backend_kws - non_default
+    extra = backend_kws - set(args.keys())
+
     if len(extra) > 0 and len(vars_keyword) == 0:
       if strictness == Strictness.STRICT:
         raise TypeError(f"Extra arguments to backend.{method.__name__}: {extra}")
@@ -278,7 +295,7 @@ class LiquidHandler:
     self,
     tip_spots: List[TipSpot],
     use_channels: Optional[List[int]] = None,
-    offsets: Defaultable[Union[Coordinate, List[Defaultable[Coordinate]]]] = Default,
+    offsets: Optional[Union[Coordinate, List[Optional[Coordinate]]]] = None,
     **backend_kwargs
   ):
     """ Pick up tips from a resource.
@@ -320,9 +337,9 @@ class LiquidHandler:
 
       ValueError: If the positions are not unique.
 
-      ChannelHasTipError: If a channel already has a tip.
+      HasTipError: If a channel already has a tip.
 
-      TipSpotHasNoTipError: If a spot does not have a tip.
+      NoTipError: If a spot does not have a tip.
     """
 
     self._assert_resources_exist(tip_spots)
@@ -346,8 +363,10 @@ class LiquidHandler:
 
     for channel, op in zip(use_channels, pickups):
       if does_tip_tracking() and not op.resource.tracker.is_disabled:
-        op.resource.tracker.queue_pickup(op)
-      self.head[channel].queue_pickup(op)
+        op.resource.tracker.remove_tip()
+      if not does_tip_tracking() and self.head[channel].has_tip:
+        self.head[channel].remove_tip() # override the tip if a tip exists
+      self.head[channel].add_tip(op.tip, origin=op.resource, commit=False)
 
     extras = self._check_args(self.backend.pick_up_tips, backend_kwargs,
       default={"ops", "use_channels"})
@@ -356,24 +375,39 @@ class LiquidHandler:
 
     try:
       await self.backend.pick_up_tips(ops=pickups, use_channels=use_channels, **backend_kwargs)
-    except:
+    except Exception as error:  # pylint: disable=broad-except
       for channel, op in zip(use_channels, pickups):
         if does_tip_tracking() and not op.resource.tracker.is_disabled:
           op.resource.tracker.rollback()
         self.head[channel].rollback()
-      raise
+      self._trigger_callback(
+        "pick_up_tips",
+        liquid_handler=self,
+        operations=pickups,
+        use_channels=use_channels,
+        error=error,
+        **backend_kwargs,
+      )
     else:
       for channel, op in zip(use_channels, pickups):
         if does_tip_tracking() and not op.resource.tracker.is_disabled:
           op.resource.tracker.commit()
         self.head[channel].commit()
+      self._trigger_callback(
+        "pick_up_tips",
+        liquid_handler=self,
+        operations=pickups,
+        use_channels=use_channels,
+        error=None,
+        **backend_kwargs,
+      )
 
   @need_setup_finished
   async def drop_tips(
     self,
     tip_spots: List[Union[TipSpot, Resource]],
     use_channels: Optional[List[int]] = None,
-    offsets: Defaultable[Union[Coordinate, List[Defaultable[Coordinate]]]] = Default,
+    offsets: Optional[Union[Coordinate, List[Optional[Coordinate]]]] = None,
     allow_nonzero_volume: bool = False,
     **backend_kwargs
   ):
@@ -414,9 +448,9 @@ class LiquidHandler:
 
       ValueError: If the positions are not unique.
 
-      ChannelHasNoTipError: If a channel does not have a tip.
+      NoTipError: If a channel does not have a tip.
 
-      TipSpotHasTipError: If a spot already has a tip.
+      HasTipError: If a spot already has a tip.
     """
 
     self._assert_resources_exist(tip_spots)
@@ -431,8 +465,6 @@ class LiquidHandler:
     tips = []
     for channel in use_channels:
       tip = self.head[channel].get_tip()
-      if tip is None:
-        raise ChannelHasNoTipError(channel)
       if tip.tracker.get_used_volume() > 0 and not allow_nonzero_volume:
         raise RuntimeError(f"Cannot drop tip with volume {tip.tracker.get_used_volume()}")
       tips.append(tip)
@@ -446,8 +478,8 @@ class LiquidHandler:
     for channel, op in zip(use_channels, drops):
       if does_tip_tracking() and isinstance(op.resource, TipSpot) and \
           not op.resource.tracker.is_disabled:
-        op.resource.tracker.queue_drop(op)
-      self.head[channel].queue_drop(op)
+        op.resource.tracker.add_tip(op.tip, commit=False)
+      self.head[channel].remove_tip()
 
     extras = self._check_args(self.backend.drop_tips, backend_kwargs,
       default={"ops", "use_channels"})
@@ -456,19 +488,34 @@ class LiquidHandler:
 
     try:
       await self.backend.drop_tips(ops=drops, use_channels=use_channels, **backend_kwargs)
-    except:
+    except Exception as error:  # pylint: disable=broad-except
       for channel, op in zip(use_channels, drops):
         if does_tip_tracking() and \
           (isinstance(op.resource, TipSpot) and not op.resource.tracker.is_disabled):
           op.resource.tracker.rollback()
         self.head[channel].rollback()
-      raise
+      self._trigger_callback(
+        "drop_tips",
+        liquid_handler=self,
+        operations=drops,
+        use_channels=use_channels,
+        error=error,
+        **backend_kwargs,
+      )
     else:
       for channel, op in zip(use_channels, drops):
         if does_tip_tracking() and \
           (isinstance(op.resource, TipSpot) and not op.resource.tracker.is_disabled):
           op.resource.tracker.commit()
         self.head[channel].commit()
+      self._trigger_callback(
+        "drop_tips",
+        liquid_handler=self,
+        operations=drops,
+        use_channels=use_channels,
+        error=None,
+        **backend_kwargs,
+      )
 
   async def return_tips(self):
     """ Return all tips that are currently picked up to their original place.
@@ -488,7 +535,10 @@ class LiquidHandler:
 
     for channel, tracker in self.head.items():
       if tracker.has_tip:
-        tip_spots.append(tracker.get_last_pickup_location())
+        origin = tracker.get_tip_origin()
+        if origin is None:
+          raise RuntimeError("No tip origin found.")
+        tip_spots.append(origin)
         channels.append(channel)
 
     if len(tip_spots) == 0:
@@ -529,7 +579,6 @@ class LiquidHandler:
 
     trash = self.deck.get_trash_area()
     offsets = trash.get_2d_center_offsets(n=n)
-    offsets = list(reversed(offsets))
 
     return await self.drop_tips(
         tip_spots=[trash]*n,
@@ -543,10 +592,10 @@ class LiquidHandler:
     resources: Union[Container, Sequence[Container]],
     vols: Union[List[float], float],
     use_channels: Optional[List[int]] = None,
-    flow_rates: Defaultable[Union[float, List[Defaultable[float]]]] = Default,
+    flow_rates: Optional[Union[float, List[Optional[float]]]] = None,
     end_delay: float = 0,
-    offsets: Union[Defaultable[Coordinate], Sequence[Defaultable[Coordinate]]] = Default,
-    liquid_height: Union[Defaultable[float], List[Defaultable[float]]] = Default,
+    offsets: Union[Optional[Coordinate], Sequence[Optional[Coordinate]]] = None,
+    liquid_height: Union[Optional[float], List[Optional[float]]] = None,
     **backend_kwargs
   ):
     """ Aspirate liquid from the specified wells.
@@ -585,12 +634,12 @@ class LiquidHandler:
         all channels will aspirate that volume.
       use_channels: List of channels to use. Index from front to back. If `None`, the first
         `len(wells)` channels will be used.
-      flow_rates: the aspiration speed. In ul/s. If `Default`, the backend default will be used.
+      flow_rates: the aspiration speed. In ul/s. If `None`, the backend default will be used.
       end_delay: The delay after the last aspiration in seconds, optional. This is useful for when
         the tips used in the aspiration are dripping.
       offsets: List of offsets for each channel, a translation that will be applied to the
         aspiration location. If `None`, no offset will be applied.
-      liquid_height: The height of the liquid in the well, in mm.
+      liquid_height: The height of the liquid in the well wrt the bottom, in mm.
       backend_kwargs: Additional keyword arguments for the backend, optional.
 
     Raises:
@@ -612,13 +661,12 @@ class LiquidHandler:
       # If offsets is supplied, make sure it is a list of the correct length. If it is not in this
       # format, raise an error. If it is not supplied, make it a list of the correct length by
       # spreading channels across the resource evenly.
-      if offsets is not Default:
+      if offsets is not None:
         if not isinstance(offsets, list) or len(offsets) != n:
           raise ValueError("Number of offsets must match number of channels used when aspirating "
                            "from a resource.")
       else:
         offsets = resources.get_2d_center_offsets(n=n)
-        offsets = list(reversed(offsets))
 
       resources = [resources] * n
     else:
@@ -645,15 +693,25 @@ class LiquidHandler:
 
     assert len(vols) == len(offsets) == len(flow_rates) == len(liquid_height)
 
-    aspirations = [Aspiration(r, v, offset=o, flow_rate=fr, liquid_height=lh, tip=t)
-                   for r, v, o, fr, lh, t in
-                    zip(resources, vols, offsets, flow_rates, liquid_height, tips)]
+    # liquid(s) for each channel. If volume tracking is disabled, use None as the liquid.
+    liquids: List[List[Tuple[Optional[Liquid], float]]] = []
+    for r, vol in zip(resources, vols):
+      if r.tracker.is_disabled or not does_volume_tracking():
+        liquids.append([(None, vol)])
+      else:
+        liquids.append(r.tracker.get_liquids(top_volume=vol))
+
+    aspirations = [Aspiration(resource=r, volume=v, offset=o, flow_rate=fr, liquid_height=lh, tip=t,
+                              blow_out_air_volume=0, liquids=lvs)
+                   for r, v, o, fr, lh, t, lvs in
+                    zip(resources, vols, offsets, flow_rates, liquid_height, tips, liquids)]
 
     for op in aspirations:
       if does_volume_tracking():
         if not op.resource.tracker.is_disabled:
-          op.resource.tracker.queue_aspiration(op)
-        op.tip.tracker.queue_aspiration(op)
+          op.resource.tracker.remove_liquid(op.volume)
+        for liquid, volume in reversed(op.liquids):
+          op.tip.tracker.add_liquid(liquid=liquid, volume=volume)
 
     extras = self._check_args(self.backend.aspirate, backend_kwargs,
       default={"ops", "use_channels"})
@@ -662,17 +720,34 @@ class LiquidHandler:
 
     try:
       await self.backend.aspirate(ops=aspirations, use_channels=use_channels, **backend_kwargs)
-    except:
+    except Exception as error:  # pylint: disable=broad-exception-caught
       for op in aspirations:
         if not op.resource.tracker.is_disabled:
           op.resource.tracker.rollback()
           op.tip.tracker.rollback()
-      raise
+      self._trigger_callback(
+        "aspirate",
+        liquid_handler=self,
+        operations=aspirations,
+        use_channels=use_channels,
+        error=error,
+        **backend_kwargs,
+      )
     else:
       for op in aspirations:
         if not op.resource.tracker.is_disabled:
           op.resource.tracker.commit()
           op.tip.tracker.commit()
+      for tracker in self.head.values():
+        tracker.commit()
+      self._trigger_callback(
+        "aspirate",
+        liquid_handler=self,
+        operations=aspirations,
+        use_channels=use_channels,
+        error=None,
+        **backend_kwargs,
+      )
 
     if end_delay > 0:
       time.sleep(end_delay)
@@ -683,10 +758,10 @@ class LiquidHandler:
     resources: Union[Container, Sequence[Container]],
     vols: Union[List[float], float],
     use_channels: Optional[List[int]] = None,
-    flow_rates: Defaultable[Union[float, List[Defaultable[float]]]] = Default,
+    flow_rates: Optional[Union[float, List[Optional[float]]]] = None,
     end_delay: float = 0,
-    offsets: Union[Defaultable[Coordinate], Sequence[Defaultable[Coordinate]]] = Default,
-    liquid_height: Union[Defaultable[float], List[Defaultable[float]]] = Default,
+    offsets: Union[Optional[Coordinate], Sequence[Optional[Coordinate]]] = None,
+    liquid_height: Union[Optional[float], List[Optional[float]]] = None,
     **backend_kwargs
   ):
     """ Dispense liquid to the specified channels.
@@ -725,12 +800,12 @@ class LiquidHandler:
         units of ul.
       use_channels: List of channels to use. Index from front to back. If `None`, the first
         `len(channels)` channels will be used.
-      flow_rates: the flow rates, in ul/s. If `Default`, the backend default will be used.
+      flow_rates: the flow rates, in ul/s. If `None`, the backend default will be used.
       end_delay: The delay after the last dispense in seconds, optional. This is useful for when
         the tips used in the dispense are dripping.
       offsets: List of offsets for each channel, a translation that will be applied to the
         dispense location. If `None`, no offset will be applied.
-      liquid_height: The height of the liquid in the well, in mm.
+      liquid_height: The height of the liquid in the well wrt the bottom, in mm.
       backend_kwargs: Additional keyword arguments for the backend, optional.
 
     Raises:
@@ -745,7 +820,7 @@ class LiquidHandler:
     # which case all channels will dispense to there, or a list of resources.
     if isinstance(resources, Resource): # if single resource, space channels evenly
       if use_channels is None:
-        use_channels = [0]
+        use_channels = list(range(len(vols))) if isinstance(vols, list) else [0]
 
       self._make_sure_channels_exist(use_channels)
 
@@ -754,13 +829,12 @@ class LiquidHandler:
       # If offsets is supplied, make sure it is a list of the correct length. If it is not in this
       # format, raise an error. If it is not supplied, make it a list of the correct length by
       # spreading channels across the resource evenly.
-      if offsets is not Default:
+      if offsets is not None:
         if not isinstance(offsets, list) or len(offsets) != n:
           raise ValueError("Number of offsets must match number of channels used when dispensing "
                           "to a resource.")
       else:
         offsets = resources.get_2d_center_offsets(n=n)
-        offsets = list(reversed(offsets))
 
       resources = [resources] * n
     else:
@@ -787,15 +861,23 @@ class LiquidHandler:
 
     assert len(vols) == len(offsets) == len(flow_rates) == len(liquid_height)
 
-    dispenses = [Dispense(r, v, offset=o, flow_rate=fr, liquid_height=lh, tip=t)
-                 for r, v, o, fr, lh, t in
-                  zip(resources, vols, offsets, flow_rates, liquid_height, tips)]
+    if does_volume_tracking():
+      liquids = [c.get_tip().tracker.get_liquids(top_volume=vol)
+                for c, vol in zip(self.head.values(), vols)]
+    else:
+      liquids = [[(None, vol)] for vol in vols]
+
+    dispenses = [Dispense(resource=r, volume=v, offset=o, flow_rate=fr, liquid_height=lh, tip=t,
+                          liquids=lvs, blow_out_air_volume=0) # TODO: get blow_out_air_volume
+                 for r, v, o, fr, lh, t, lvs in
+                  zip(resources, vols, offsets, flow_rates, liquid_height, tips, liquids)]
 
     for op in dispenses:
       if does_volume_tracking():
         if not op.resource.tracker.is_disabled:
-          op.resource.tracker.queue_dispense(op)
-        op.tip.tracker.queue_dispense(op)
+          for liquid, volume in op.liquids:
+            op.resource.tracker.add_liquid(liquid=liquid, volume=volume)
+        op.tip.tracker.remove_liquid(op.volume)
 
     extras = self._check_args(self.backend.dispense, backend_kwargs,
       default={"ops", "use_channels"})
@@ -804,17 +886,32 @@ class LiquidHandler:
 
     try:
       await self.backend.dispense(ops=dispenses, use_channels=use_channels, **backend_kwargs)
-    except:
+    except Exception as error:  # pylint: disable=broad-except
       for op in dispenses:
         if not op.resource.tracker.is_disabled:
           op.resource.tracker.rollback()
           op.tip.tracker.rollback()
-      raise
+      self._trigger_callback(
+        "dispense",
+        liquid_handler=self,
+        operations=dispenses,
+        use_channels=use_channels,
+        error=error,
+        **backend_kwargs,
+      )
     else:
       for op in dispenses:
         if not op.resource.tracker.is_disabled:
           op.resource.tracker.commit()
           op.tip.tracker.commit()
+      self._trigger_callback(
+        "dispense",
+        liquid_handler=self,
+        operations=dispenses,
+        use_channels=use_channels,
+        error=None,
+        **backend_kwargs,
+      )
 
     if end_delay > 0:
       time.sleep(end_delay)
@@ -826,8 +923,8 @@ class LiquidHandler:
     source_vol: Optional[float] = None,
     ratios: Optional[List[float]] = None,
     target_vols: Optional[List[float]] = None,
-    aspiration_flow_rate: Defaultable[float] = Default,
-    dispense_flow_rates: Defaultable[Union[float, List[Defaultable[float]]]] = Default,
+    aspiration_flow_rate: Optional[float] = None,
+    dispense_flow_rates: Optional[Union[float, List[Optional[float]]]] = None,
     **backend_kwargs
   ):
     """Transfer liquid from one well to another.
@@ -858,9 +955,9 @@ class LiquidHandler:
         the volumes will be distributed equally.
       target_vols: The volumes to transfer to the target wells. If specified, `source_vols` and
         `ratios` must be `None`.
-      aspiration_flow_rate: The flow rate to use when aspirating, in ul/s. If `Default`, the backend
+      aspiration_flow_rate: The flow rate to use when aspirating, in ul/s. If `None`, the backend
         default will be used.
-      dispense_flow_rates: The flow rates to use when dispensing, in ul/s. If `Default`, the backend
+      dispense_flow_rates: The flow rates to use when dispensing, in ul/s. If `None`, the backend
         default will be used. Either a single flow rate for all channels, or a list of flow rates,
         one for each target well.
 
@@ -923,13 +1020,22 @@ class LiquidHandler:
     for extra in extras:
       del backend_kwargs[extra]
 
+    pickup_operation = PickupTipRack(resource=tip_rack, offset=offset)
     await self.backend.pick_up_tips96(
-      pickup=PickupTipRack(resource=tip_rack, offset=offset),
+      pickup=pickup_operation,
       **backend_kwargs
     )
 
     # Save the tips as picked up.
     self._picked_up_tips96 = tip_rack
+
+    self._trigger_callback(
+      "pick_up_tips96",
+      liquid_handler=self,
+      pickup=pickup_operation,
+      error=None,
+      **backend_kwargs,
+    )
 
   async def drop_tips96(
     self,
@@ -954,12 +1060,21 @@ class LiquidHandler:
     for extra in extras:
       del backend_kwargs[extra]
 
+    drop_operation = DropTipRack(resource=tip_rack, offset=offset)
     await self.backend.drop_tips96(
-      drop=DropTipRack(resource=tip_rack, offset=offset),
+      drop=drop_operation,
       **backend_kwargs
     )
 
     self._picked_up_tips96 = None
+
+    self._trigger_callback(
+      "drop_tips96",
+      liquid_handler=self,
+      drop=drop_operation,
+      error=None,
+      **backend_kwargs,
+    )
 
   async def return_tips96(self):
     """ Return the tips on the 96 head to the tip rack where they were picked up.
@@ -983,7 +1098,7 @@ class LiquidHandler:
     self,
     plate: Plate,
     volume: float,
-    flow_rate: Defaultable[float] = Default,
+    flow_rate: Optional[float] = None,
     end_delay: float = 0,
     **backend_kwargs
   ):
@@ -999,7 +1114,7 @@ class LiquidHandler:
       pattern: Either a list of lists of booleans where inner lists represent rows and outer lists
         represent columns, or a string representing a range of positions. Default all.
       volume: The volume to aspirate from each well.
-      flow_rate: The flow rate to use when aspirating, in ul/s. If `Default`, the backend default
+      flow_rate: The flow rate to use when aspirating, in ul/s. If `None`, the backend default
         will be used.
       end_delay: The delay after the last aspiration in seconds, optional. This is useful for when
         the tips used in the aspiration are dripping.
@@ -1011,22 +1126,42 @@ class LiquidHandler:
       del backend_kwargs[extra]
 
     if self._picked_up_tips96 is None:
-      raise ChannelHasNoTipError("No tips have been picked up with the 96 head")
+      raise NoTipError("No tips have been picked up with the 96 head")
     tips = self._picked_up_tips96.get_all_tips()
 
     if plate.has_lid():
       raise ValueError("Aspirating from plate with lid")
 
+    # liquid(s) for each channel. If volume tracking is disabled, use None as the liquid.
+    liquids: List[List[Tuple[Optional[Liquid], float]]] = []
+    for w in plate.get_all_items():
+      if w.tracker.is_disabled or not does_volume_tracking():
+        liquids.append([(None, volume)])
+      else:
+        liquids.append(w.tracker.get_liquids(top_volume=volume))
+
     if plate.num_items_x == 12 and plate.num_items_y == 8:
-      await self.backend.aspirate96(aspiration=AspirationPlate(
+      aspiration_plate = AspirationPlate(
         resource=plate,
         volume=volume,
+        offset=Coordinate.zero(),
         flow_rate=flow_rate,
-        tips=tips),
-        **backend_kwargs)
+        tips=tips,
+        liquid_height=None,
+        blow_out_air_volume=0,
+        liquids=liquids,
+      )
+      await self.backend.aspirate96(aspiration=aspiration_plate, **backend_kwargs)
+      self._trigger_callback(
+        "aspirate_plate",
+        liquid_handler=self,
+        aspiration=aspiration_plate,
+        error=None,
+        **backend_kwargs,
+      )
     else:
       raise NotImplementedError(f"It is not possible to plate aspirate from an {plate.num_items_x} "
-                               f"by {plate.num_items_y} plate")
+                                f"by {plate.num_items_y} plate")
 
     if end_delay > 0:
       time.sleep(end_delay)
@@ -1035,7 +1170,7 @@ class LiquidHandler:
     self,
     plate: Plate,
     volume: float,
-    flow_rate: Defaultable[float] = Default,
+    flow_rate: Optional[float] = None,
     end_delay: float = 0,
     **backend_kwargs
   ):
@@ -1051,7 +1186,7 @@ class LiquidHandler:
       pattern: Either a list of lists of booleans where inner lists represent rows and outer lists
         represent columns, or a string representing a range of positions. Default all.
       volume: The volume to dispense to each well.
-      flow_rate: The flow rate to use when aspirating, in ul/s. If `Default`, the backend default
+      flow_rate: The flow rate to use when aspirating, in ul/s. If `None`, the backend default
         will be used.
       end_delay: The delay after the last dispense in seconds, optional. This is useful for when
         the tips used in the dispense are dripping.
@@ -1063,19 +1198,39 @@ class LiquidHandler:
       del backend_kwargs[extra]
 
     if self._picked_up_tips96 is None:
-      raise ChannelHasNoTipError("No tips have been picked up with the 96 head")
+      raise NoTipError("No tips have been picked up with the 96 head")
     tips = self._picked_up_tips96.get_all_tips()
 
     if plate.has_lid():
       raise ValueError("Dispensing to plate with lid")
 
+    # liquid(s) for each channel. If volume tracking is disabled, use None as the liquid.
+    liquids: List[List[Tuple[Optional[Liquid], float]]] = []
+    for w in plate.get_all_items():
+      if w.tracker.is_disabled or not does_volume_tracking():
+        liquids.append([(None, volume)])
+      else:
+        liquids.append(w.tracker.get_liquids(top_volume=volume))
+
     if plate.num_items_x == 12 and plate.num_items_y == 8:
-      await self.backend.dispense96(dispense=DispensePlate(
+      dispense_plate = DispensePlate(
         resource=plate,
         volume=volume,
+        offset=Coordinate.zero(),
         flow_rate=flow_rate,
-        tips=tips),
-        **backend_kwargs)
+        tips=tips,
+        liquid_height=None,
+        blow_out_air_volume=0,
+        liquids=liquids,
+      )
+      await self.backend.dispense96(dispense=dispense_plate, **backend_kwargs)
+      self._trigger_callback(
+        "dispense_plate",
+        liquid_handler=self,
+        dispense=dispense_plate,
+        error=None,
+        **backend_kwargs,
+      )
     else:
       raise NotImplementedError(f"It is not possible to plate dispense to an {plate.num_items_x} "
                                f"by {plate.num_items_y} plate")
@@ -1088,8 +1243,8 @@ class LiquidHandler:
     source: Plate,
     target: Plate,
     volume: float,
-    aspiration_flow_rate: Defaultable[float] = Default,
-    dispense_flow_rate: Defaultable[float] = Default,
+    aspiration_flow_rate: Optional[float] = None,
+    dispense_flow_rate: Optional[float] = None,
   ):
     """ Stamp (aspiration and dispense) one plate onto another.
 
@@ -1097,9 +1252,9 @@ class LiquidHandler:
       source: the source plate
       target: the target plate
       volume: the volume to be transported
-      aspiration_flow_rate: the flow rate for the aspiration, in ul/s. If `Default`, the backend
+      aspiration_flow_rate: the flow rate for the aspiration, in ul/s. If `None`, the backend
         default will be used.
-      dispense_flow_rate: the flow rate for the dispense, in ul/s. If `Default`, the backend default
+      dispense_flow_rate: the flow rate for the dispense, in ul/s. If `None`, the backend default
         will be used.
     """
 
@@ -1121,13 +1276,15 @@ class LiquidHandler:
     to: Coordinate,
     intermediate_locations: Optional[List[Coordinate]] = None,
     resource_offset: Coordinate = Coordinate.zero(),
-    to_offset: Coordinate = Coordinate.zero(),
+    destination_offset: Coordinate = Coordinate.zero(),
     pickup_distance_from_top: float = 0,
     get_direction: GripDirection = GripDirection.FRONT,
     put_direction: GripDirection = GripDirection.FRONT,
     **backend_kwargs
   ):
     """ Move a resource to a new location.
+
+    Has convenience methods :meth:`move_plate` and :meth:`move_lid`.
 
     Examples:
       Move a plate to a new location:
@@ -1137,8 +1294,9 @@ class LiquidHandler:
     Args:
       resource: The Resource object.
       to: The absolute coordinate (meaning relative to deck) to move the resource to.
+      intermediate_locations: A list of intermediate locations to move the resource through.
       resource_offset: The offset from the resource's origin, optional (rarely necessary).
-      to_offset: The offset from the location's origin, optional (rarely necessary).
+      destination_offset: The offset from the location's origin, optional (rarely necessary).
       pickup_distance_from_top: The distance from the top of the resource to pick up from.
       get_direction: The direction from which to pick up the resource.
       put_direction: The direction from which to put down the resource.
@@ -1148,16 +1306,28 @@ class LiquidHandler:
     for extra in extras:
       del backend_kwargs[extra]
 
-    return await self.backend.move_resource(move=Move(
+    move_operation = Move(
       resource=resource,
-      to=to,
-      intermediate_locations=intermediate_locations,
+      destination=to,
+      intermediate_locations=intermediate_locations or [],
       resource_offset=resource_offset,
-      to_offset=to_offset,
+      destination_offset=destination_offset,
       pickup_distance_from_top=pickup_distance_from_top,
       get_direction=get_direction,
-      put_direction=put_direction),
-      **backend_kwargs)
+      put_direction=put_direction,
+    )
+
+    result = await self.backend.move_resource(move=move_operation, **backend_kwargs)
+
+    self._trigger_callback(
+      "move_resource",
+      liquid_handler=self,
+      move=move_operation,
+      error=None,
+      **backend_kwargs,
+    )
+
+    return result
 
   async def move_lid(
     self,
@@ -1165,7 +1335,7 @@ class LiquidHandler:
     to: Union[Plate, ResourceStack, Coordinate],
     intermediate_locations: Optional[List[Coordinate]] = None,
     resource_offset: Coordinate = Coordinate.zero(),
-    to_offset: Coordinate = Coordinate.zero(),
+    destination_offset: Coordinate = Coordinate.zero(),
     get_direction: GripDirection = GripDirection.FRONT,
     put_direction: GripDirection = GripDirection.FRONT,
     pickup_distance_from_top: float = 5.7,
@@ -1189,7 +1359,7 @@ class LiquidHandler:
       lid: The lid to move. Can be either a Plate object or a Lid object.
       to: The location to move the lid to, either a plate, ResourceStack or a Coordinate.
       resource_offset: The offset from the resource's origin, optional (rarely necessary).
-      to_offset: The offset from the location's origin, optional (rarely necessary).
+      destination_offset: The offset from the location's origin, optional (rarely necessary).
 
     Raises:
       ValueError: If the lid is not assigned to a resource.
@@ -1219,7 +1389,7 @@ class LiquidHandler:
       intermediate_locations=intermediate_locations,
       pickup_distance_from_top=pickup_distance_from_top,
       resource_offset=resource_offset,
-      to_offset=to_offset,
+      destination_offset=destination_offset,
       get_direction=get_direction,
       put_direction=put_direction,
       **backend_kwargs)
@@ -1238,7 +1408,7 @@ class LiquidHandler:
     to: Union[ResourceStack, CarrierSite, Resource, Coordinate],
     intermediate_locations: Optional[List[Coordinate]] = None,
     resource_offset: Coordinate = Coordinate.zero(),
-    to_offset: Coordinate = Coordinate.zero(),
+    destination_offset: Coordinate = Coordinate.zero(),
     put_direction: GripDirection = GripDirection.FRONT,
     get_direction: GripDirection = GripDirection.FRONT,
     pickup_distance_from_top: float = 13.2,
@@ -1273,7 +1443,7 @@ class LiquidHandler:
       plate: The plate to move. Can be either a Plate object or a CarrierSite object.
       to: The location to move the plate to, either a plate, CarrierSite or a Coordinate.
       resource_offset: The offset from the resource's origin, optional (rarely necessary).
-      to_offset: The offset from the location's origin, optional (rarely necessary).
+      destination_offset: The offset from the location's origin, optional (rarely necessary).
     """
 
     if isinstance(to, ResourceStack):
@@ -1294,7 +1464,7 @@ class LiquidHandler:
       intermediate_locations=intermediate_locations,
       pickup_distance_from_top=pickup_distance_from_top,
       resource_offset=resource_offset,
-      to_offset=to_offset,
+      destination_offset=destination_offset,
       get_direction=get_direction,
       put_direction=put_direction,
       **backend_kwargs)
@@ -1332,6 +1502,30 @@ class LiquidHandler:
     with open(path, "w", encoding="utf-8") as f:
       json.dump(self.serialize(), f, indent=2)
 
+  def register_callback(self, method_name: str, callback: OperationCallback):
+    """Registers a callback for a specific method."""
+    if method_name in self._callbacks:
+      error_message = f"Callback already registered for: {method_name}"
+      raise RuntimeError(error_message)
+    if method_name not in self.ALLOWED_CALLBACKS:
+      error_message = f"Callback not allowed: {method_name}"
+      raise RuntimeError(error_message)
+    self._callbacks[method_name] = callback
+
+  def _trigger_callback(self, method_name: str, *args, error: Optional[Exception] = None, **kwargs):
+    """Triggers the callback associated with a method, if any.
+
+    NB: If an error exists it will be passed to the callback instead of being raised.
+    """
+    if callback := self._callbacks.get(method_name):
+      callback(self, *args, error=error, **kwargs)
+    elif error is not None:
+      raise error
+
+  @property
+  def callbacks(self):
+    return self._callbacks
+
   @classmethod
   def deserialize(cls, data: dict) -> LiquidHandler:
     """ Deserialize a liquid handler from a dictionary.
@@ -1354,3 +1548,8 @@ class LiquidHandler:
 
     with open(path, "r", encoding="utf-8") as f:
       return cls.deserialize(json.load(f))
+
+
+class OperationCallback(Protocol):
+  def __call__(self, handler: "LiquidHandler", *args: Any, **kwargs: Any) -> None:
+    ...  # pragma: no cover

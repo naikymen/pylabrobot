@@ -4,15 +4,15 @@ import http.server
 import logging
 import os
 import threading
-import typing
+from typing import List, Optional, Tuple
 import webbrowser
 
-from pylabrobot.liquid_handling.backends import WebSocketBackend
-from pylabrobot.resources import Plate, TipRack
+from pylabrobot.liquid_handling.backends.websocket import WebSocketBackend
 from pylabrobot.liquid_handling.standard import Move
+from pylabrobot.resources import Container, Plate, TipRack, Liquid
 
 
-logger = logging.getLogger(__name__) # TODO: get from somewhere else?
+logger = logging.getLogger("pylabrobot")
 
 
 class SimulatorBackend(WebSocketBackend):
@@ -24,32 +24,12 @@ class SimulatorBackend(WebSocketBackend):
 
   The websocket server will run at `http://localhost:2121 <http://localhost:2121>`_ by default. If a
   new browser page connects, it will replace the existing connection. All previously sent actions
-  will be sent to the new page, with no simualated delay, to ensure that the state of the simulation
+  will be sent to the new page, with no simulated delay, to ensure that the state of the simulation
   remains the same. This also happens when a browser reloads the page or on the first page load.
-
-  Note that the simulator backend uses
-  :class:`~pylabrobot.resources.Resource` 's to locate resources, where eg.
-  :class:`~pylabrobot.liquid_handling.backends.hamilton.STAR` uses absolute coordinates.
 
   .. note::
 
     See :doc:`/using-the-simulator` for a more complete tutorial.
-
-  Examples:
-    Running a simple simulation:
-
-    >>> import pyhamilton.liquid_handling.backends.simulation.simulation as simulation
-    >>> from pylabrobot.liquid_handling.liquid_handler import LiquidHandler
-    >>> sb = simulation.SimulatorBackend()
-    >>> lh = LiquidHandler(backend=sb)
-    >>> lh.setup()
-    INFO:websockets.server:server listening on 127.0.0.1:2121
-    INFO:pyhamilton.liquid_handling.backends.simulation.simulation:Simulation server started at
-      http://127.0.0.1:2121
-    INFO:pyhamilton.liquid_handling.backends.simulation.simulation:File server started at
-      http://127.0.0.1:1337
-    >>> lh.edit_tips(tips, pattern=[[True]*12]*8)
-    >>> lh.pick_up_tips(tips["A1:H1"])
   """
 
   def __init__(
@@ -83,8 +63,8 @@ class SimulatorBackend(WebSocketBackend):
     self.fs_port = fs_port
     self.open_browser = open_browser
 
-    self._httpd: typing.Optional[http.server.HTTPServer] = None
-    self._fst: typing.Optional[threading.Thread] = None
+    self._httpd: Optional[http.server.HTTPServer] = None
+    self._fst: Optional[threading.Thread] = None
 
     self._sent_messages = []
     self.received = []
@@ -126,15 +106,36 @@ class SimulatorBackend(WebSocketBackend):
                          "repository.")
 
     def start_server():
-      # try to start the server. If the port is in use, try with another port until it succeeds.
-      og_path = os.getcwd()
-      os.chdir(path) # only within thread.
+      ws_host, ws_port, fs_host, fs_port = self.ws_host, self.ws_port, self.fs_host, self.fs_port
 
+      # try to start the server. If the port is in use, try with another port until it succeeds.
       class QuietSimpleHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         """ A simple HTTP request handler that does not log requests. """
+        def __init__(self, *args, **kwargs):
+          super().__init__(*args, directory=path, **kwargs)
+
         def log_message(self, format, *args):
           # pylint: disable=redefined-builtin
           pass
+
+        def do_GET(self) -> None:
+          # rewrite some info in the index.html file on the fly,
+          # like a simple template engine
+          if self.path == "/":
+            with open(os.path.join(path, "index.html"), "r", encoding="utf-8") as f:
+              content = f.read()
+
+            content = content.replace("{{ ws_host }}", ws_host)
+            content = content.replace("{{ ws_port }}", str(ws_port))
+            content = content.replace("{{ fs_host }}", fs_host)
+            content = content.replace("{{ fs_port }}", str(fs_port))
+
+            self.send_response(200)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            self.wfile.write(content.encode("utf-8"))
+          else:
+            return super().do_GET()
 
       while True:
         try:
@@ -147,8 +148,6 @@ class SimulatorBackend(WebSocketBackend):
           self.fs_port += 1
 
       self.httpd.serve_forever()
-
-      os.chdir(og_path)
 
     self._fst = threading.Thread(name="simulation_fs", target=start_server, daemon=True)
     self.fst.start()
@@ -172,39 +171,65 @@ class SimulatorBackend(WebSocketBackend):
   async def move_resource(self, move: Move, **backend_kwargs):
     raise NotImplementedError("This method is not implemented in the simulator.")
 
-  async def adjust_well_volume(self, plate: Plate, pattern: typing.List[typing.List[float]]):
-    """ Fill a resource with liquid (**simulator only**).
+  async def adjust_wells_liquids(
+    self,
+    plate: Plate,
+    liquids: List[List[Tuple[Optional["Liquid"], float]]]
+  ):
+    """ Fill all wells in a plate with the same mix of liquids (**simulator only**).
 
     Simulator method to fill a resource with liquid, for testing of liquid handling.
 
     Args:
-      resource: The resource to fill.
-      pattern: A list of lists of liquid volumes to fill the resource with.
-
-    Raises:
-      RuntimeError: if this method is called before :func:`~setup`.
+      plate: The plate to fill.
+      liquids: The liquids to fill the wells with. Liquids are specified as a list of tuples of
+        (liquid, volume). Unspecified liquids are represented as `None`. The bottom liquid should
+        be the first in the inner list. The outer list contains the wells, starting from the top
+        left and going down, then right.
     """
-
-    # Check if set up has been run, else raise a RuntimeError.
-    if not self.setup_finished:
-      raise RuntimeError("The setup has not been finished.")
 
     serialized_pattern = []
 
-    for i, row in enumerate(pattern):
-      for j, vol in enumerate(row):
-        idx = i + j * 8
-        well = plate.get_item(idx)
-        if well is None:
-          raise RuntimeError(f"Could not find well {idx} in plate {plate.name}.")
-        serialized_pattern.append({
-          "well_name": well.name,
-          "volume": vol
-        })
+    if len(liquids) != plate.num_items:
+      raise ValueError("The number of wells in the plate does not match the number of liquids.")
 
-    await self.send_command(command="adjust_well_volume", data={"pattern": serialized_pattern})
+    for well, well_liquids in zip(plate.get_all_items(), liquids):
+      serialized_pattern.append({
+        "well_name": well.name,
+        "liquids": [
+          {
+            "liquid": liquid.name if liquid is not None else None,
+            "volume": volume
+          } for liquid, volume in well_liquids]
+      })
 
-  async def edit_tips(self, tip_rack: TipRack, pattern: typing.List[typing.List[bool]]):
+    await self.send_command(command="adjust_well_liquids", data={"pattern": serialized_pattern})
+
+  async def adjust_container_liquids(
+    self,
+    container: Container,
+    liquids: List[Tuple[Liquid, float]]
+  ):
+    """ Fill a container with the specified liquids (**simulator only**).
+
+    Simulator method to fill a resource with liquid, for testing of liquid handling.
+
+    Args:
+      container: The container to fill.
+      liquids: The liquids to fill the container with. Liquids are specified as a list of tuples of
+        (liquid, volume).
+    """
+
+    serialized_liquids = [
+      {"liquid": liquid.name if liquid is not None else None, "volume": volume}
+      for liquid, volume in liquids]
+
+    await self.send_command(command="adjust_container_liquids", data={
+      "liquids": serialized_liquids,
+      "resource_name": container.name
+    })
+
+  async def edit_tips(self, tip_rack: TipRack, pattern: List[List[bool]]):
     """ Place and/or remove tips on the robot (**simulator only**).
 
     Simulator method to place tips on the robot, for testing of tip pickup/droping. Unlike,
@@ -217,9 +242,6 @@ class SimulatorBackend(WebSocketBackend):
       resource: The resource to place tips in.
       pattern: A list of lists of places where to place a tip. TipRack will be removed from the
         resource where the pattern is `False`.
-
-    Raises:
-      RuntimeError: if this method is called before :func:`~setup`.
     """
 
     serialized_pattern = []
@@ -228,8 +250,6 @@ class SimulatorBackend(WebSocketBackend):
       for j, has_one in enumerate(row):
         idx = i + j * 8
         tip = tip_rack.get_item(idx)
-        if tip is None:
-          raise RuntimeError(f"Could not find tip {idx} in tip rack {tip_rack.name}.")
         serialized_pattern.append({
           "tip": tip.serialize(),
           "has_one": has_one

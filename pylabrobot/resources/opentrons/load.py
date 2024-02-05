@@ -8,14 +8,11 @@ try:
 except ImportError:
   USE_OT = False
 
+from pylabrobot.resources.coordinate import Coordinate
+from pylabrobot.resources.plate import Plate
 from pylabrobot.resources.tip import Tip, TipCreator
-from pylabrobot.resources import (
-  Coordinate,
-  Plate,
-  TipRack,
-  Well,
-  TipSpot,
-)
+from pylabrobot.resources.tip_rack import TipRack, TipSpot
+from pylabrobot.resources.well import Well
 
 if TYPE_CHECKING:
   from opentrons_shared_data.labware.dev_types import LabwareDefinition
@@ -108,7 +105,6 @@ def ot_definition_to_resource(
         size_y=size_y,
         size_z=size_z,
         items=cast(List[List[Well]], wells),
-        one_dot_max=None,
         model=data["metadata"]["displayName"]
       )
     elif display_category == "tipRack":

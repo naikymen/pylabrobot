@@ -3,10 +3,11 @@
 import binascii
 import csv
 import struct
+import sys
 import textwrap
 from typing import Dict
 
-from pylabrobot.liquid_handling.liquid_classes import LiquidClass
+from pylabrobot.resources.liquid import Liquid
 
 
 def liquid_class_to_tip_volume(liquid_class: str) -> float:
@@ -33,7 +34,7 @@ def ieee_754_to_float(dat: bytes) -> float:
 
 
 def main():
-  with open("LiquidClass.csv", "r", encoding="utf-8") as f:
+  with open(sys.argv[1], "r", encoding="utf-8") as f:
     lines = f.readlines()
     lines = lines[1:]
     reader = csv.reader(lines)
@@ -77,7 +78,7 @@ def main():
 
     try:
       tip_volume = liquid_class_to_tip_volume(name)
-      liquid = LiquidClass.from_str(liquid_name)
+      liquid = Liquid.from_str(liquid_name)
     except ValueError as e:
       print(f"\n!!! Skipping, because: {e} !!!\n")
       continue
@@ -102,7 +103,7 @@ def main():
 
     out_file.write(textwrap.dedent(f"""\n
     {notes}
-    mapping[({tip_volume}, {core}, {tip}, {has_filter}, LiquidClass.{liquid.name}, {jet}, {empty})] = \\
+    mapping[({tip_volume}, {core}, {tip}, {has_filter}, Liquid.{liquid.name}, {jet}, {empty})] = \\
     {name} = HamiltonLiquidClass(
       curve={curve},
       aspiration_flow_rate={aspiration_flow_rate},

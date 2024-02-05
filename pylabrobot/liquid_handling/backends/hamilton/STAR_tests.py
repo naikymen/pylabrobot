@@ -1,10 +1,10 @@
-""" Tests for Hamilton backend. """
+""" Tests for the Hamilton STAR backend. """
 
 from typing import cast
 import unittest
 
 from pylabrobot.liquid_handling import LiquidHandler
-from pylabrobot.liquid_handling.backends import LiquidHandlerBackend
+from pylabrobot.liquid_handling.backends.backend import LiquidHandlerBackend
 from pylabrobot.plate_reading import PlateReader
 from pylabrobot.plate_reading.plate_reader_tests import MockPlateReaderBackend
 from pylabrobot.resources import (
@@ -25,11 +25,12 @@ from pylabrobot.liquid_handling.standard import Pickup, GripDirection
 
 from tests.usb import MockDev, MockEndpoint
 
-from .STAR import STAR
-from .errors import (
+from .STAR import (
+  STAR,
+  parse_star_fw_string,
+  STARFirmwareError,
   CommandSyntaxError,
-  HamiltonFirmwareError,
-  NoTipError,
+  HamiltonNoTipError,
   HardwareError,
   UnknownHamiltonError
 )
@@ -64,45 +65,45 @@ class TestSTARResponseParsing(unittest.TestCase):
     self.star = STAR()
 
   def test_parse_response_params(self):
-    parsed = self.star.parse_response("C0QMid1111", "")
+    parsed = parse_star_fw_string("C0QMid1111", "")
     self.assertEqual(parsed, {"id": 1111})
 
-    parsed = self.star.parse_response("C0QMid1111", "id####")
+    parsed = parse_star_fw_string("C0QMid1111", "id####")
     self.assertEqual(parsed, {"id": 1111})
 
-    parsed = self.star.parse_response("C0QMid1112aaabc", "aa&&&")
+    parsed = parse_star_fw_string("C0QMid1112aaabc", "aa&&&")
     self.assertEqual(parsed, {"id": 1112, "aa": "abc"})
 
-    parsed = self.star.parse_response("C0QMid1112aa-21", "aa##")
+    parsed = parse_star_fw_string("C0QMid1112aa-21", "aa##")
     self.assertEqual(parsed, {"id": 1112, "aa": -21})
 
-    parsed = self.star.parse_response("C0QMid1113pqABC", "pq***")
+    parsed = parse_star_fw_string("C0QMid1113pqABC", "pq***")
     self.assertEqual(parsed, {"id": 1113, "pq": int("ABC", base=16)})
 
     with self.assertRaises(ValueError):
       # should fail with auto-added id.
-      parsed = self.star.parse_response("C0QMaaabc", "")
+      parsed = parse_star_fw_string("C0QMaaabc", "")
       self.assertEqual(parsed, "")
 
     with self.assertRaises(ValueError):
-      self.star.parse_response("C0QM", "id####") # pylint: disable=expression-not-assigned
+      parse_star_fw_string("C0QM", "id####") # pylint: disable=expression-not-assigned
 
     with self.assertRaises(ValueError):
-      self.star.parse_response("C0RV", "") # pylint: disable=expression-not-assigned
+      parse_star_fw_string("C0RV", "") # pylint: disable=expression-not-assigned
 
   def test_parse_response_no_errors(self):
-    parsed = self.star.parse_response("C0QMid1111", "")
+    parsed = parse_star_fw_string("C0QMid1111", "")
     self.assertEqual(parsed, {"id": 1111})
 
-    parsed = self.star.parse_response("C0QMid1111 er00/00", "")
+    parsed = parse_star_fw_string("C0QMid1111 er00/00", "")
     self.assertEqual(parsed, {"id": 1111})
 
-    parsed = self.star.parse_response("C0QMid1111 er00/00 P100/00", "")
+    parsed = parse_star_fw_string("C0QMid1111 er00/00 P100/00", "")
     self.assertEqual(parsed, {"id": 1111})
 
   def test_parse_response_master_error(self):
-    with self.assertRaises(HamiltonFirmwareError) as ctx:
-      self.star.parse_response("C0QMid1111 er01/30", "")
+    with self.assertRaises(STARFirmwareError) as ctx:
+      self.star.check_fw_string_error("C0QMid1111 er01/30")
     e = ctx.exception
     self.assertEqual(len(e), 1)
     assert "Master" in e
@@ -110,8 +111,8 @@ class TestSTARResponseParsing(unittest.TestCase):
     self.assertEqual(e["Master"].message, "Unknown command")
 
   def test_parse_response_slave_errors(self):
-    with self.assertRaises(HamiltonFirmwareError) as ctx:
-      self.star.parse_response("C0QMid1111 er99/00 P100/00 P235/00 P402/98 PG08/76", "")
+    with self.assertRaises(STARFirmwareError) as ctx:
+      self.star.check_fw_string_error("C0QMid1111 er99/00 P100/00 P235/00 P402/98 PG08/76")
     e = ctx.exception
     self.assertEqual(len(e), 3)
     assert "Master" not in e
@@ -122,15 +123,15 @@ class TestSTARResponseParsing(unittest.TestCase):
 
     self.assertIsInstance(e["Pipetting channel 2"], UnknownHamiltonError)
     self.assertIsInstance(e["Pipetting channel 4"], HardwareError)
-    self.assertIsInstance(e["Pipetting channel 16"], NoTipError)
+    self.assertIsInstance(e["Pipetting channel 16"], HamiltonNoTipError)
 
     self.assertEqual(e["Pipetting channel 2"].message, "No error")
     self.assertEqual(e["Pipetting channel 4"].message, "Unknown trace information code 98")
     self.assertEqual(e["Pipetting channel 16"].message, "Tip already picked up")
 
   def test_parse_slave_response_errors(self):
-    with self.assertRaises(HamiltonFirmwareError) as ctx:
-      self.star.parse_response("P1OQid1111er30", "")
+    with self.assertRaises(STARFirmwareError) as ctx:
+      self.star.check_fw_string_error("P1OQid1111er30")
 
     e = ctx.exception
     self.assertEqual(len(e), 1)
@@ -172,7 +173,7 @@ class TestSTARUSBComms(unittest.IsolatedAsyncioTestCase):
 
 
 class STARCommandCatcher(STAR):
-  """ Mock backend for star that catches commands and saves them instad of sending them to the
+  """ Mock backend for star that catches commands and saves them instead of sending them to the
   machine. """
 
   def __init__(self):
@@ -180,10 +181,10 @@ class STARCommandCatcher(STAR):
     self.commands = []
 
   async def setup(self) -> None:
-    self.setup_finished = True
     self._num_channels = 8
     self.iswap_installed = True
     self.core96_head_installed = True
+    self._core_parked = True
 
   async def send_command(self, module, command, tip_pattern=None, fmt="", read_timeout=0,
     write_timeout=0, **kwargs):
@@ -243,7 +244,7 @@ class TestSTARLiquidHandlerCommands(unittest.IsolatedAsyncioTestCase):
     # Command that fits the format, but is not the same as the command we are looking for.
     similar = None
 
-    parsed_cmd = self.mockSTAR.parse_fw_string(cmd, fmt)
+    parsed_cmd = parse_star_fw_string(cmd, fmt)
     parsed_cmd.pop("id")
 
     for sent_cmd in self.mockSTAR.commands:
@@ -252,7 +253,7 @@ class TestSTARLiquidHandlerCommands(unittest.IsolatedAsyncioTestCase):
         continue
 
       try:
-        parsed_sent_cmd = self.mockSTAR.parse_fw_string(sent_cmd, fmt)
+        parsed_sent_cmd = parse_star_fw_string(sent_cmd, fmt)
         parsed_sent_cmd.pop("id")
 
         if parsed_cmd == parsed_sent_cmd:
@@ -275,6 +276,12 @@ class TestSTARLiquidHandlerCommands(unittest.IsolatedAsyncioTestCase):
     elif not should_be and found:
       self.fail(f"Command {cmd} was found in sent commands: {self.mockSTAR.commands}")
 
+  async def test_indictor_light(self):
+    """ Test the indicator light. """
+    await self.mockSTAR.set_loading_indicators(bit_pattern=[True]*54, blink_pattern=[False]*54)
+    self._assert_command_sent_once("C0CPid0000cl3FFFFFFFFFFFFFcb00000000000000",
+                                             "cl**************cb**************")
+
   def test_ops_to_fw_positions(self):
     """ Convert channel positions to firmware positions. """
     # pylint: disable=protected-access
@@ -282,23 +289,44 @@ class TestSTARLiquidHandlerCommands(unittest.IsolatedAsyncioTestCase):
     tip_f1 = self.tip_rack.get_item("F1")
     tip = self.tip_rack.get_tip("A1")
 
-    op = Pickup(resource=tip_a1, tip=tip)
+    op1 = Pickup(resource=tip_a1, tip=tip, offset=Coordinate.zero())
+    op2 = Pickup(resource=tip_f1, tip=tip, offset=Coordinate.zero())
     self.assertEqual(
-      self.mockSTAR._ops_to_fw_positions((op,), use_channels=[0]),
+      self.mockSTAR._ops_to_fw_positions((op1,), use_channels=[0]),
       ([1179, 0], [2418, 0], [True, False])
     )
 
-    ops = (Pickup(resource=tip_a1, tip=tip), Pickup(resource=tip_f1, tip=tip))
     self.assertEqual(
-      self.mockSTAR._ops_to_fw_positions(ops, use_channels=[0, 1]),
+      self.mockSTAR._ops_to_fw_positions((op1, op2), use_channels=[0, 1]),
       ([1179, 1179, 0], [2418, 1968, 0], [True, True, False])
     )
 
-    ops = (Pickup(resource=tip_a1, tip=tip), Pickup(resource=tip_f1, tip=tip))
     self.assertEqual(
-      self.mockSTAR._ops_to_fw_positions(ops, use_channels=[1, 2]),
+      self.mockSTAR._ops_to_fw_positions((op1, op2), use_channels=[1, 2]),
       ([0, 1179, 1179, 0], [0, 2418, 1968, 0], [False, True, True, False])
     )
+
+    # check two operations on the same row, different column.
+    tip_a2 = self.tip_rack.get_item("A2")
+    op3 = Pickup(resource=tip_a2, tip=tip, offset=Coordinate.zero())
+    self.assertEqual(
+      self.mockSTAR._ops_to_fw_positions((op1, op3), use_channels=[0, 1]),
+      ([1179, 1269, 0], [2418, 2418, 0], [True, True, False])
+    )
+
+    # A1, A2, B1, B2
+    tip_b1 = self.tip_rack.get_item("B1")
+    op4 = Pickup(resource=tip_b1, tip=tip, offset=Coordinate.zero())
+    tip_b2 = self.tip_rack.get_item("B2")
+    op5 = Pickup(resource=tip_b2, tip=tip, offset=Coordinate.zero())
+    self.assertEqual(
+      self.mockSTAR._ops_to_fw_positions((op1, op4, op3, op5), use_channels=[0, 1, 2, 3]),
+      ([1179, 1179, 1269, 1269, 0], [2418, 2328, 2418, 2328, 0], [True, True, True, True, False])
+    )
+
+    # make sure two operations on the same spot are not allowed
+    with self.assertRaises(ValueError):
+      self.mockSTAR._ops_to_fw_positions((op1, op1), use_channels=[0, 1])
 
   def _assert_command_sent_once(self, cmd: str, fmt: str):
     """ Assert that the given command was sent to the backend exactly once. """
@@ -341,7 +369,7 @@ class TestSTARLiquidHandlerCommands(unittest.IsolatedAsyncioTestCase):
     assert self.plate.lid is not None
     self.plate.lid.unassign()
     for well in self.plate.get_items(["A1", "B1"]):
-      well.tracker.set_used_volume(100 * 1.072) # liquid class correction
+      well.tracker.set_liquids([(None, 100 * 1.072)]) # liquid class correction
     await self.lh.aspirate(self.plate["A1", "B1"], vols=[100, 100], use_channels=[4, 5])
     self._assert_command_sent_once("C0ASid0004at0 0 0 0 0 0 0&tm0 0 0 0 1 1 0&xp00000 00000 00000 "
       "00000 02980 02980 00000&yp0000 0000 0000 0000 1460 1370 0000&th2450te2450lp2011 2011 2011 "
@@ -365,7 +393,7 @@ class TestSTARLiquidHandlerCommands(unittest.IsolatedAsyncioTestCase):
     assert self.plate.lid is not None
     self.plate.lid.unassign()
     well = self.plate.get_item("A1")
-    well.tracker.set_used_volume(100 * 1.072) # liquid class correction
+    well.tracker.set_liquids([(None, 100 * 1.072)]) # liquid class correction
     await self.lh.aspirate([well], vols=[100])
 
     # This passes the test, but is not the real command.
@@ -384,7 +412,7 @@ class TestSTARLiquidHandlerCommands(unittest.IsolatedAsyncioTestCase):
     assert self.plate.lid is not None
     self.plate.lid.unassign()
     well = self.plate.get_item("A1")
-    well.tracker.set_used_volume(100 * 1.072) # liquid class correction
+    well.tracker.set_liquids([(None, 100 * 1.072)]) # liquid class correction
     await self.lh.aspirate([well], vols=[100], liquid_height=10)
 
     # This passes the test, but is not the real command.
@@ -404,7 +432,7 @@ class TestSTARLiquidHandlerCommands(unittest.IsolatedAsyncioTestCase):
     self.plate.lid.unassign()
     wells = self.plate.get_items("A1:B1")
     for well in wells:
-      well.tracker.set_used_volume(100 * 1.072) # liquid class correction
+      well.tracker.set_liquids([(None, 100 * 1.072)]) # liquid class correction
     await self.lh.aspirate(self.plate["A1:B1"], vols=100)
 
     # This passes the test, but is not the real command.
@@ -421,8 +449,8 @@ class TestSTARLiquidHandlerCommands(unittest.IsolatedAsyncioTestCase):
 
   async def test_aspirate_single_resource(self):
     self.lh.update_head_state({i: self.tip_rack.get_tip(i) for i in range(5)})
-    self.bb.tracker.set_used_volume(96 * 10 * 1.072) # liquid class correction
-    await self.lh.aspirate(self.bb, vols=10, use_channels=[0, 1, 2, 3, 4], liquid_height=1)
+    with no_volume_tracking():
+      await self.lh.aspirate(self.bb, vols=10, use_channels=[0, 1, 2, 3, 4], liquid_height=1)
     self._assert_command_sent_once(
       "C0ASid0002at0 0 0 0 0 0&tm1 1 1 1 1 0&xp04865 04865 04865 04865 04865 00000&yp2098 1961 "
       "1825 1688 1551 0000&th2450te2450lp2000 2000 2000 2000 2000 2000&ch000 000 000 000 000 000&"
@@ -448,8 +476,8 @@ class TestSTARLiquidHandlerCommands(unittest.IsolatedAsyncioTestCase):
       "1825 1688 1551 0000&zx1260 1260 1260 1260 1260 1260&lp2000 2000 2000 2000 2000 2000&zl1210 "
       "1210 1210 1210 1210 1210&po0100 0100 0100 0100 0100 0100&ip0000 0000 0000 0000 0000 0000&"
       "it0 0 0 0 0 0&fp0000 0000 0000 0000 0000 0000&zu0032 0032 0032 0032 0032 0032&zr06180 06180 "
-      "06180 06180 06180 06180&th2450te2450dv00116 00116 00116 00116 00116 00116&ds1000 1000 1000 "
-      "1000 1000 1000&ss0050 0050 0050 0050 0050 0050&rv000 000 000 000 000 000&ta050 050 050 050 "
+      "06180 06180 06180 06180&th2450te2450dv00116 00116 00116 00116 00116 00116&ds1800 1800 1800 "
+      "1800 1800 1800&ss0050 0050 0050 0050 0050 0050&rv000 000 000 000 000 000&ta050 050 050 050 "
       "050 050&ba0000 0000 0000 0000 0000 0000&lm0 0 0 0 0 0&dj00zo000 000 000 000 000 000&ll1 1 1 "
       "1 1 1&lv1 1 1 1 1 1&de0010 0010 0010 0010 0010 0010&wt00 00 00 00 00 00&mv00000 00000 00000 "
       "00000 00000 00000&mc00 00 00 00 00 00&mp000 000 000 000 000 000&ms0010 0010 0010 0010 0010 "
@@ -465,7 +493,7 @@ class TestSTARLiquidHandlerCommands(unittest.IsolatedAsyncioTestCase):
     self._assert_command_sent_once(
       "C0DSid0002dm1 1&tm1 0&xp02980 00000&yp1460 0000&zx1931 1931&lp2011 2011&zl1881 1881&"
       "po0100 0100&ip0000 0000&it0 0&fp0000 0000&zu0032 0032&zr06180 06180&th2450te2450"
-      "dv01072 01072&ds1000 1000&ss0050 0050&rv000 000&ta050 050&ba0000 0000&lm0 0&"
+      "dv01072 01072&ds1800 1800&ss0050 0050&rv000 000&ta050 050&ba0000 0000&lm0 0&"
       "dj00zo000 000&ll1 1&lv1 1&de0010 0010&wt00 00&mv00000 00000&mc00 00&mp000 000&"
       "ms0010 0010&mh0000 0000&gi000 000&gj0gk0",
       fmt=DISPENSE_RESPONSE_FORMAT)
@@ -481,7 +509,7 @@ class TestSTARLiquidHandlerCommands(unittest.IsolatedAsyncioTestCase):
     self._assert_command_sent_once(
       "C0DSid0002dm1 1 1&tm1 1 0&xp02980 02980 00000&yp1460 1370 0000&zx1931 1931 1931&lp2011 2011 "
       "2011&zl1881 1881 1881&po0100 0100 0100&ip0000 0000 0000&it0 0 0&fp0000 0000 0000&zu0032 "
-      "0032 0032&zr06180 06180 06180&th2450te2450dv01072 01072 01072&ds1000 1000 1000&"
+      "0032 0032&zr06180 06180 06180&th2450te2450dv01072 01072 01072&ds1800 1800 1800&"
       "ss0050 0050 0050&rv000 000 000&ta050 050 050&ba0000 0000 0000&lm0 0 0&dj00zo000 000 000&"
       "ll1 1 1&lv1 1 1&de0010 0010 0010&wt00 00 00&mv00000 00000 00000&mc00 00 00&mp000 000 000&"
       "ms0010 0010 0010&mh0000 0000 0000&gi000 000 000&gj0gk0",
@@ -664,7 +692,7 @@ class TestSTARLiquidHandlerCommands(unittest.IsolatedAsyncioTestCase):
     await self.lh.discard_tips()
     self._assert_command_sent_once(
      "C0TRid0206xp08000 08000 08000 08000 08000 08000 08000 08000yp4050 3782 3514 3246 2978 2710 "
-     "2442 2174tp1970tz1890th2450te2450tm1 1 1 1 1 1 1 1ti0",
+     "2442 2174tp1970tz1870th2450te2450tm1 1 1 1 1 1 1 1ti0",
      DROP_TIP_FORMAT)
 
   async def test_portrait_tip_rack_handling(self):
@@ -695,3 +723,16 @@ class TestSTARLiquidHandlerCommands(unittest.IsolatedAsyncioTestCase):
     serialized = STAR().serialize()
     deserialized = LiquidHandlerBackend.deserialize(serialized)
     self.assertEqual(deserialized.__class__.__name__, "STAR")
+
+  async def test_move_core(self):
+    await self.lh.move_plate(self.plate, self.plt_car[1], pickup_distance_from_top=13,
+                             use_arm="core")
+    self._assert_command_sent_once("C0ZTid0020xs07975xd0ya1250yb1070pa07pb08tp2350tz2250th2450tt14",
+                                   "xs#####xd#ya####yb####pa##pb##tp####tz####th####tt##")
+    self._assert_command_sent_once("C0ZPid0021xs03475xd0yj1145yv0050zj1876zy0500yo0890yg0830yw15"
+                                   "th2840te2750",
+                                   "xs#####xd#yj####yv####zj####zy####yo####yg####yw##th####te####")
+    self._assert_command_sent_once("C0ZRid0022xs03475xd0yj2105zj1876zi000zy0500yo0890th2840te2750",
+                                   "xs#####xd#yj####zj####zi###zy####yo####th####te####")
+    self._assert_command_sent_once("C0ZSid0023xs07975xd0ya1250yb1070tp2150tz2050th2450te2450",
+                                    "xs#####xd#ya####yb####tp####tz####th####te####")

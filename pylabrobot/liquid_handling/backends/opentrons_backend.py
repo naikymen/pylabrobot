@@ -1,7 +1,7 @@
+import sys
 from typing import Dict, Optional, List, cast
 
-from pylabrobot.default import get_value, is_not_default
-from pylabrobot.liquid_handling.backends import LiquidHandlerBackend
+from pylabrobot.liquid_handling.backends.backend import LiquidHandlerBackend
 from pylabrobot.liquid_handling.errors import NoChannelError
 from pylabrobot.resources import (
   Coordinate,
@@ -25,15 +25,21 @@ from pylabrobot.liquid_handling.standard import (
 )
 from pylabrobot import utils
 
-try:
-  import ot_api
-  USE_OT = True
-except ImportError:
+PYTHON_VERSION = sys.version_info[:2]
+
+if PYTHON_VERSION <= (3, 10):
+  try:
+    import ot_api
+    USE_OT = True
+  except ImportError:
+    USE_OT = False
+else:
   USE_OT = False
 
 
 class OpentronsBackend(LiquidHandlerBackend):
-  """ Backends for the Opentrons liquid handling robots """
+  """ Backends for the Opentrons liquid handling robots. Only supported on Python 3.10 and below.
+  """
 
   pipette_name2volume = {
     "p10_single": 10,
@@ -56,7 +62,8 @@ class OpentronsBackend(LiquidHandlerBackend):
     super().__init__()
 
     if not USE_OT:
-      raise RuntimeError("Opentrons is not installed. Please run pip install pylabrobot[opentrons]")
+      raise RuntimeError("Opentrons is not installed. Please run pip install pylabrobot[opentrons]."
+                         " Only supported on Python 3.10 and below.")
 
     self.host = host
     self.port = port
@@ -271,9 +278,8 @@ class OpentronsBackend(LiquidHandlerBackend):
     if not pipette_id:
       raise NoChannelError("No pipette channel of right type with no tip available.")
 
-    offset = op.offset
-    if is_not_default(offset):
-      offset_x, offset_y, offset_z = offset.x, offset.y, offset.z
+    if op.offset is not None:
+      offset_x, offset_y, offset_z = op.offset.x, op.offset.y, op.offset.z
     else:
       offset_x = offset_y = offset_z = 0
 
@@ -303,9 +309,8 @@ class OpentronsBackend(LiquidHandlerBackend):
     if not pipette_id:
       raise NoChannelError("No pipette channel of right type with tip available.")
 
-    offset = op.offset
-    if is_not_default(offset):
-      offset_x, offset_y, offset_z = offset.x, offset.y, offset.z
+    if op.offset is not None:
+      offset_x, offset_y, offset_z = op.offset.x, op.offset.y, op.offset.z
     else:
       offset_x = offset_y = offset_z = 0
 
@@ -396,13 +401,12 @@ class OpentronsBackend(LiquidHandlerBackend):
       raise NoChannelError("No pipette channel of right type with tip available.")
 
     pipette_name = self.get_pipette_name(pipette_id)
-    flow_rate = get_value(op.flow_rate, self._get_default_aspiration_flow_rate(pipette_name))
+    flow_rate = op.flow_rate or self._get_default_aspiration_flow_rate(pipette_name)
 
     labware_id = self.defined_labware[op.resource.parent.name]
 
-    offset = op.offset
-    if is_not_default(offset):
-      offset_x, offset_y, offset_z = offset.x, offset.y, offset.z
+    if op.offset is not None:
+      offset_x, offset_y, offset_z = op.offset.x, op.offset.y, op.offset.z
     else:
       offset_x = offset_y = offset_z = 0
 
@@ -450,13 +454,12 @@ class OpentronsBackend(LiquidHandlerBackend):
       raise NoChannelError("No pipette channel of right type with tip available.")
 
     pipette_name = self.get_pipette_name(pipette_id)
-    flow_rate = get_value(op.flow_rate, self._get_default_dispense_flow_rate(pipette_name))
+    flow_rate = op.flow_rate or self._get_default_dispense_flow_rate(pipette_name)
 
     labware_id = self.defined_labware[op.resource.parent.name]
 
-    offset = op.offset
-    if is_not_default(offset):
-      offset_x, offset_y, offset_z = offset.x, offset.y, offset.z
+    if op.offset is not None:
+      offset_x, offset_y, offset_z = op.offset.x, op.offset.y, op.offset.z
     else:
       offset_x = offset_y = offset_z = 0
 
