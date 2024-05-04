@@ -67,3 +67,11 @@ class SilverDeck(Deck):
     """)
 
     return ascii_dck
+
+def import_workspace(workspace: dict):
+  deck = SilverDeck(
+    name = workspace.get("name", "silver_deck"),
+    size_x = workspace.get("width"),
+    size_y = workspace.get("length"),
+    size_z = workspace.get("height")
+  )
