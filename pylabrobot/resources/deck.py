@@ -81,10 +81,10 @@ class Deck(Resource):
     """ Returns the resource with the given name.
 
     Raises:
-      ValueError: If the resource is not found.
+      ResourceNotFoundError: If the resource is not found.
     """
     if not self.has_resource(name):
-      raise ValueError(f"Resource '{name}' not found")
+      raise ResourceNotFoundError(f"Resource '{name}' not found")
     return self.resources[name]
 
   def has_resource(self, name: str) -> bool:
@@ -95,18 +95,24 @@ class Deck(Resource):
     """ Returns a list of all resources in the deck. """
     return list(self.resources.values())
 
-  def clear(self):
+  def clear(self, include_trash: bool = False):
     """ Removes all resources from the deck.
 
     Examples:
-
       Clearing all resources on a liquid handler deck:
 
       >>> lh.deck.clear()
+
+      Clearing all resources on a liquid handler deck, including the trash area:
+
+      >>> lh.deck.clear(include_trash=True)
     """
 
-    all_resources = list(self.resources.values()) # can't change size during iteration
-    for resource in all_resources:
+    children_names = [child.name for child in self.children]
+    for resource_name in children_names:
+      resource = self.get_resource(resource_name)
+      if isinstance(resource, Trash) and not include_trash:
+        continue
       resource.unassign()
 
   def get_trash_area(self) -> Trash:
@@ -121,3 +127,7 @@ class Deck(Resource):
     for resource in self.children:
       summary_ += f"{resource.name}: {resource}\n"
     return summary_
+
+  def get_trash_area96(self) -> Trash:
+    deck_class = self.__class__.__name__
+    raise NotImplementedError(f"This method is not implemented by deck '{deck_class}'")

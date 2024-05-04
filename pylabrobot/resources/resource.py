@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-import copy
+import itertools
 import json
 import logging
 import sys
-from typing import Any, Callable, Dict, List, Optional, Type, cast
+from typing import Any, Callable, Dict, List, Optional, cast
 
 from .coordinate import Coordinate
+from .errors import ResourceNotFoundError
 from pylabrobot.serializer import serialize, deserialize
+from pylabrobot.utils.object_parsing import find_subclass
 
 if sys.version_info >= (3, 11):
   from typing import Self
@@ -44,7 +46,7 @@ class Resource:
     size_y: float,
     size_z: float,
     category: Optional[str] = None,
-    model: Optional[str] = None
+    model: Optional[str] = None,
   ):
     self._name = name
     self._size_x = size_x
@@ -57,7 +59,7 @@ class Resource:
     self.parent: Optional[Resource] = None
     self.children: List[Resource] = []
 
-    self.rotation = 0
+    self.rotation = 0 # TODO: like location, this should be wrt parent
 
     self._will_assign_resource_callbacks: List[WillAssignResourceCallback] = []
     self._did_assign_resource_callbacks: List[DidAssignResourceCallback] = []
@@ -74,6 +76,7 @@ class Resource:
       "size_y": self._size_y,
       "size_z": self._size_z,
       "location": serialize(self.location),
+      "rotation": self.rotation,
       "category": self.category,
       "model": self.model,
       "children": [child.serialize() for child in self.children],
@@ -95,13 +98,6 @@ class Resource:
     if self.parent is not None:
       raise RuntimeError("Cannot change the name of a resource that is assigned.")
     self._name = name
-
-  def copy(self):
-    """ Copy this resource. """
-    if self.parent is not None:
-      raise ValueError("Cannot copy a resource that is assigned to another resource.")
-
-    return copy.deepcopy(self)
 
   def __eq__(self, other):
     return (
@@ -148,7 +144,7 @@ class Resource:
   def assign_child_resource(
     self,
     resource: Resource,
-    location: Optional[Coordinate],
+    location: Coordinate,
     reassign: bool = True):
     """ Assign a child resource to this resource.
 
@@ -293,28 +289,10 @@ class Resource:
     for child in self.children:
       try:
         return child.get_resource(name)
-      except ValueError:
+      except ResourceNotFoundError:
         pass
 
-    raise ValueError(f"Resource with name '{name}' does not exist.")
-
-  def get_2d_center_offsets(self, n: int = 1) -> List[Coordinate]:
-    """ Get the offsets (from bottom left) of the center(s) of this resource.
-
-    If `n` is greater than one, the offsets are equally spaced along a column (the y axis), all
-    having the same x and z coordinates. The z coordinate is the bottom of the resource.
-
-    The offsets are returned from high y (back) to low y (front).
-    """
-
-    dx = self.get_size_x() / 2
-    dy = self.get_size_y() / (n+1)
-    offsets = [Coordinate(dx, dy * (i+1), 0) for i in range(n)]
-    return list(reversed(offsets))
-
-  def get_2d_center_offset(self) -> Coordinate:
-    """ Get the offset (from bottom left) of the center of this resource. """
-    return self.get_2d_center_offsets()[0]
+    raise ResourceNotFoundError(f"Resource with name '{name}' does not exist.")
 
   def rotate(self, degrees: int):
     """ Rotate counter clockwise by the given number of degrees.
@@ -325,7 +303,7 @@ class Resource:
 
     effective_degrees = degrees % 360
 
-    if effective_degrees == 0 or effective_degrees % 90 != 0:
+    if effective_degrees % 90 != 0:
       raise ValueError(f"Invalid rotation: {degrees}")
 
     for child in self.children:
@@ -346,21 +324,105 @@ class Resource:
 
     self.rotation = (self.rotation + degrees) % 360
 
-  def rotated(self, degrees: int) -> Self: # type: ignore
+  def copy(self) -> Self:
+    resource_copy = self.__class__.deserialize(self.serialize())
+    resource_copy.load_all_state(self.serialize_all_state())
+    return resource_copy
+
+  def rotated(self, degrees: int) -> Self:
     """ Return a copy of this resource rotated by the given number of degrees.
 
     Args:
       degrees: must be a multiple of 90, but not also 360.
     """
 
-    new_resource = copy.deepcopy(self)
+    new_resource = self.copy()
     new_resource.rotate(degrees)
     return new_resource
 
-  def center(self) -> Coordinate:
-    """ Get the center of the bottom plane of this resource. """
+  def center(self, x: bool = True, y: bool = True, z: bool = False) -> Coordinate:
+    """ Get the center of this resource.
 
-    return Coordinate(self.get_size_x() / 2, self.get_size_y() / 2, 0)
+    Args:
+      x: If `True`, the x-coordinate will be the center, otherwise it will be 0.
+      y: If `True`, the y-coordinate will be the center, otherwise it will be 0.
+      z: If `True`, the z-coordinate will be the center, otherwise it will be 0.
+
+    Examples:
+      Get the center of a resource in the xy plane:
+
+      >>> r = Resource("resource", size_x=12, size_y=12, size_z=12)
+      >>> r.center()
+
+      Coordinate(x=6.0, y=6.0, z=0.0)
+
+      Get the center of a resource with only the x-coordinate:
+
+      >>> r = Resource("resource", size_x=12, size_y=12, size_z=12)
+      >>> r.center(x=True, y=False, z=False)
+
+      Coordinate(x=6.0, y=0.0, z=0.0)
+
+      Get the center of a resource in the x, y, and z directions:
+
+      >>> r = Resource("resource", size_x=12, size_y=12, size_z=12)
+      >>> r.center(x=True, y=True, z=True)
+
+      Coordinate(x=6.0, y=6.0, z=6.0)
+    """
+
+    return Coordinate(
+      self.get_size_x() / 2 if x else 0,
+      self.get_size_y() / 2 if y else 0,
+      self.get_size_z() / 2 if z else 0
+    )
+
+  def centers(self, xn: int = 1, yn: int = 1, zn: int = 1) -> List[Coordinate]:
+    """ Get equally spaced points in the x, y, and z directions.
+
+    Args:
+      xn: the number of points in the x direction.
+      yn: the number of points in the y direction.
+      zn: the number of points in the z direction.
+
+    Returns:
+      A grid of points in the x, y, and z directions.
+
+    Examples:
+      Get the center of a resource:
+
+      >>> r = Resource("resource", size_x=12, size_y=12, size_z=12)
+      >>> r.centers()
+
+      Coordinate(x=6.0, y=6.0, z=6.0)
+
+      Get the center of a resource with 2 points in the x direction:
+
+      >>> r = Resource("resource", size_x=12, size_y=12, size_z=12)
+      >>> r.centers(xn=2)
+
+      [Coordinate(x=4.0, y=6.0, z=6.0), Coordinate(x=9.0, y=6.0, z=6.0)]
+
+      Get the center of a resource with 2 points in the x and y directions:
+
+      >>> r = Resource("resource", size_x=12, size_y=12, size_z=12)
+      >>> r.centers(xn=2, yn=2)
+      [Coordinate(x=4.0, y=4.0, z=6.0), Coordinate(x=8.0, y=4.0, z=6.0),
+       Coordinate(x=4.0, y=8.0, z=6.0), Coordinate(x=8.0, y=8.0, z=6.0)]
+    """
+
+    def _get_centers(n, dim_size):
+      if n < 0:
+        raise ValueError(f"Invalid number of points: {n}")
+      if n == 0:
+        return [0]
+      return [(i+1) * dim_size/(n+1)  for i in range(n)]
+
+    xs = _get_centers(xn, self.get_size_x())
+    ys = _get_centers(yn, self.get_size_y())
+    zs = _get_centers(zn, self.get_size_z())
+
+    return [Coordinate(x, y, z) for x, y, z in itertools.product(xs, ys, zs)]
 
   def save(self, fn: str, indent: Optional[int] = None):
     """ Save a resource to a JSON file.
@@ -396,7 +458,7 @@ class Resource:
 
     data_copy = data.copy() # copy data because we will be modifying it
 
-    subclass = get_resource_class_from_string(data["type"])
+    subclass = find_subclass(data["type"], cls=Resource)
     if subclass is None:
       raise ValueError(f"Could not find subclass with name '{data['type']}'")
     assert issubclass(subclass, cls) # mypy does not know the type after the None check...
@@ -404,10 +466,12 @@ class Resource:
     for key in ["type", "parent_name", "location"]: # delete meta keys
       del data_copy[key]
     children_data = data_copy.pop("children")
+    rotation = data_copy.pop("rotation")
     resource = subclass(**data_copy)
+    resource.rotation = rotation
 
     for child_data in children_data:
-      child_cls = get_resource_class_from_string(child_data["type"])
+      child_cls = find_subclass(child_data["type"], cls=Resource)
       if child_cls is None:
         raise ValueError(f"Could not find subclass with name {child_data['type']}")
       child = child_cls.deserialize(child_data)
@@ -415,7 +479,7 @@ class Resource:
       if location_data is not None:
         location = cast(Coordinate, deserialize(location_data))
       else:
-        location = None
+        raise ValueError(f"Child resource '{child.name}' has no location.")
       resource.assign_child_resource(child, location=location)
 
     return resource
@@ -579,26 +643,3 @@ class Resource:
   def _state_updated(self):
     for callback in self._resource_state_updated_callbacks:
       callback(self.serialize_state())
-
-
-def get_resource_class_from_string(
-  class_name: str,
-  cls: Type[Resource] = Resource
-) -> Optional[Type[Resource]]:
-  """ Recursively find a subclass with the correct name.
-
-  Args:
-    class_name: The name of the class to find.
-    cls: The class to search in.
-
-  Returns:
-    The class with the given name, or `None` if no such class exists.
-  """
-
-  if cls.__name__ == class_name:
-    return cls
-  for subclass in cls.__subclasses__():
-    subclass_ = get_resource_class_from_string(class_name=class_name, cls=subclass)
-    if subclass_ is not None:
-      return subclass_
-  return None
