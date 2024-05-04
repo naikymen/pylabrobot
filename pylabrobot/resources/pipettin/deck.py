@@ -21,7 +21,7 @@ class SilverDeck(Deck):
                # TODO: Update default origin.
                origin: Coordinate = Coordinate(0, 0, 0),
                # TODO: Update default trash location.
-               trash_location: Coordinate = Coordinate(x=82.84, y=53.56, z=5),
+               trash_location: Coordinate = Coordinate(x=0.0, y=0.0, z=0.0),
                no_trash: bool = False):
 
     # Run init from the base Deck class.
@@ -41,10 +41,9 @@ class SilverDeck(Deck):
 
     trash = Trash(
       name="trash",
-      # TODO: Update default dimensions.
-      size_x=80,
-      size_y=120,
-      size_z=50
+      size_x=location.x,
+      size_y=location.y,
+      size_z=location.z
     )
 
     self.assign_child_resource(trash, location=location)
