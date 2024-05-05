@@ -10,3 +10,4 @@ pyhamilton/LAY-BACKUP
 build/lib
 *.directory
 .venv/*
+pylabrobot-venv

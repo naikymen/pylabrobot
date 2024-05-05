@@ -2,25 +2,25 @@ from pylabrobot.resources.tip import Tip
 from pylabrobot.resources.itemized_resource import create_equally_spaced
 from pylabrobot.resources.tip_rack import TipRack, TipSpot
 
-def create_tip_rack(platform_item, platform_data, tip_container):
+def create_tip_rack(platform_item, platform_data, *args):
 
-  def make_pew_tip():
-    """ Make single tip.
+  # def make_pew_tip():
+  #   """ Make single tip.
 
-    Attributes from the Tip class:
-      has_filter: whether the tip type has a filter
-      total_tip_length: total length of the tip, in in mm
-      maximal_volume: maximal volume of the tip, in ul
-      fitting_depth: the overlap between the tip and the pipette, in mm
-    """
-    tip = Tip(
-      has_filter=False,
-      total_tip_length=tip_container["length"],
-      maximal_volume=tip_container["maxVolume"],
-      fitting_depth=tip_container["length"]-tip_container["activeHeight"]
-    )
+  #   Attributes from the Tip class:
+  #     has_filter: whether the tip type has a filter
+  #     total_tip_length: total length of the tip, in in mm
+  #     maximal_volume: maximal volume of the tip, in ul
+  #     fitting_depth: the overlap between the tip and the pipette, in mm
+  #   """
+  #   tip = Tip(
+  #     has_filter=False,
+  #     total_tip_length=container_data["length"],
+  #     maximal_volume=container_data["maxVolume"],
+  #     fitting_depth=container_data["length"]-container_data["activeHeight"]
+  #   )
 
-    return tip
+  #   return tip
 
   tip_rack_item = TipRack(
       name=platform_item["name"],
@@ -29,7 +29,8 @@ def create_tip_rack(platform_item, platform_data, tip_container):
       size_z=platform_data["height"],
       # category = "tip_rack", # The default.
       model=platform_data["name"], # Optional.
-      items=create_equally_spaced(TipSpot,
+      items=create_equally_spaced(
+        klass=TipSpot,
         num_items_x=platform_data["wellsColumns"],
         num_items_y=platform_data["wellsRows"],
         # dx: The bottom left corner for items in the left column.
@@ -42,17 +43,21 @@ def create_tip_rack(platform_item, platform_data, tip_container):
         # XY distance between adjacent items in the grid.
         item_size_x=platform_data["wellSeparationX"],
         item_size_y=platform_data["wellSeparationY"],
-        # The TipSpot class will receive this argument (through kwargs) to create its tips.
+        # The TipSpot class will receive this argument (through **kwargs) to create its tips,
+        # overriding the default "TipCreator" (see "tip_rack.py"). This is only used to create tips
+        # when "tip tracking" is disabled, and a tip is required from an empty tip-spot.
         # Note that this is not needed for "wells", as there are no "well spots" in PLR.
         # There are however, "tube spots" in pipettin, which I don't know how to accomodate.
-        make_tip=make_pew_tip
+        # TODO: reconsider enabling this.
+        #make_tip=make_pew_tip
       ),
+      # NOTE: Skipping filling with tips for now.
       with_tips=False
     )
 
   return tip_rack_item
 
-
+# Example using exported data.
 if __name__ == "__main__":
   import json
 
@@ -70,7 +75,7 @@ if __name__ == "__main__":
   pew_tip_racks = [p for p in platforms if p["type"] == "TIP_RACK"]
   pew_tip_rack = pew_tip_racks[0]
 
-  # Get a workspace item matching that platform.
+  # Get a platform item from the workspace, matching that platform.
   pew_items = [i for i in workspace["items"] if i["platform"] == pew_tip_rack["name"] ]
   pew_item = pew_items[0]
 
@@ -90,12 +95,12 @@ if __name__ == "__main__":
   pew_item_contents = pew_item["content"]
   tip_content = pew_item_contents[0]
 
-  tip_container = [c for c in containers if c["name"]==tip_content["container"]][0]
-  #tip_container
+  tip_containers = [c for c in containers if c["name"]==tip_content["container"]]
+  tip_container = tip_containers[0]
 
   # Get container offset
-  tip_container_offset = [o for o in pew_tip_rack["containers"] if o["container"] == tip_container["name"]][0]
-  #tip_container_offset
+  tip_container_offsets = [o for o in pew_tip_rack["containers"] if o["container"] == tip_container["name"]]
+  tip_container_offset = tip_container_offsets[0]
 
   # Create and populate the tip rack.
   tip_rack = create_tip_rack(
