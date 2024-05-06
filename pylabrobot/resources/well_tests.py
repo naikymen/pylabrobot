@@ -24,6 +24,14 @@ class TestWell(unittest.TestCase):
       "type": "Well",
       "parent_name": None,
       "location": None,
+      "rotation": 0,
     })
 
     self.assertEqual(Well.deserialize(well.serialize()), well)
+
+  def test_set_liquids(self):
+    well = Well(name="well...", size_x=1, size_y=2, size_z=3, bottom_type=WellBottomType.FLAT,
+                max_volume=10, model="model")
+    well.set_liquids([(None, 10)])
+    self.assertEqual(well.tracker.liquids, [(None, 10)])
+    self.assertEqual(well.tracker.get_used_volume(), 10)

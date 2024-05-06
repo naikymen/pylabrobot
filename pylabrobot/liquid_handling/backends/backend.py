@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from typing import List, Type, Optional
+from typing import List, Optional
 
-from pylabrobot.machine import MachineBackend
-from pylabrobot.resources import Resource
+from pylabrobot.machines.backends import MachineBackend
+from pylabrobot.resources import Deck, Resource
 from pylabrobot.liquid_handling.standard import (
   Pickup,
   PickupTipRack,
@@ -28,6 +28,24 @@ class LiquidHandlerBackend(MachineBackend, metaclass=ABCMeta):
   Attributes:
     setup_finished: Whether the backend has been set up.
   """
+
+  def __init__(self):
+    self.setup_finished = False
+    self._deck: Optional[Deck] = None
+
+  def set_deck(self, deck: Deck):
+    """ Set the deck for the robot. Called automatically by `LiquidHandler.setup` or can be called
+    manually if interacting with the backend directly. A deck must be set before setup. """
+    self._deck = deck
+
+  @property
+  def deck(self) -> Deck:
+    assert self._deck is not None, "Deck not set"
+    return self._deck
+
+  async def setup(self):
+    """ Set up the robot. This method should be called before any other method is called. """
+    assert self._deck is not None, "Deck not set"
 
   async def assigned_resource_callback(self, resource: Resource):
     """ Called when a new resource was assigned to the robot.
@@ -87,39 +105,6 @@ class LiquidHandlerBackend(MachineBackend, metaclass=ABCMeta):
   @abstractmethod
   async def move_resource(self, move: Move):
     """ Move a resource to a new location. """
-
-  def serialize(self):
-    """ Serialize the backend so that an equivalent backend can be created by passing the dict
-    as kwargs to the initializer. The dict must contain a key "type" that specifies the type of
-    backend to create. This key will be removed from the dict before passing it to the initializer.
-    """
-
-    return {
-      "type": self.__class__.__name__,
-    }
-
-  @classmethod
-  def deserialize(cls, data: dict) -> LiquidHandlerBackend:
-    """ Deserialize the backend. Unless a custom serialization method is implemented, this method
-    should not be overridden. """
-
-    # Recursively find a subclass with the correct name
-    def find_subclass(cls: Type[LiquidHandlerBackend], name: str) -> \
-      Optional[Type[LiquidHandlerBackend]]:
-      if cls.__name__ == name:
-        return cls
-      for subclass in cls.__subclasses__():
-        subclass_ = find_subclass(subclass, name)
-        if subclass_ is not None:
-          return subclass_
-      return None
-
-    subclass = find_subclass(cls, data["type"])
-    if subclass is None:
-      raise ValueError(f"Could not find subclass with name {data['type']}")
-
-    del data["type"]
-    return subclass(**data)
 
   async def prepare_for_manual_channel_operation(self, channel: int):
     """ Prepare the robot for manual operation. """

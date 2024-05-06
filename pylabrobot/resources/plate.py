@@ -21,7 +21,8 @@ class Lid(Resource):
     size_x: float,
     size_y: float,
     size_z: float,
-    category: str = "lid"
+    category: str = "lid",
+    model: Optional[str] = None
   ):
     """ Create a lid for a plate.
 
@@ -31,7 +32,8 @@ class Lid(Resource):
       size_y: Size of the lid in y-direction.
       size_z: Size of the lid in z-direction.
     """
-    super().__init__(name=name, size_x=size_x, size_y=size_y, size_z=size_z, category=category)
+    super().__init__(name=name, size_x=size_x, size_y=size_y, size_z=size_z, category=category,
+                     model=model)
 
 
 class Plate(ItemizedResource[Well]):
@@ -81,18 +83,25 @@ class Plate(ItemizedResource[Well]):
       assert lid_height > 0, "Lid height must be greater than 0 if with_lid == True."
 
       lid = Lid(name + "_lid", size_x=size_x, size_y=size_y, size_z=lid_height)
-      self.assign_child_resource(lid, location=Coordinate(0, 0, self.get_size_z() - lid_height))
+      self.assign_child_resource(lid)
+
+  def serialize(self) -> dict:
+    return {**super().serialize(), "lid_height": self.lid_height}
 
   def assign_child_resource(
     self,
     resource: Resource,
-    location: Optional[Coordinate],
+    location: Optional[Coordinate] = None,
     reassign: bool = True
   ):
     if isinstance(resource, Lid):
       if self.has_lid():
         raise ValueError(f"Plate '{self.name}' already has a lid.")
       self.lid = resource
+      assert self.lid_height > 0, "Lid height must be greater than 0."
+      location = Coordinate(0, 0, self.get_size_z() - self.lid_height)
+    else:
+      assert location is not None, "Location must be specified for if resource is not a lid."
     return super().assign_child_resource(resource, location=location, reassign=reassign)
 
   def unassign_child_resource(self, resource):
@@ -104,7 +113,7 @@ class Plate(ItemizedResource[Well]):
     return (f"{self.__class__.__name__}(name={self.name}, size_x={self._size_x}, "
             f"size_y={self._size_y}, size_z={self._size_z}, location={self.location})")
 
-  def get_well(self, identifier: Union[str, int]) -> Well:
+  def get_well(self, identifier: Union[str, int, Tuple[int, int]]) -> Well:
     """ Get the item with the given identifier.
 
     See :meth:`~.get_item` for more information.
@@ -176,3 +185,27 @@ class Plate(ItemizedResource[Well]):
 
     for well in self.get_all_items():
       well.tracker.enable()
+
+  def get_quadrant(self, quadrant: int) -> List[Well]:
+    """ Return the wells in the specified quadrant. Quadrants are overlapping and refer to
+    alternating rows and columns of the plate. Quadrant 1 contains A1, A3, C1, etc. Quadrant 2
+    contains A2, quadrant 3 contains B1, and quadrant 4 contains B2. """
+
+    if quadrant == 1:
+      return [self.get_well((row, column))
+                for row in range(0, self.num_items_y, 2)
+                for column in range(0, self.num_items_x, 2)]
+    elif quadrant == 2:
+      return [self.get_well((row, column))
+                for row in range(0, self.num_items_y, 2)
+                for column in range(1, self.num_items_x, 2)]
+    elif quadrant == 3:
+      return [self.get_well((row, column))
+                for row in range(1, self.num_items_y, 2)
+                for column in range(0, self.num_items_x, 2)]
+    elif quadrant == 4:
+      return [self.get_well((row, column))
+                for row in range(1, self.num_items_y, 2)
+                for column in range(1, self.num_items_x, 2)]
+    else:
+      raise ValueError(f"Invalid quadrant number: {quadrant}. Quadrant must be 1, 2, 3, or 4.")

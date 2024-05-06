@@ -44,12 +44,14 @@ class SerializingBackend(LiquidHandlerBackend, metaclass=ABCMeta):
     raise NotImplementedError
 
   async def setup(self):
-    await self.send_command(command="setup")
     await super().setup()
+    await self.send_command(command="setup")
 
   async def stop(self):
     await self.send_command(command="stop")
-    await super().stop()
+
+  def serialize(self) -> dict:
+    return {**super().serialize(), "num_channels": self.num_channels}
 
   async def assigned_resource_callback(self, resource: Resource):
     await self.send_command(command="resource_assigned", data={"resource": resource.serialize(),
@@ -118,7 +120,7 @@ class SerializingBackend(LiquidHandlerBackend, metaclass=ABCMeta):
 
   async def aspirate96(self, aspiration: AspirationPlate):
     await self.send_command(command="aspirate96", data={"aspiration": {
-      "resource_name": aspiration.resource.name,
+      "well_names": [well.name for well in aspiration.wells],
       "offset": serialize(aspiration.offset),
       "volume": aspiration.volume,
       "flow_rate": serialize(aspiration.flow_rate),
@@ -130,7 +132,7 @@ class SerializingBackend(LiquidHandlerBackend, metaclass=ABCMeta):
 
   async def dispense96(self, dispense: DispensePlate):
     await self.send_command(command="dispense96", data={"dispense": {
-      "resource_name": dispense.resource.name,
+      "well_names": [well.name for well in dispense.wells],
       "offset": serialize(dispense.offset),
       "volume": dispense.volume,
       "flow_rate": serialize(dispense.flow_rate),
