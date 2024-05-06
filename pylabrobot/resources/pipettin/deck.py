@@ -3,8 +3,8 @@ import textwrap
 
 from pylabrobot.resources import Coordinate, Deck, Trash
 
-from pylabrobot.resources.pipettin.tip_racks import create_tip_rack
-from pylabrobot.resources.pipettin.tube_racks import create_tube_rack
+from pylabrobot.resources.pipettin.tip_racks import load_ola_tip_rack
+from pylabrobot.resources.pipettin.tube_racks import load_ola_tube_rack
 
 def not_implemented(*args, **kwargs):
   raise NotImplementedError("Method not implemented.")
@@ -28,8 +28,8 @@ class SilverDeck(Deck):
   """
 
   platform_importers: dict = {
-    "TUBE_RACK": create_tube_rack,
-    "TIP_RACK": create_tip_rack,
+    "TUBE_RACK": load_ola_tube_rack,
+    "TIP_RACK": load_ola_tip_rack,
     "BUCKET": create_trash,
     "CUSTOM": not_implemented,
     "PETRI_DISH": not_implemented,

@@ -2,7 +2,7 @@
 from pylabrobot.resources.itemized_resource import create_equally_spaced
 from pylabrobot.resources.tip_rack import TipRack, TipSpot
 
-def create_tip_rack(platform_item, platform_data, *args, **kwargs):
+def load_ola_tip_rack(platform_item, platform_data, *args, **kwargs):
 
   # def make_pew_tip():
   #   """ Make single tip.
@@ -109,7 +109,7 @@ if __name__ == "__main__":
   tip_container_offset = tip_container_offsets[0]
 
   # Create and populate the tip rack.
-  tip_rack = create_tip_rack(
+  tip_rack = load_ola_tip_rack(
      platform_item=pew_item,
      platform_data=pew_tip_rack,
      tip_container=tip_container)

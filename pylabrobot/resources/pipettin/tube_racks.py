@@ -1,7 +1,8 @@
 import math
+from abc import ABCMeta
 from typing import Optional, Callable, List, Union, Sequence, cast, Any, Dict
-from pylabrobot.serializer import deserialize
 
+from pylabrobot.serializer import deserialize
 from pylabrobot.resources.container import Container
 from pylabrobot.resources.liquid import Liquid
 #from pylabrobot.resources.plate import Plate
@@ -18,13 +19,13 @@ class TubeLid:
   has_lid: bool = True
   # NOTE: There are many types of tube lids:
   #       "hinge" "screw" "cork" "rubber_cap" "vial_stopper" "none"
-  type: str = "hinge"
+  lid_type: str = "hinged"
 
   def __init__(self, lid_type, is_open: False) -> None:
 
-    self.type = lid_type
+    self.lid_type = lid_type
 
-    if self.type is None:
+    if self.lid_type is None:
       self.has_lid = False
       self.is_open = True
     else:
@@ -614,8 +615,7 @@ class TubeRack(ItemizedResource[TubeSpot], metaclass=ABCMeta):
       tube = self.get_tube(i)
       tube.tracker.set_used_volume(volume)
 
-
-def create_tube_rack(platform_item, platform_data, *args):
+def load_ola_tube_rack(platform_item, platform_data, *args):
 
   tube_rack_item = TubeRack(
       name=platform_item["name"],

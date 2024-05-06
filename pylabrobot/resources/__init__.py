@@ -44,4 +44,6 @@ from .tecan import *
 from .thermo_fisher import *
 from .vwr import *
 
+from .pipettin import *
+
 # labware made from 3rd parties that share their designs with PLR
