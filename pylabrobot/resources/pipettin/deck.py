@@ -6,10 +6,14 @@ from pylabrobot.resources import Coordinate, Deck, Trash
 from pylabrobot.resources.pipettin.tip_racks import load_ola_tip_rack
 from pylabrobot.resources.pipettin.tube_racks import load_ola_tube_rack
 
-def not_implemented(*args, **kwargs):
-  raise NotImplementedError("Method not implemented.")
+from .utils import get_items_platform #, get_contents_container
 
-def create_trash(platform_item, platform_data, *args):
+def not_implemented(platform_item, platform_data, containers_data, *args, **kwargs):
+  # raise NotImplementedError("Method not implemented for platform type: " + platform_data["type"])
+  print("Method not implemented for platform type: " + platform_data["type"])
+  return None
+
+def create_trash(platform_item, platform_data, *args, **kwargs):
   trash = Trash(
     name=platform_item.get("name"),
     size_x=platform_data.get("width"),
@@ -60,8 +64,8 @@ class SilverDeck(Deck):
     padding = workspace.get("padding", None)
     if padding:
       origin = Coordinate(
-        x=padding.get("left"),
-        y=padding.get("right"),
+        x=padding["left"],
+        y=padding["right"],
         z=default_origin.z
       )
     else:
@@ -84,49 +88,31 @@ class SilverDeck(Deck):
     """ Convert platforms to resources and add them to the deck. """
     items = workspace.get("items", [])
     for item in items:
-      platform_data = self.get_items_platform(item, platforms)
+      platform_data = get_items_platform(item, platforms)
       # Create a resource from the item.
-      platform_resource = self.assign_platform(item, platform_data)
-      # Add tubes, tips, and other resources in the platform item.
-      self.assign_contents(platform_resource, item, platform_data, containers)
+      # Also add tubes, tips, and other resources in the platform item.
+      self.assign_platform(item, platform_data, containers)
 
-  def assign_platform(self, platform_item, platform_data):
+  def assign_platform(self, platform_item, platform_data, containers):
     # Get importer method.
-    platform_type = platform_data.get("type")
+    platform_type = platform_data["type"]
     importer = self.platform_importers[platform_type]
     # Execute the translation.
     platform_resource = importer(
       platform_item=platform_item,
-      platform_data=platform_data
+      platform_data=platform_data,
+      containers_data=containers
     )
     # Get the resources' location.
-    position = platform_item.get("position")
+    position = platform_item["position"]
     location = Coordinate(**position)
+
     # Assign the translated resource.
-    self.assign_child_resource(platform_resource, location=location)
+    if platform_resource is not None:
+      self.assign_child_resource(platform_resource, location=location)
+
     # Done!
     return platform_resource
-
-  def assign_contents(self, platform_resource, platform_item, platform_data, containers):
-
-    platform_contents = platform_item.get("contents")
-    for content in platform_contents:
-      content_position = content.get("position")
-      container_data = self.get_contents_container(content, containers)
-      content_resource = content
-      platform_resource.assign_child_resource(content_resource)
-
-    raise NotImplementedError("Have't written this part yet.")
-
-  @staticmethod
-  def get_items_platform(item, platforms):
-    platform_data = next(x for x in platforms if x["name"] == item.get("platform"))
-    return platform_data
-
-  @staticmethod
-  def get_contents_container(content, containers):
-    container_data = next(x for x in containers if x["name"] == content.get("container"))
-    return container_data
 
   def summary(self) -> str:
     """ Get a summary of the deck.

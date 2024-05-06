@@ -10,6 +10,8 @@ from pylabrobot.resources.resource import Resource, Coordinate
 from pylabrobot.resources.itemized_resource import ItemizedResource
 from pylabrobot.resources.itemized_resource import create_equally_spaced
 
+from .utils import get_contents_container
+
 # TODO: There is already a "Tube" class. Try integrating it to the one below.
 # from pylabrobot.resources.tube import Tube
 
@@ -178,6 +180,8 @@ class Tube(Container):
       self,
       name: str,
       size_x: float, size_y: float, size_z: float,
+      # TODO: Add "activeHeight" somewhere here. Find out where...
+      #       It will be needed to adjust the Z coordinate for pipetting.
       category: str = "tube",
       volume: float = 0,
       max_volume: Optional[float] = None,
@@ -226,8 +230,10 @@ class Tube(Container):
       model=model
     )
 
-    # NOTE: Example from "using-trackers.ipynb":
-    #       plate.get_item("A1").tracker.set_liquids([(Liquid.WATER, 10)])
+
+    # NOTE: The tracker object is inherited from the "Container" class.
+    #       Example from "using-trackers.ipynb":
+    #         plate.get_item("A1").tracker.set_liquids([(Liquid.WATER, 10)])
     self.tracker.set_liquids([(Liquid.WATER, volume)])
 
   def level(self):
@@ -615,8 +621,32 @@ class TubeRack(ItemizedResource[TubeSpot], metaclass=ABCMeta):
       tube = self.get_tube(i)
       tube.tracker.set_used_volume(volume)
 
-def load_ola_tube_rack(platform_item, platform_data, *args):
+def load_ola_tube_rack(
+  platform_item: dict,
+  platform_data: dict,
+  containers_data: list,
+  *args, **kwargs):
 
+  # NOTE: I need to create this function here, it is required by "TubeSpot" later on.
+  def make_pew_tube():
+    # TODO: Find a way to avoid defaulting to the first associated container.
+    # NOTE: Perhaps PLR does not consider having different tubes for the same tube rack.
+    first_container = platform_data["containers"][0]
+    container_data = next(x for x in containers_data if x["name"] == first_container["container"])
+    tube = Tube(
+      # TODO: Names for tubes should all be different.
+      name="placeholder name",
+      size_x=container_data["width"],
+      size_y=container_data["width"],
+      size_z=container_data["length"],
+      max_volume=container_data["maxVolume"],
+      model=container_data["name"]
+      # TODO: Add "activeHeight" somewhere here.
+      #       It is needed to get the proper Z coordinate.
+    )
+    return tube
+
+  # Create the TubeRack instance.
   tube_rack_item = TubeRack(
       name=platform_item["name"],
       size_x=platform_data["width"],
@@ -624,9 +654,11 @@ def load_ola_tube_rack(platform_item, platform_data, *args):
       size_z=platform_data["height"],
       # category = "tip_rack", # The default.
       model=platform_data["name"], # Optional.
+
+      # Use the helper function to create a regular 2D-grid of tip spots.
       items=create_equally_spaced(
-        # NOTE: the TipRack uses "TipSpot" class here.
-        klass=Tube,
+        # NOTE: Parameters for "create_equally_spaced".
+        klass=TubeSpot,  # NOTE: the TipRack uses "TipSpot" class here. Should I use "Tube"?
         num_items_x=platform_data["wellsColumns"],
         num_items_y=platform_data["wellsRows"],
         # item_dx: The size of the items in the x direction
@@ -640,16 +672,54 @@ def load_ola_tube_rack(platform_item, platform_data, *args):
         # dz: The z coordinate for all items.
         # TODO: I dont know how "dz" is used later on. Check that it corresponds to activeHeight.
         dz=platform_data["activeHeight"],
+
+        # NOTE: Additional keyword arguments are passed to the "klass" constructor set above.
+        size_x=platform_data["wellDiameter"],
+        size_y=platform_data["wellDiameter"],
+        # size_z=platform_data["height"]
+        # NOTE: The TubeSpot class will receive this argument (through kwargs) to create its tubes.
+        #       Note that this is not needed for "wells", as there are no "well spots" in PLR.
+        #       There are however, "tube spots" in pipettin, which I don't know how to accommodate.
+        make_tube=make_pew_tube
+
         # XY distance between adjacent items in the grid.
-        item_size_x=platform_data["wellSeparationX"],
-        item_size_y=platform_data["wellSeparationY"],
-        # The TubeSpot class will receive this argument (through kwargs) to create its tubes.
-        # Note that this is not needed for "wells", as there are no "well spots" in PLR.
-        # There are however, "tube spots" in pipettin, which I don't know how to accommodate.
-        #make_tip=make_pew_tube
+        # item_size_x=platform_data["wellSeparationX"],
+        # item_size_y=platform_data["wellSeparationY"],
       ),
       # Fill with tubes.
       with_tubes=False
     )
+
+  # Add tubes in the platform item, if any.
+  platform_contents = platform_item.get("content", [])
+  for content in platform_contents:
+    container_data = get_contents_container(content, containers_data)
+
+    # Create the Tube.
+    new_tube = Tube(
+      name=content["name"],
+      size_x=container_data["width"],
+      size_y=container_data["width"],
+      size_z=container_data["length"],
+      max_volume=container_data["maxVolume"],
+      model=container_data["name"]
+      # TODO: Add "activeHeight" somewhere here.
+      #       It is needed to get the proper Z coordinate.
+    )
+
+    # Add liquid to the tracker.
+    # TODO: Add liquid classes to our data schemas, even if it is water everywhere for now.
+    new_tube.tracker.add_liquid(Liquid.WATER, volume=content["volume"])
+
+    # Get the tube's position indexes.
+    # NOTE: "i" for "Y/rows", and "j" for "X/columns".
+    i, j = content["position"]["row"]-1, content["position"]["col"]-1
+    # Get the TubeSpot.
+    tube_spot: TubeSpot = tube_rack_item.get_item((i, j))
+    # Add the Tube to the tracker.
+    tube_spot.tracker.add_tube(new_tube, commit=True)
+    # Add the Tube to the TubeSpot as a child resource.
+    # NOTE: This is required, otherwise it does not show up in the deck by name.
+    tube_spot.assign_child_resource(new_tube, location=Coordinate(0,0,0))
 
   return tube_rack_item
