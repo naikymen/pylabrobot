@@ -8,8 +8,7 @@ from pylabrobot.resources.container import Container
 from pylabrobot.resources.liquid import Liquid
 #from pylabrobot.resources.plate import Plate
 from pylabrobot.resources.resource import Resource, Coordinate
-from pylabrobot.resources.itemized_resource import ItemizedResource
-from pylabrobot.resources.itemized_resource import create_equally_spaced
+from pylabrobot.resources.itemized_resource import ItemizedResource, create_equally_spaced
 
 from .utils import get_contents_container
 
@@ -570,6 +569,11 @@ class TubeRack(ItemizedResource[TubeSpot], metaclass=ABCMeta):
     # NOTE: This differs from the method in "well plates". See note in "get_tube".
     return [ts.get_tube() for ts in super().get_items(identifier)]
 
+  def __getitem__(self, identifier):
+    """Overrides [] from ItemizedResource, in order to return tubes instead of TubeSpots"""
+    tube_spots = super().__getitem__(identifier)
+    return [ts.get_tube() for ts in tube_spots]
+
   # TODO: Should I port "set_tip_state" from "TipRack" too?
   #       Fist I need to figure out how "make_tip" works.
 
@@ -591,8 +595,7 @@ class TubeRack(ItemizedResource[TubeSpot], metaclass=ABCMeta):
 
   def get_all_tubes(self) -> List[Tube]:
     """ Get all tubes in the tube rack. """
-    return [ts.get_tube() for ts in self.get_all_items()]
-
+    return [ts.get_tube() for ts in super().get_all_items() if ts.has_tube()]
 
   def set_tube_volumes(self, volumes: Union[List[List[float]], List[float], float]) -> None:
     """ Update the volume in the volume tracker of each tube in the plate.
