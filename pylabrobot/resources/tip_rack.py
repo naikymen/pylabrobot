@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from abc import ABCMeta
 from typing import Any, Dict, List, Union, Optional, Sequence, cast
+from string import ascii_uppercase as LETTERS
 
 from pylabrobot.resources.tip import Tip, TipCreator
 from pylabrobot.resources.tip_tracker import TipTracker, does_tip_tracking
@@ -114,6 +115,13 @@ class TipRack(ItemizedResource[TipSpot], metaclass=ABCMeta):
   def __repr__(self) -> str:
     return (f"{self.__class__.__name__}(name={self.name}, size_x={self._size_x}, "
             f"size_y={self._size_y}, size_z={self._size_z}, location={self.location})")
+
+  def print_grid(self):
+    item_grid = [[LETTERS[i]+":"] + ["O" if self.get_item((i, j)).has_tip() else "-" for j in range(self.num_items_x)] for i in range(self.num_items_y)]
+    # item_grid_header = ["  "] + [str(j+1) for j in range(tiprack.num_items_x)] # item_grid.insert(0, item_grid_header)
+    info_str = f"'{self.name}' ({self.num_items_x}x{self.num_items_y} {self.__class__.__name__})"
+    info_str += "\n" + "\n".join("  ".join(row) for row in item_grid)
+    print(info_str)
 
   def get_tip(self, identifier: Union[str, int]) -> Tip:
     """ Get the item with the given identifier.

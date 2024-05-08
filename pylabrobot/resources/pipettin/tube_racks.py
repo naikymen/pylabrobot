@@ -1,6 +1,7 @@
 import math
 from abc import ABCMeta
 from typing import Optional, Callable, List, Union, Sequence, cast, Any, Dict
+from string import ascii_uppercase as LETTERS
 
 from pylabrobot.serializer import deserialize
 from pylabrobot.resources.container import Container
@@ -541,7 +542,14 @@ class TubeRack(ItemizedResource[TubeSpot], metaclass=ABCMeta):
 
   def __repr__(self) -> str:
     return (f"{self.__class__.__name__}(name={self.name}, size_x={self._size_x}, "
-            f"size_y={self._size_y}, size_z={self._size_z}, location={self.location}, ")
+            f"size_y={self._size_y}, size_z={self._size_z}, location={self.location})")
+
+  def print_grid(self):
+    item_grid = [[LETTERS[i]+":"] + ["O" if self.get_item((i, j)).has_tube() else "-" for j in range(self.num_items_x)] for i in range(self.num_items_y)]
+    # item_grid_header = ["  "] + [str(j+1) for j in range(tiprack.num_items_x)] # item_grid.insert(0, item_grid_header)
+    info_str = f"'{self.name}' ({self.num_items_x}x{self.num_items_y} {self.__class__.__name__})"
+    info_str += "\n" + "\n".join("  ".join(row) for row in item_grid)
+    print(info_str)
 
   def get_tube(self, identifier: Union[str, int]) -> Tube:
     """ Get the item with the given identifier.

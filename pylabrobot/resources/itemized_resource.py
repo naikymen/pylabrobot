@@ -1,6 +1,7 @@
 from abc import ABCMeta
 import sys
 from typing import Union, Tuple, TypeVar, Generic, List, Optional, Generator, Type, Sequence, cast
+from string import ascii_uppercase as LETTERS
 
 import pylabrobot.utils
 
@@ -385,6 +386,12 @@ class ItemizedResource(Resource, Generic[T], metaclass=ABCMeta):
 
     return self.get_items(range(self.num_items))
 
+  def __repr__(self) -> str:
+    item_grid = [[LETTERS[i]+":"] + ["O" if self.get_item((i, j)).children else "-" for j in range(self.num_items_x)] for i in range(self.num_items_y)]
+    # item_grid_header = ["  "] + [str(j+1) for j in range(tiprack.num_items_x)] # item_grid.insert(0, item_grid_header)
+    info_str = f"{self.num_items_x}x{self.num_items_y} {self.__class__.__name__}"
+    info_str += "\n" + "\n".join("  ".join(row) for row in item_grid)
+    return info_str
 
 def create_equally_spaced(
     klass: Type[T],
