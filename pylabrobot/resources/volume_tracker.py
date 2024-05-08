@@ -68,8 +68,6 @@ class VolumeTracker:
   def remove_liquid(self, volume: float) -> List[Tuple[Optional["Liquid"], float]]:
     """ Remove liquid from the container. Top to bottom. """
 
-    print(f"Removing {volume} uL.")
-
     if volume > self.get_used_volume():
       raise TooLittleLiquidError(
         f"Container has too little liquid: {volume}uL > {self.get_used_volume()}uL.")
@@ -91,8 +89,6 @@ class VolumeTracker:
 
   def add_liquid(self, liquid: Optional["Liquid"], volume: float) -> None:
     """ Add liquid to the container. """
-
-    print(f"Adding {volume} uL of {liquid}.")
 
     if volume > self.get_free_volume():
       raise TooLittleVolumeError(
