@@ -710,7 +710,8 @@ def load_ola_tube_rack(
       size_y=container_data["width"],
       size_z=container_data["length"],
       max_volume=container_data["maxVolume"],
-      model=container_data["name"]
+      model=container_data["name"],
+      category=container_data["type"]  # "tube"
       # TODO: Add "activeHeight" somewhere here.
       #       It is needed to get the proper Z coordinate.
     )
@@ -731,3 +732,41 @@ def load_ola_tube_rack(
     tube_spot.assign_child_resource(new_tube, location=Coordinate(0,0,0))
 
   return tube_rack_item
+
+class CustomPlatform(Resource):
+  pass
+
+def load_ola_custom(platform_item, platform_data, containers_data, **kwargs):
+  custom = CustomPlatform(
+    name=platform_item["name"],
+    size_x=platform_data["width"],
+    size_y=platform_data["length"],
+    size_z=platform_data["height"],
+    category=platform_data.get("type", None), # Optional in PLR.
+    model=platform_data.get("name", None) # Optional in PLR (not documented in Resource).
+  )
+  # Add tubes in the platform item, if any.
+  platform_contents = platform_item.get("content", [])
+  for content in platform_contents:
+    # Create the Tube.
+    container_data = get_contents_container(content, containers_data)
+    tube = Tube(
+      name=content["name"],
+      size_x=container_data["width"],
+      size_y=container_data["width"],
+      size_z=container_data["length"],
+      max_volume=container_data["maxVolume"],
+      model=container_data["name"],
+      category=container_data["type"]  # "tube"
+      # TODO: Add "activeHeight" somewhere here.
+      #       It is needed to get the proper Z coordinate.
+    )
+
+    # TODO: Add liquid classes to our data schemas, even if it is water everywhere for now.
+    # Add liquid to the tracker.
+    tube.tracker.add_liquid(Liquid.WATER, volume=content["volume"])
+
+    # Add the tube as a direct child.
+    custom.assign_child_resource(tube, location=Coordinate(**content["position"]))
+
+  return custom

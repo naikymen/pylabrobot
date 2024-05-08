@@ -13,7 +13,7 @@ from .deck import Deck
 from .errors import ResourceNotFoundError
 from .itemized_resource import ItemizedResource, create_equally_spaced
 from .liquid import Liquid
-from .petri_dish import PetriDish, PetriDishHolder
+from .petri_dish import PetriDish, PetriDishHolder, Colony
 from .plate import Plate, Lid, Well
 from .powder import Powder
 from .resource import Resource

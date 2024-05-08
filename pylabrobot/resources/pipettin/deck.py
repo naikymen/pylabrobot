@@ -1,29 +1,16 @@
 import textwrap
 # from typing import Optional, Callable
 
-from pylabrobot.resources import Coordinate, Deck, Trash
+from pylabrobot.resources import Coordinate, Deck
 
 from pylabrobot.resources.pipettin.tip_racks import load_ola_tip_rack
-from pylabrobot.resources.pipettin.tube_racks import load_ola_tube_rack
+from pylabrobot.resources.pipettin.tube_racks import load_ola_tube_rack, load_ola_custom
 
-from .utils import get_items_platform #, get_contents_container
+from .utils import get_items_platform, create_trash, create_petri_dish
 
-def not_implemented(platform_item, platform_data, containers_data, *args, **kwargs):
-  # raise NotImplementedError("Method not implemented for platform type: " + platform_data["type"])
+def importer_not_implemented(platform_item, platform_data, containers_data, *args, **kwargs):
   print("Method not implemented for platform type: " + platform_data["type"])
-  return None
-
-def create_trash(platform_item, platform_data, *args, **kwargs):
-  trash = Trash(
-    name=platform_item.get("name"),
-    size_x=platform_data.get("width"),
-    size_y=platform_data.get("length"),
-    size_z=platform_data.get("height"),
-    category=platform_data.get("type", None), # Optional in PLR.
-    model=platform_data.get("name", None) # Optional in PLR (not documented in Resource).
-  )
-
-  return trash
+  # raise NotImplementedError("Method not implemented for platform type: " + platform_data["type"])
 
 class SilverDeck(Deck):
   """ (Ag)nostic deck object.
@@ -33,11 +20,11 @@ class SilverDeck(Deck):
 
   platform_importers: dict = {
     "TUBE_RACK": load_ola_tube_rack,
+    "CUSTOM": load_ola_custom,
     "TIP_RACK": load_ola_tip_rack,
     "BUCKET": create_trash,
-    "CUSTOM": not_implemented,
-    "PETRI_DISH": not_implemented,
-    "ANCHOR": not_implemented
+    "PETRI_DISH": create_petri_dish,
+    "ANCHOR": importer_not_implemented
   }
 
   def __init__(self,
