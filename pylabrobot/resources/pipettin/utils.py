@@ -1,3 +1,6 @@
+import json
+import urllib.request
+
 from pylabrobot.resources import Coordinate, Trash, PetriDish, Colony
 from pylabrobot.resources.liquid import Liquid
 
@@ -59,3 +62,22 @@ def create_petri_dish(platform_item, platform_data, **kwargs):
     dish.assign_child_resource(colony, location=Coordinate(**content["position"]))
 
   return dish
+
+def load_objects_from_url(target_url):
+  data = urllib.request.urlopen(target_url)
+  objects = json.load(data)
+  return objects
+
+def load_defaults():
+  # Example using exported data.
+
+  target_url = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/workspaces.json'
+  workspace = load_objects_from_url(target_url)[0]
+
+  target_url = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/platforms.json'
+  platforms = load_objects_from_url(target_url)
+
+  target_url = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/containers.json'
+  containers = load_objects_from_url(target_url)
+
+  return workspace, platforms, containers

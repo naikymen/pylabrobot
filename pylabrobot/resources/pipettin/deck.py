@@ -1,3 +1,20 @@
+"""
+Pipettin deck adapter for PLR.
+
+Example:
+
+```python3
+from pylabrobot.resources import SilverDeck
+from pylabrobot.resources.pipettin.utils import load_defaults
+
+workspace, platforms, containers = load_defaults()
+
+deck = SilverDeck(workspace, platforms, containers)
+```
+
+Have fun!
+"""
+
 import textwrap
 # from typing import Optional, Callable
 

@@ -1,16 +1,34 @@
 """
 Piper backend for PLR.
 
-It relies on the pipettin piper module, which uses the the websocket API provided by the Moonkraker program.
+It relies on the "piper" module, which implements a robot controller for the OLA/Pipettin lab automation project.
 
-See "klipper_backend.py" for a discussion on "Klipper macro" v.s. "Piper" as possible backends.
+Example:
+
+```python3
+from pylabrobot.liquid_handling import LiquidHandler
+
+from pylabrobot.liquid_handling.backends import PiperBackend
+from pylabrobot.resources import SilverDeck
+from pylabrobot.resources.pipettin.utils import load_defaults
+
+workspace, platforms, containers = load_defaults()
+
+deck = SilverDeck(workspace, platforms, containers)
+back = PiperBackend()
+lh = LiquidHandler(backend=back, deck=deck)
+
+await lh.setup()
+```
+
+Have fun!
 """
 
 # pylint: disable=unused-argument
 
-from pprint import pprint, pformat
-
+from pprint import pformat
 from typing import List
+import asyncio
 
 from pylabrobot.liquid_handling.backends import LiquidHandlerBackend
 from pylabrobot.resources import Resource
@@ -27,109 +45,68 @@ from pylabrobot.liquid_handling.standard import (
 )
 
 # Load piper modules.
-from piper.commander_utils_mongo import MongoObjects
-from piper.gcode import GcodeBuilder
-from piper.coroutines_moon import moonControl
+from piper.coroutines_moon import Controller
+# from piper.log import setup_logging
+from piper.utils import get_config_path
+from piper.config.config_helper import TrackedDict
 # Load newt module.
 import newt
 
 class PiperBackend(LiquidHandlerBackend):
     """ Chatter box backend for 'How to Open Source' """
-    commands: List[dict] = []
-    tracker: dict = {}
 
     def __init__(self,
-                 clearance,
-                 num_channels: int = 1,
-                 mongo_url: str = "mongodb://localhost:27017/",
-                 sio_address: str = "http://localhost:3333", # Pipettin GUI node server.
-                 ws_address: str = "ws://localhost:7125/websocket", # Moonraker server.
-                 verbose: bool = True,
-                 protocol_name=None,
-                 protocol=None,
-                 workspace=None,
-                 platforms_in_workspace=None,
-                 dry=False):
-        """Init method for the PiperBackend.
+                 piper_config:dict = None,
+                 num_channels: int = 1):
+        """Init method for the PiperBackend."""
 
-        Note: 'protocol_name' will override the other parameters if a MongoDB address is given.
-        """
-
-        print(
-            f"Instantiating the PiperBackend with num_channels={num_channels}")
+        print(f"Instantiating the PiperBackend with num_channels={num_channels}")
         super().__init__()
 
         self._num_channels = num_channels
 
-        self.verbose = verbose
-        self.dry = dry
+        if piper_config is None:
+            piper_config = {}
+        base_config_file = get_config_path()
+        base_config = TrackedDict(base_config_file, allow_edits=True)
+        base_config.update(piper_config)
 
-        self.mongo_url = mongo_url
-        if self.mongo_url:
-            # Setup database connection and tools.
-            self.mo = MongoObjects(mongo_url=self.mongo_url, verbose=self.verbose)
-            # List protocols (will print possible protocol names).
-            self.protocols = self.mo.listProtocols()
-        else:
-            self.mo = None
-            self.protocols = None
-
-        # Get workspace info (i.e. the "deck" in PLR terms) from MongoDB if up.
-        if self.mo and protocol_name:
-
-            # if not protocol_name:
-            #     # Get the name of the newest protocol by default.
-            #     protocol_name = self.protocols[-1]["name"]
-
-            # Get the main objects from the protocol's name.
-            protocol, workspace, platforms_in_workspace = self.mo.getProtocolObjects(protocol_name=protocol_name)
-            # Other options:
-            # workspace = self.mo.getWorkspaceByName(workspace_name="asdasd")
-            # platforms_in_workspace = self.mo.getPlatformsInWorkspace(workspace=workspace)
-            # workspace, platforms_in_workspace = None, None
-
-        # Save objects
-        self.protocol, self.workspace, self.platforms_in_workspace = protocol, workspace, platforms_in_workspace
-
-        # Instatiate the GCODE builder class
-        self.builder = GcodeBuilder(protocol=protocol,
-                                    workspace=workspace,
-                                    platformsInWorkspace=platforms_in_workspace,
-                                    verbose=self.verbose)
-        # TODO: Get clearance from the deck object.
-        self.builder.clearance = clearance
-
-        # Setup
-        # Connection to Moonraker
-        self.moon = moonControl(commands=self.commands,
-                                sio_address=sio_address, # "http://localhost:3333", # Pipettin GUI node server.
-                                ws_address=ws_address, # "ws://localhost:7125/websocket", # Moonraker server.
-                                background_writer=False,
-                                tracker=self.tracker, verbose=self.verbose, dry=self.dry)
+        self.config = base_config
+        self.controller = Controller(config=self.config)
 
     # Setup/Stop methods ####
 
-    async def setup(self, reset_firmware_on_error=True, timeout=10.0, dry=False):
-        if dry:
-            self.dry = True
+    async def setup(self, home=False):
 
         await super().setup()
 
-        # Connect to Moonraker.
-        await self._setup_moonraker(timeout, reset_firmware_on_error)
+        # TODO: Set up logging. Will it interfere with PLRs?
+        # setup_logging(directory=opts.get('logdir', None),
+        #               level=opts.get('loglevel', logging.INFO))
 
-        # Home the robot.
-        await self._home_machine(timeout)
+        # Start the controller.
+        await self._setup_controller(timeout=5, reset_firmware_on_error=True)
 
-    async def _setup_moonraker(self, timeout, reset_firmware_on_error):
-        if self.dry:
+        # Home the robot's motion system.
+        if home:
+            await self._home_machine(timeout=43)
+
+        # Mark finished.
+        self.setup_finished = True
+
+    async def _setup_controller(self, timeout, reset_firmware_on_error):
+
+        if self.controller.dry:
             print("Dry mode enabled, skipping Moonraker connection.")
             return
 
-        print("Setting up connection to the robot...")
-        self.moon.start_as_task()
-        ws_ready = await self.moon.wait_for_setup(timeout=timeout, raise_error=True)
-        printer_ready = await self.moon.wait_for_ready(reset=reset_firmware_on_error, wait_time=1.1, timeout=timeout)
+        # Start the controller.
+        print("Setting up connections...")
+        self.controller_task: asyncio.Task = asyncio.create_task(self.controller.moon_commander())
+
+        # Wait for readiness.
+        ws_ready = await self.controller.wait_for_setup(timeout=timeout, raise_error=True)
+        printer_ready = await self.controller.wait_for_ready(reset=reset_firmware_on_error, wait_time=1.1, timeout=timeout)
         if not ws_ready:
             raise Exception("Moonraker is not ready, check its logs.")
         elif not printer_ready:
@@ -140,27 +117,30 @@ class PiperBackend(LiquidHandlerBackend):
     async def _home_machine(self, timeout):
         # TODO: customize parameters.
         home_action = self.make_home_action()
-        gcode = self.builder.parseAction(action=home_action)
+        gcode = self.controller.builder.parseAction(action=home_action)
 
-        if self.dry:
+        if self.controller.dry:
             print("Dry mode enabled, skipping Homing routine.")
             return
 
         # Send commands.
         print("Homing the machine's axes...")
-        cmd_id = await self.moon.send_gcode_script(gcode, wait=False, check=False, cmd_id="PLR setup", timeout=0.0)
+        cmd_id = await self.controller.send_gcode_script(gcode, wait=False, check=False, cmd_id="PLR setup", timeout=0.0)
+
         # Wait for idle printer.
         print("Waiting for homing completion (idle machine)...")
-        result = await self.moon.wait_for_idle_printer(timeout=timeout)
+        result = await self.controller.wait_for_idle_printer(timeout=timeout)
         if not result:
             print(f"The homing process timed out. Try increasing the value of 'timeout' (currently at {timeout}), or check the logs for errors.")
+
         # Check for homing success
         print("Checking for homing success...")
-        result = await self.moon.check_command_result_ok(cmd_id=cmd_id, timeout=timeout/2, loop_delay=0.2)
+        result = await self.controller.check_command_result_ok(cmd_id=cmd_id, timeout=timeout/2, loop_delay=0.2)
         if not result:
             await super().stop()
-            response = self.moon.get_response_by_id(cmd_id)
-            raise Exception("Failed to HOME Klipper. Response:\n" + pformat(response) + "\n")
+            response = self.controller.get_response_by_id(cmd_id)
+            raise Exception("Failed to HOME. Response:\n" + pformat(response) + "\n")
+
         print("Homing done!")
 
     async def stop(self, timeout=2.0, home=True):
@@ -168,7 +148,7 @@ class PiperBackend(LiquidHandlerBackend):
             # Home the robot.
             await self._home_machine(timeout)
 
-        if self.dry:
+        if self.controller.dry:
             print("Dry mode enabled, skipping Backend cleanup.")
             await super().stop()
             return
@@ -176,17 +156,17 @@ class PiperBackend(LiquidHandlerBackend):
             print("Stopping the robot.")
 
             # Try sending a "motors-off" command.
-            cmd_id = await self.moon.send_gcode_cmd("M84", wait=True, check=True, timeout=timeout)
+            cmd_id = await self.controller.send_gcode_cmd("M84", wait=True, check=True, timeout=timeout)
 
             # Send an "emergency stop" command if M84 failed.
-            if not await self.moon.check_command_result_ok(cmd_id=cmd_id, timeout=timeout, loop_delay=0.2):
-                self.moon.firmware_restart()
+            if not await self.controller.check_command_result_ok(cmd_id=cmd_id, timeout=timeout, loop_delay=0.2):
+                self.controller.firmware_restart()
 
             # TODO: comment on what this does.
             await super().stop()
 
             # Close the connection to moonraker.
-            await self.moon.stop()
+            await self.controller.stop()
 
     # Resource callback methods ####
 
@@ -214,12 +194,12 @@ class PiperBackend(LiquidHandlerBackend):
     async def _send_command_wait_and_check(self, gcode, timeout):
         # TODO: customize timeout.
         # Send gcode commands.
-        if not self.dry:
+        if not self.controller.dry:
             # Send commands.
-            cmd_id = await self.moon.send_gcode_script(gcode, wait=True, check=True, timeout=timeout)
+            await self.controller.send_gcode_script(gcode, wait=True, check=True, timeout=timeout)
 
             # Wait for idle printer.
-            return await self.moon.wait_for_idle_printer(timeout=1.0)
+            return await self.controller.wait_for_idle_printer(timeout=1.0)
         else:
             print(f"Backend in dry mode, commands ignored:\n{pformat(gcode)}")
 
@@ -329,7 +309,7 @@ class PiperBackend(LiquidHandlerBackend):
         action = self.make_tip_pickup_action(ops[0], tool_id)
 
         # Make GCODE
-        gcode = self.builder.parseAction(action=action)
+        gcode = self.controller.builder.parseAction(action=action)
 
         # TODO: have the timeout based on an estimation.
         timeout = 10.0
@@ -350,7 +330,7 @@ class PiperBackend(LiquidHandlerBackend):
         drop_tip_action = self.make_discard_tip_action(ops[0], tool_id=tool_id)
 
         # Make GCODE
-        gcode = self.builder.parseAction(action=drop_tip_action)
+        gcode = self.controller.builder.parseAction(action=drop_tip_action)
 
         # TODO: have the timeout based on an estimation.
         timeout = 10.0
@@ -369,7 +349,7 @@ class PiperBackend(LiquidHandlerBackend):
         action = self.make_pipetting_action(ops[0], tool_id)
 
         # Make GCODE
-        gcode = self.builder.parseAction(action=action)
+        gcode = self.controller.builder.parseAction(action=action)
 
         # TODO: have the timeout based on an estimation.
         timeout = 10.0
@@ -394,7 +374,7 @@ class PiperBackend(LiquidHandlerBackend):
         action = self.make_pipetting_action(ops[0], tool_id, dispense=True)
 
         # Make GCODE
-        gcode = self.builder.parseAction(action=action)
+        gcode = self.controller.builder.parseAction(action=action)
 
         # TODO: have the timeout based on an estimation.
         timeout = 10.0

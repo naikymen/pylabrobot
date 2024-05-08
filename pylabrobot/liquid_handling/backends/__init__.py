@@ -8,5 +8,6 @@ from .hamilton.vantage import Vantage
 from .http import HTTPBackend
 from .opentrons_backend import OpentronsBackend
 from .saver_backend import SaverBackend
+from .piper_backend import PiperBackend
 
 from .tecan.EVO import EVO
