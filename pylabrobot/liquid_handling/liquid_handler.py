@@ -767,7 +767,7 @@ class LiquidHandler(Machine):
       if does_volume_tracking():
         if not op.resource.tracker.is_disabled:
           (op.resource.tracker.commit if success else op.resource.tracker.rollback)()
-        (self.head[channel].commit if success else self.head[channel].rollback)()
+        (self.head[channel].get_tip().tracker.commit if success else self.head[channel].rollback)()
 
     # trigger callback
     self._trigger_callback(
@@ -936,7 +936,7 @@ class LiquidHandler(Machine):
       error = e
 
     # determine which channels were successful
-    successes = [error is not None] * len(dispenses)
+    successes = [error is None] * len(dispenses)
     if error is not None and isinstance(error, ChannelizedError):
       successes = [channel_idx not in error.errors for channel_idx in use_channels]
 
@@ -945,11 +945,11 @@ class LiquidHandler(Machine):
       if does_volume_tracking():
         if not op.resource.tracker.is_disabled:
           (op.resource.tracker.commit if success else op.resource.tracker.rollback)()
-        (self.head[channel].commit if success else self.head[channel].rollback)()
+        (self.head[channel].get_tip().tracker.commit if success else self.head[channel].rollback)()
 
     # trigger callback
     self._trigger_callback(
-      "aspirate",
+      "dispense",
       liquid_handler=self,
       operations=dispenses,
       use_channels=use_channels,
