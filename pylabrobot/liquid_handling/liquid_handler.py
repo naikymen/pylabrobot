@@ -724,11 +724,8 @@ class LiquidHandler(Machine):
     for r, vol in zip(resources, vols):
       if r.tracker.is_disabled or not does_volume_tracking():
         liquids.append([(None, vol)])
-        print(f"Adding liquids: {liquids[-1]} (volume tracking disabled)")
       else:
         liquids.append(r.tracker.get_liquids(top_volume=vol))
-        print(f"Adding liquid: {liquids[-1]} (with volume tracking)")
-    print(f"Using liquids: {liquids}")
 
     # create operations
     aspirations = [Aspiration(resource=r, volume=v, offset=o, flow_rate=fr, liquid_height=lh, tip=t,
@@ -902,10 +899,8 @@ class LiquidHandler(Machine):
     if does_volume_tracking():
       liquids = [c.get_tip().tracker.get_liquids(top_volume=vol)
                 for c, vol in zip(self.head.values(), vols)]
-      print(f"Using liquids: {liquids} (with volume tracking)")
     else:
       liquids = [[(None, vol)] for vol in vols]
-      print(f"Using liquids: {liquids} (volume tracking disabled)")
 
     # create operations
     dispenses = [Dispense(resource=r, volume=v, offset=o, flow_rate=fr, liquid_height=lh, tip=t,
