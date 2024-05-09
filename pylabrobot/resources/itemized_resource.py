@@ -387,18 +387,26 @@ class ItemizedResource(Resource, Generic[T], metaclass=ABCMeta):
     return self.get_items(range(self.num_items))
 
   def __repr__(self) -> str:
+
     # Make a title with summary information.
     info_str = f"{self.num_items_x}x{self.num_items_y} {self.__class__.__name__}"
 
-    # Create the header row with numbers aligned to the columns.
-    # Calculate the maximum number of digits required for any column index
+    if self.num_items_y > len(LETTERS):
+      # TODO: This will work up to 384-well plates.
+      return info_str + " (too many rows to print)"
+
+    # Calculate the maximum number of digits required for any column index.
     max_digits = len(str(self.num_items_x))
+
+    # Create the header row with numbers aligned to the columns.
     # Use right-alignment specifier.
     header_row = "    " + " ".join(f"{i+1:<{max_digits}}" for i in range(self.num_items_x))
 
     # Create the item grid with resource absence/presence information.
-    item_grid = [[LETTERS[i]+":"] + ["O" if self.get_item((i, j)).children else "-" for j in range(self.num_items_x)] for i in range(self.num_items_y)]
-    item_grid = "\n".join("  ".join(row) for row in item_grid)
+    item_grid = [["O" if self.get_item((i, j)).children else "-" for j in range(self.num_items_x)] for i in range(self.num_items_y)]
+    spacer = (" " * max(1, max_digits))
+    item_grid = [LETTERS[i] + ":  " + spacer.join(row) for i, row in enumerate(item_grid)]
+    item_grid = "\n".join(item_grid)
 
     # Build the final representation.
     return info_str + "\n" + header_row + "\n" + item_grid
