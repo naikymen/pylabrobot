@@ -81,8 +81,6 @@ class SilverDeck(Deck):
       size_x = workspace.get("width", default_size_x),
       size_y = workspace.get("length", default_size_y),
       size_z = workspace.get("height", default_size_z),
-      # resource_assigned_callback = resource_assigned_callback,
-      # resource_unassigned_callback = resource_unassigned_callback,
       origin = origin)
 
     # Load platform items.
