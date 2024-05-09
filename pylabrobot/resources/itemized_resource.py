@@ -387,11 +387,21 @@ class ItemizedResource(Resource, Generic[T], metaclass=ABCMeta):
     return self.get_items(range(self.num_items))
 
   def __repr__(self) -> str:
-    item_grid = [[LETTERS[i]+":"] + ["O" if self.get_item((i, j)).children else "-" for j in range(self.num_items_x)] for i in range(self.num_items_y)]
-    # item_grid_header = ["  "] + [str(j+1) for j in range(tiprack.num_items_x)] # item_grid.insert(0, item_grid_header)
+    # Make a title with summary information.
     info_str = f"{self.num_items_x}x{self.num_items_y} {self.__class__.__name__}"
-    info_str += "\n" + "\n".join("  ".join(row) for row in item_grid)
-    return info_str
+
+    # Create the header row with numbers aligned to the columns.
+    # Calculate the maximum number of digits required for any column index
+    max_digits = len(str(self.num_items_x))
+    # Use right-alignment specifier.
+    header_row = "    " + " ".join(f"{i+1:<{max_digits}}" for i in range(self.num_items_x))
+
+    # Create the item grid with resource absence/presence information.
+    item_grid = [[LETTERS[i]+":"] + ["O" if self.get_item((i, j)).children else "-" for j in range(self.num_items_x)] for i in range(self.num_items_y)]
+    item_grid = "\n".join("  ".join(row) for row in item_grid)
+
+    # Build the final representation.
+    return info_str + "\n" + header_row + "\n" + item_grid
 
 def create_equally_spaced(
     klass: Type[T],
