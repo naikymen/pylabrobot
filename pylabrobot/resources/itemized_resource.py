@@ -403,7 +403,10 @@ class ItemizedResource(Resource, Generic[T], metaclass=ABCMeta):
     header_row = "    " + " ".join(f"{i+1:<{max_digits}}" for i in range(self.num_items_x))
 
     # Create the item grid with resource absence/presence information.
-    item_grid = [["O" if self.get_item((i, j)).children else "-" for j in range(self.num_items_x)] for i in range(self.num_items_y)]
+    item_grid = [
+      ["O" if self.get_item((i, j)).children else "-" for j in range(self.num_items_x)]
+      for i in range(self.num_items_y)
+    ]
     spacer = (" " * max(1, max_digits))
     item_grid = [LETTERS[i] + ":  " + spacer.join(row) for i, row in enumerate(item_grid)]
     item_grid = "\n".join(item_grid)
