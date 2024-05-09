@@ -29,7 +29,11 @@ Have fun!
 from pprint import pformat
 from typing import List
 import asyncio
+import json
+import urllib
 
+from pylabrobot.resources import TipSpot
+from pylabrobot.resources.pipettin.tube_racks import Tube as PiperTube
 from pylabrobot.liquid_handling.backends import LiquidHandlerBackend
 from pylabrobot.resources import Resource
 from pylabrobot.liquid_handling.standard import (
@@ -46,16 +50,30 @@ from pylabrobot.liquid_handling.standard import (
 
 # Load piper modules.
 from piper.coroutines_moon import Controller
+from piper.datatools.nodb import NoObjects
 # from piper.log import setup_logging
 from piper.utils import get_config_path
 from piper.config.config_helper import TrackedDict
 # Load newt module.
 import newt
 
+def load_objects_from_file(file_path):
+  with open(file_path, "r", encoding="utf-8") as f:
+    objects = json.load(f)
+  return objects
+
+def load_objects_from_url(target_url):
+  data = urllib.request.urlopen(target_url)
+  objects = json.load(data)
+  return objects
+
 class PiperBackend(LiquidHandlerBackend):
   """ Chatter box backend for 'How to Open Source' """
 
+  controller: Controller
+
   def __init__(self,
+               tools_json:str,
                piper_config:dict = None,
                num_channels: int = 1):
     """Init method for the PiperBackend."""
@@ -65,14 +83,16 @@ class PiperBackend(LiquidHandlerBackend):
 
     self._num_channels = num_channels
 
+    # Parse configuration.
     if piper_config is None:
       piper_config = {}
     base_config_file = get_config_path()
     base_config = TrackedDict(base_config_file, allow_edits=True)
     base_config.update(piper_config)
-
     self.config = base_config
-    self.controller = Controller(config=self.config)
+
+    # Save tool data.
+    self.tools = load_objects_from_url(tools_json)
 
   # Setup/Stop methods ####
 
@@ -84,8 +104,26 @@ class PiperBackend(LiquidHandlerBackend):
     # setup_logging(directory=opts.get('logdir', None),
     #               level=opts.get('loglevel', logging.INFO))
 
+    # Populate the controller's database with data from the Deck.
+    database_tools = NoObjects()
+    database_tools.workspaces = [self.deck.workspace]
+    database_tools.platforms = self.deck.platforms
+    database_tools.containers = self.deck.containers
+    database_tools.tools = self.tools
+    # database_tools.settings
+
+    # Create the controller object.
+    self.controller = Controller(config=self.config, database_tools=database_tools)
+
+    # Set current data objects in the gcode builder.
+    self.controller.builder.initialize_objects(
+      workspace=self.deck.workspace, platformsInWorkspace=self.deck.platforms)
+
+    # Populate the controller's database with Tool data.
+    self.tool_ids = list(self.controller.builder.tools)
+
     # Start the controller.
-    await self._setup_controller(timeout=5, reset_firmware_on_error=True)
+    await self._start_controller(timeout=5, reset_firmware_on_error=True)
 
     # Home the robot's motion system.
     if home:
@@ -94,10 +132,10 @@ class PiperBackend(LiquidHandlerBackend):
     # Mark finished.
     self.setup_finished = True
 
-  async def _setup_controller(self, timeout, reset_firmware_on_error):
+  async def _start_controller(self, timeout, reset_firmware_on_error):
 
     if self.controller.dry:
-      print("Dry mode enabled, skipping Moonraker connection.")
+      print("Dry mode enabled, skipping setup.")
       return
 
     # Start the controller.
@@ -203,90 +241,134 @@ class PiperBackend(LiquidHandlerBackend):
     else:
       print(f"Backend in dry mode, commands ignored:\n{pformat(gcode)}")
 
-  # Pipetting action generators ####
+  def check_tool(self, tool_id):
+    if tool_id not in self.tool_ids:
+      raise ValueError(f"Tool with ID '{tool_id}' was not found in the backend's tools list ({self.tool_ids}).")
 
-  def make_home_action(self, axes=None):
-    # home_action = {'cmd': 'HOME'}
-    # if axes:
-    #     home_action["args"] = {"axis": axes}
+
+  # Action generators ####
+  @staticmethod
+  def get_spot_index(spot):
+    """Find the index number of a resource (e.g. a TipSpot) from an itemized resource (e.g. a Tip Rack)."""
+    itemized_resource = spot.parent
+    index = next(i for i, s in enumerate(itemized_resource.get_all_items()) if s is spot)
+    return index
+
+  def make_home_action(self, axes=None) -> List:
+    """make_home_action"""
     home_action = newt.protocol_actions.action_home(axis=axes)
-    return home_action
+    return [home_action]
 
-  def make_tip_pickup_action(self, operation: Pickup, tool_id: str):
-    # TODO: Add validation through "jsonschema.validate" (maybe in piper, maybe here).
-    # NOTE: The platform version of the content definition is not useful for now.
-    # pick_up_tip_action = {
-    #     'args': {'item': '200ul_tip_rack_MULTITOOL 1', 'tool': 'P200'},
-    #     'cmd': 'PICK_TIP'}
-    # NOTE: Using the platformless content definition.
-    # pick_up_tip_action = {
-    #     'cmd': 'PICK_TIP',
-    #     'args': {'coords': self.get_coords(operation),
-    #              'tool': tool_id,
-    #              'tip': {'maxVolume': operation.tip.maximal_volume,
-    #                      'tipLength': operation.tip.total_tip_length,
-    #                      'volume': 0}}}
-    pick_up_tip_action = newt.protocol_actions.action_pick_tip_coords(
-      coords=self.get_coords(operation),
-      tool=tool_id,
-      volume=0.0, # TODO: Does an initial volume make sense here?
-      tip_max_volume=operation.tip.maximal_volume,
-      tip_length=operation.tip.total_tip_length
-    )
+  def make_tip_pickup_action(self, operations: List[Pickup], use_channels: List[int], tool_id: str) -> List:
+    """make_tip_pickup_action"""
+    self.check_tool(tool_id)
 
-    return pick_up_tip_action
+    pick_up_tip_actions = []
+    for op, ch in zip(operations, use_channels):
 
-  def make_discard_tip_action(self, operation: Pickup, tool_id: str = None):
-    # TODO: The tip ejection coordinates are configured in the tool definition,
-    #       and are unaffected by the location defined in the "deck" object.
-    #       See "drop_tips" for more details.
-    # discard_tip_action = {'args': {'tool': tool_id}, 'cmd': 'DISCARD_TIP'}
+      # Get the index of the TipSpot in the TipRack.
+      tip_spot_index = self.get_spot_index(op.resource)
+
+      # Make the action.
+      pick_up_tip_action = newt.protocol_actions.action_pick_tip(
+        tool=tool_id,
+        item=op.resource.parent.name,
+        # NOTE: Can't use names because PLR Tips don't have one.
+        value=tip_spot_index, select_by="index"
+      )
+      pick_up_tip_actions.append(pick_up_tip_action)
+
+    return pick_up_tip_actions
+
+  def make_discard_tip_action(self, operations: List[Drop], use_channels: List[int], tool_id: str = None) -> List:
+    """make_discard_tip_action"""
+    self.check_tool(tool_id)
+
 
     # Use newt.
-    discard_tip_action = newt.protocol_actions.action_discard_tip(
-      item=None, tool=tool_id
-      # TODO: Check if piper needs any of the stuff in "operation".
-    )
-    return discard_tip_action
+    discard_tip_actions = []
+    for op, ch in zip(operations, use_channels):
 
-  def make_pipetting_action(self, operation: Aspiration, tool_id: str, dispense:bool=False):
-    # TODO: Add validation through "jsonschema.validate" (maybe in piper, maybe here).
-    # NOTE: The platform version of the content definition is not useful for now.
-    # pipetting_action = {
-    #     'args': {'item': '5x16_1.5_rack 1', 'selector': {'by': 'name', 'value': 'tube1'}, 'volume': 100},
-    #     'cmd': 'LOAD_LIQUID'}
-    # NOTE: Using the platformless content definition.
-    # pipetting_action = {
-    #         "cmd": "LOAD_LIQUID",
-    #         "args": {
-    #             "coords": self.get_coords(operation),
-    #             "tube": {"volume": operation.resource.tracker.get_used_volume()},
-    #             "volume": operation.volume,
-    #             "tool": tool_id
-    #         }
-    #     }
+      # Get the correct item name.
+      # NOTE: PLR may pass a "Trash" or "TipSpot" resource to a Drop operation.
+      if isinstance(op.resource, TipSpot):
+        item_name = op.resource.parent.name
+        content_name=op.resource.name
+      else:
+        # NOTE: Probably "Trash".
+        item_name = op.resource.name
+        content_name = None
 
-    if dispense:
-      pipetting_action = newt.protocol_actions.action_drop_liquid_coords(
-        coords=self.get_coords(operation),
-        volume=operation.volume,
+      # TODO: Check if piper needs any more stuff from the "operation".
+      discard_tip_action = newt.protocol_actions.action_discard_tip(
         tool=tool_id,
-        used_volume=operation.resource.tracker.get_used_volume()
+        # NOTE: Piper will deduce the type of drop location on its own.
+        item=item_name,
+        value=content_name, select_by="name"
       )
-    else:
-      pipetting_action = newt.protocol_actions.action_load_liquid_coords(
-        coords=self.get_coords(operation),
-        volume=operation.volume,
-        tool=tool_id,
-        used_volume=operation.resource.tracker.get_used_volume()
-      )
+      discard_tip_actions.append(discard_tip_action)
 
-    return pipetting_action
+    return discard_tip_actions
+
+  def make_pipetting_action(self, operations: List[Aspiration], use_channels: List[int], tool_id: str) -> List:
+    """make_pipetting_action"""
+    self.check_tool(tool_id)
+
+    pipetting_actions = []
+    for op, ch in zip(operations, use_channels):
+
+      # Get the correct item name.
+      if isinstance(op.resource, PiperTube):
+        # NOTE: Tubes are nested in TubeSpots.
+        item_name = op.resource.parent.parent.name
+      else:
+        item_name = op.resource.parent.name
+
+      # Choose the appropriate action function.
+      if isinstance(op, Dispense):
+        liquid_action_func = newt.protocol_actions.action_drop_liquid
+      elif isinstance(op, Aspiration):
+        liquid_action_func = newt.protocol_actions.action_load_liquid
+      else:
+        msg = f"The pipetting operation must Aspirate or Dispense, not '{op.__class__.__name__}'."
+        raise ValueError(msg)
+
+      # Generate the action.
+      pipetting_action = liquid_action_func(
+                volume=op.volume,
+                tool=tool_id,
+                # NOTE: Piper will deduce the type of drop location on its own.
+                item=item_name,
+                value=op.resource.name, select_by="name"
+              )
+      # Save it to the list.
+      pipetting_actions.append(pipetting_action)
+
+    return pipetting_actions
 
   # Atomic implemented in hardware ####
 
-  async def pick_up_tips(self, ops: List[Pickup], use_channels: List[int], **backend_kwargs):
-    """_summary_
+  def parse_actions(self, actions: list) -> List:
+    gcode_list = []
+    for a in actions:
+      action_commands, _ = self.controller.builder.parseAction(a)
+      gcode_list += action_commands
+    return gcode_list
+
+  async def run_gcode(self, gcode_list:list, timeout:float):
+    for gcode in gcode_list:
+      await self._send_command_wait_and_check(gcode, timeout=timeout)
+
+  async def run_actions(self, actions:list):
+    # Make GCODE
+    gcode_list = self.parse_actions(actions)
+
+    # Send and check for success
+    # TODO: have the timeout based on an estimation.
+    await self.run_gcode(gcode_list, timeout=10.0)
+
+  async def pick_up_tips(self, ops: List[Pickup], use_channels: List[int], tool_id: str, **backend_kwargs):
+    """Pick up tips.
 
     The action can also provide the tip's coordinates directly, but must provide "tip" data explicitly:
       'args': {'coords': {"x": 20, "y": 200, "z": 30},
@@ -299,90 +381,69 @@ class PiperBackend(LiquidHandlerBackend):
       'tipLength': 50.0,
       'volume': 0
     """
-    print(f"Picking up tips {ops}.")
+    print(f"Picking up tips: {ops}")
 
-    # TODO: Ask Rick how to choose a pipette (or channel from a multichanel pipette).
+    self.check_tool(tool_id)
+
+    # TODO: Ask Rick how to choose a pipette (or channel from a multi-chanel pipette).
     #       The OT module has a "select_tip_pipette" method.
-    tool_id = "P200"
 
     # TODO: Handle multi-channel pick-up operations.
-    action = self.make_tip_pickup_action(ops[0], tool_id)
+    actions = self.make_tip_pickup_action(ops, use_channels, tool_id)
 
-    # Make GCODE
-    gcode = self.controller.builder.parseAction(action=action)
+    # Run the actions.
+    await self.run_actions(actions)
 
-    # TODO: have the timeout based on an estimation.
-    timeout = 10.0
-
-    # Send and check for success
-    await self._send_command_wait_and_check(gcode, timeout=timeout)
-
-  async def drop_tips(self, ops: List[Drop], use_channels: List[int], **backend_kwargs):
+  async def drop_tips(self, ops: List[Drop], use_channels: List[int], tool_id: str, **backend_kwargs):
+    """drop_tips"""
     print(f"Dropping tips {ops}.")
+
     # TODO: reject operations which are not "discard to trash" using "NotImplementedError".
     # This is because the Pipettin robot (2023/03) ejects tips using a fixed "post" and not a regular ejector.
 
-    # TODO: Ask Rick how to choose a pipette (or channel from a multichanel pipette).
+    # TODO: Ask Rick how to choose a pipette (or channel from a multi-chanel pipette).
     #       The OT module has a "select_tip_pipette" method.
-    tool_id = None
+    self.check_tool(tool_id)
 
     # TODO: Handle multi-channel pick-up operations.
-    drop_tip_action = self.make_discard_tip_action(ops[0], tool_id=tool_id)
+    actions = self.make_discard_tip_action(ops, use_channels, tool_id=tool_id)
 
-    # Make GCODE
-    gcode = self.controller.builder.parseAction(action=drop_tip_action)
+    # Run the actions.
+    await self.run_actions(actions)
 
-    # TODO: have the timeout based on an estimation.
-    timeout = 10.0
 
-    # Send and check for success
-    await self._send_command_wait_and_check(gcode, timeout=timeout)
-
-  async def aspirate(self, ops: List[Aspiration], use_channels: List[int], **backend_kwargs):
+  async def aspirate(self, ops: List[Aspiration], use_channels: List[int], tool_id: str, **backend_kwargs):
+    """aspirate"""
     print(f"Aspirating {ops}.")
 
     # TODO: Ask Rick how to choose a pipette (or channel from a multichanel pipette).
     #       The OT module has a "select_tip_pipette" method.
-    tool_id = None
+    self.check_tool(tool_id)
 
     # Make action
-    action = self.make_pipetting_action(ops[0], tool_id)
+    actions = self.make_pipetting_action(ops, use_channels, tool_id)
 
-    # Make GCODE
-    gcode = self.controller.builder.parseAction(action=action)
-
-    # TODO: have the timeout based on an estimation.
-    timeout = 10.0
-
-    # Send and check for success
-    await self._send_command_wait_and_check(gcode, timeout=timeout)
+    # Run the actions.
+    await self.run_actions(actions)
 
   async def dispense(self, ops: List[Dispense], use_channels: List[int], **backend_kwargs):
+    """dispense"""
     print(f"Dispensing {ops}.")
 
     # TODO: Ask Rick how to choose a pipette (or channel from a multichanel pipette).
     #       The OT module has a "select_tip_pipette" method.
     tool_id = None
 
-    # Make action:
-    # dispense_liquid_action = {
-    #     'args': {'item': '5x16_1.5_rack 1', 'selector': {'by': 'name', 'value': 'tube2'}, 'volume': 100},
-    #     'cmd': 'DROP_LIQUID'}
-
     # Make action
     # TODO: ask Rick if the "Dispense" operation is really the same as "Aspirate" (see standard.py).
-    action = self.make_pipetting_action(ops[0], tool_id, dispense=True)
+    actions = self.make_pipetting_action(ops, use_channels, tool_id)
 
-    # Make GCODE
-    gcode = self.controller.builder.parseAction(action=action)
+    # Run the actions.
+    await self.run_actions(actions)
 
-    # TODO: have the timeout based on an estimation.
-    timeout = 10.0
-
-    # Send and check for success
-    await self._send_command_wait_and_check(gcode, timeout=timeout)
 
   # Atomic actions not implemented in hardware  ####
+
   # TODO: implement these methods as a required human intervention.
   async def pick_up_tips96(self, pickup: PickupTipRack):
     raise NotImplementedError("The backend does not support the CoRe 96.")

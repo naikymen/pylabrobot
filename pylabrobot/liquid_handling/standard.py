@@ -25,7 +25,7 @@ class Pickup:
 @dataclass
 class Drop:
   """ A drop operation. """
-  resource: Resource
+  resource: List[Union[TipSpot, Resource]]  # Can be trash, see LiquidHandler.
   offset: Optional[Coordinate]
   tip: Tip
 

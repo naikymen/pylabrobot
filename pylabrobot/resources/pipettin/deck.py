@@ -64,6 +64,10 @@ class SilverDeck(Deck):
                #resource_unassigned_callback: Optional[Callable] = None
                ):
 
+    self.workspace = workspace
+    self.platforms = platforms
+    self.containers = containers
+
     # Parse origin from padding.
     padding = workspace.get("padding", None)
     if padding:
