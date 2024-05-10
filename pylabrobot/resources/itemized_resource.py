@@ -387,9 +387,21 @@ class ItemizedResource(Resource, Generic[T], metaclass=ABCMeta):
     return self.get_items(range(self.num_items))
 
   def __repr__(self) -> str:
+    return (f"{self.__class__.__name__}(name={self.name}, size_x={self._size_x}, "
+            f"size_y={self._size_y}, size_z={self._size_z}, location={self.location})")
+
+  @staticmethod
+  def _occupied_func(x: Resource):
+    return "O" if x.children else "-"
+
+  def make_grid(self, occupied_func=None):
+    # The "occupied_func" is a function that checks if a resource has something in it,
+    # and returns a single character representing its status.
+    if occupied_func is None:
+      occupied_func = self._occupied_func
 
     # Make a title with summary information.
-    info_str = f"{self.num_items_x}x{self.num_items_y} {self.__class__.__name__}"
+    info_str = repr(self)
 
     if self.num_items_y > len(LETTERS):
       # TODO: This will work up to 384-well plates.
@@ -404,15 +416,20 @@ class ItemizedResource(Resource, Generic[T], metaclass=ABCMeta):
 
     # Create the item grid with resource absence/presence information.
     item_grid = [
-      ["O" if self.get_item((i, j)).children else "-" for j in range(self.num_items_x)]
+      [occupied_func(self.get_item((i, j))) for j in range(self.num_items_x)]
       for i in range(self.num_items_y)
     ]
-    spacer = (" " * max(1, max_digits))
-    item_grid = [LETTERS[i] + ":  " + spacer.join(row) for i, row in enumerate(item_grid)]
-    item_grid = "\n".join(item_grid)
+    spacer = " " * max(1, max_digits)
+    item_list = [LETTERS[i] + ":  " + spacer.join(row) for i, row in enumerate(item_grid)]
+    item_text = "\n".join(item_list)
 
-    # Build the final representation.
-    return info_str + "\n" + header_row + "\n" + item_grid
+    # Simple footer with dimensions.
+    footer_text = f"{self.num_items_x}x{self.num_items_y} {self.__class__.__name__}"
+
+    return info_str + "\n" + header_row + "\n" + item_text + "\n" + footer_text
+
+  def print_grid(self, occupied_func=None):
+    print(self.make_grid(occupied_func=occupied_func))
 
 def create_equally_spaced(
     klass: Type[T],
