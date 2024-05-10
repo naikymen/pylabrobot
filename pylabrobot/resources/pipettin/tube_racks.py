@@ -546,9 +546,6 @@ class TubeRack(ItemizedResource[TubeSpot], metaclass=ABCMeta):
   def _occupied_func(x: TubeSpot):
     return "U" if x.has_tube() else "-"
 
-  def print_grid(self,occupied_func=None):
-    super().print_grid(occupied_func=occupied_func)
-
   def get_tube(self, identifier: Union[str, int]) -> Tube:
     """ Get the item with the given identifier.
 
