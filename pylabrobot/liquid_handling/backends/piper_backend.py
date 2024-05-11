@@ -31,6 +31,7 @@ from typing import List
 import asyncio
 import json
 import urllib
+from typing import Union
 
 from pylabrobot.resources import TipSpot
 from pylabrobot.resources.pipettin.tube_racks import Tube as PiperTube
@@ -223,7 +224,7 @@ class PiperBackend(LiquidHandlerBackend):
     return self._num_channels
 
   @staticmethod
-  def get_coords(operation):
+  def get_coords(operation: Union[Pickup, Drop]):
     # pick_up_op
     coordinate = operation.get_absolute_location()
     coordinate_dict = coordinate.serialize()

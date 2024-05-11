@@ -47,6 +47,10 @@ def reshape_2d(list_: List[T], shape: Tuple[int, int]) -> List[List[T]]:
 
 
 def expand(list_or_item: Union[Sequence[T], T], n: int) -> List[T]:
+  """
+  Check that 'list_or_item' is length 'n', or make
+  a list of that length by repeating 'list_or_item'.
+  """
   if n <= 0:
     raise ValueError(f"Cannot expand list {list_or_item} by {n}.")
   if isinstance(list_or_item, collections.abc.Sequence) and not isinstance(list_or_item, str):

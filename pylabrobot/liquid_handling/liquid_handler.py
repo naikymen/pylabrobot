@@ -347,13 +347,17 @@ class LiquidHandler(Machine):
       NoTipError: If a spot does not have a tip.
     """
 
-    # fix arguments
+    # Fix arguments.
+    # Force 'offsets' to be a list of length 'n'.
     offsets = expand(offsets, len(tip_spots))
+    # Fix channels.
     if use_channels is None:
       if self._default_use_channels is None:
         use_channels = list(range(len(tip_spots)))
       else:
         use_channels = self._default_use_channels
+
+    # Get tips.
     tips = [tip_spot.get_tip() for tip_spot in tip_spots]
 
     # checks

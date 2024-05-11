@@ -460,6 +460,8 @@ class Vantage(HamiltonLiquidHandler):
     tips = [cast(HamiltonTip, op.resource.get_tip()) for op in ops]
     ttti = await self.get_ttti(tips)
 
+    # NOTE: "max_z" here is the Z coordinate of the tip's tip, when sitting on a spot,
+    #       just as Rick has observed on his robot.
     max_z = max(op.resource.get_absolute_location().z + \
                  (op.offset.z if op.offset is not None else 0) for op in ops)
     max_total_tip_length = max(op.tip.total_tip_length for op in ops)
@@ -477,6 +479,9 @@ class Vantage(HamiltonLiquidHandler):
         y_position=y_positions,
         tip_pattern=tip_pattern,
         tip_type=ttti,
+        # NOTE: The "x 10" multiplication below is needed by the hardware,
+        #       which operates in units of [0.1 mm]. The explanation is well
+        #       out of my interest for now. xD
         begin_z_deposit_position=[int((max_z + max_total_tip_length)*10)]*len(ops),
         end_z_deposit_position=[int((max_z + max_tip_length)*10)]*len(ops),
         minimal_traverse_height_at_begin_of_command=minimal_traverse_height_at_begin_of_command or \

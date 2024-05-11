@@ -32,7 +32,8 @@ def importer_not_implemented(platform_item, platform_data, containers_data, *arg
 class SilverDeck(Deck):
   """ (Ag)nostic deck object.
 
-  Boilerplate code written by Rick: https://forums.pylabrobot.org/t/writing-a-new-backend-agnosticity/844/16
+    - Discussion: https://forums.pylabrobot.org/t/writing-a-new-backend-agnosticity/844/16
+    - Boilerplate code written by Rick.
   """
 
   platform_importers: dict = {
