@@ -56,13 +56,7 @@ class SilverDeck(Deck):
                default_size_y: float = 350,
                default_size_z: float = 200,
                # TODO: Update default origin.
-               default_origin: Coordinate = Coordinate(0, 0, 0)
-               # TODO: Update default trash location.
-               #trash_location: Coordinate = Coordinate(x=0.0, y=0.0, z=0.0),
-               #no_trash: bool = True,
-               # TODO: Check if it is important to override these callback methods.
-               #resource_assigned_callback: Optional[Callable] = None,
-               #resource_unassigned_callback: Optional[Callable] = None
+               default_origin: Coordinate = None
                ):
 
     self.workspace = workspace
@@ -70,6 +64,8 @@ class SilverDeck(Deck):
     self.containers = containers
 
     # Parse origin from padding.
+    if default_origin is None:
+      default_origin = Coordinate(0, 0, 0)
     padding = workspace.get("padding", None)
     if padding:
       origin = Coordinate(

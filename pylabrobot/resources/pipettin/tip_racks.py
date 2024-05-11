@@ -8,14 +8,30 @@ def load_ola_tip_rack(
   platform_item: dict,
   platform_data: dict,
   containers_data: list,
-  *args, **kwargs):
+  *args, **kwargs) -> TipRack:
+  """Create a TipRack resource from Pipettin data objects.
+
+  Notes:
+    - The Z-coordinate of the tip spots is at the bottom of the tip when placed in the tip rack.
+
+  Args:
+      platform_item (dict): _description_
+      platform_data (dict): _description_
+      containers_data (list): _description_
+
+  Returns:
+      _type_: _description_
+  """
+
+  # TODO: Find a way to avoid defaulting to the first associated container.
+  # NOTE: Perhaps PLR does not consider having different tips for the same tip rack.
+  #       This would be uncommon anyway.
+  linked_tips = platform_data["containers"]
+  default_tip_link = linked_tips[0]
 
   # NOTE: I need to create this function here, it is required by "TipSpot" later on.
   def make_pew_tip():
-    # TODO: Find a way to avoid defaulting to the first associated container.
-    # NOTE: Perhaps PLR does not consider having different tips for the same tip rack.
-    first_container = platform_data["containers"][0]
-    container_data = next(x for x in containers_data if x["name"] == first_container["container"])
+    container_data = next(x for x in containers_data if x["name"] == default_tip_link["container"])
     tip = Tip(
       has_filter=False,
       total_tip_length=container_data["length"],
@@ -46,10 +62,13 @@ def load_ola_tip_rack(
         # dx: The X coordinate of the bottom left corner for items in the left column.
         dx=platform_data["firstWellCenterX"] - platform_data["wellSeparationX"]/2,
         # dy: The Y coordinate of the bottom left corner for items in the top row.
-        dy=platform_data["length"]-platform_data["firstWellCenterY"]-platform_data["wellSeparationY"]*(0.5+platform_data["wellsRows"]),
+        dy=platform_data["length"] -
+           platform_data["firstWellCenterY"] -
+           platform_data["wellSeparationY"]*(0.5+platform_data["wellsRows"]),
         # dz: The z coordinate for all items.
-        # TODO: I dont know how "dz" is used later on. Check that it corresponds to activeHeight.
-        dz=platform_data["activeHeight"],
+        # NOTE: According to Rick and the sources, the Z of a TipSpot is the Z of the tip's tip
+        # when sitting on the spot, relative to the base of the tip rack (I guess this last part).
+        dz=platform_data["activeHeight"] - default_tip_link["containerOffsetZ"],
 
         # NOTE: Additional keyword arguments are passed to the "klass" constructor set above.
         size_x=platform_data["wellDiameter"],
@@ -70,13 +89,15 @@ def load_ola_tip_rack(
       with_tips=False
     )
 
-
   # Add tips in the platform item, if any.
   platform_contents = platform_item.get("content", [])
   for content in platform_contents:
+    # Position of the tip on the rack.
     content_pos = content["position"]
 
+    # Tip properties.
     container_data = get_contents_container(content, containers_data)
+    tip_container_id = container_data["name"]
 
     # Create the Tip.
     new_tip = Tip(
@@ -93,6 +114,13 @@ def load_ola_tip_rack(
     tip_spot = tip_rack_item.get_item((i, j))
     # Add the Tip.
     tip_spot.tracker.add_tip(new_tip, commit=True)
+
+    # Get the offset for this specific tip model.
+    container_offset_z = next(pc["containerOffsetZ"]
+                              for pc in linked_tips
+                              if pc["container"] == tip_container_id)
+    # Fix the Z coordinate applying the proper offset.
+    tip_spot.location.z = platform_data["activeHeight"] - container_offset_z
 
   return tip_rack_item
 
