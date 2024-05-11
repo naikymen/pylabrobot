@@ -444,7 +444,28 @@ class TubeSpot(Resource):
 
 class TubeRack(ItemizedResource[TubeSpot], metaclass=ABCMeta):
   """ Abstract base class for Tube Rack resources.
-  Boilerplate code copied from the 'Plate' class and the original 'TubeRack' class.
+
+  Boilerplate code copied from the 'Plate', 'TubeRack', and 'TipRack' classes.
+
+  In pipettin the math for the top height and fitting height of a tube in a tip rack should be:
+
+  1. (+) Workspace's Z origin (usually 0). Get this from the Deck.
+  2. (+) Platform's Z position: usually 0 for all, can be adjusted. Get this from the rack's
+         location.
+  3. (+) Platform's activeHeight (i.e. tube slot Z position - not the slot): height of the surface
+         that supports the tubes. This is not defined in PLR.
+  4. (+) Container's offset: Distance from the tube's external bottom to the tube slot, usually
+         negative (i.e. how much the tube "sinks" into the tube slot). This is also undefined in
+         PLR. However, in combination with (3), the equivalent PLR tube *spot* location can be
+         calculated: (3) - (4) = TipSpot's Z
+  5. (+) Total tube's length. Available in the Tube object.
+         This is now the absolute top Z coordinate of the tube.
+  6. (-) Tube's activeHeight. The distance from the external bottom of the tube to its internal
+         bottom. Use with (4) and (5) to obtain the Z coordinate at which the tube is well fitted.
+
+  In summary, the TubeSpot's Z coordinate should be equal to:
+      `plat_active_height - container_z_offset`
+
   """
 
   def __init__(
@@ -631,11 +652,10 @@ class TubeRack(ItemizedResource[TubeSpot], metaclass=ABCMeta):
 def load_ola_tube_rack(
   platform_item: dict,
   platform_data: dict,
-  containers_data: list,
-  *args, **kwargs):
+  containers_data: list):
 
-  # NOTE: I need to create this function here, it is required by "TubeSpot" later on.
   def make_pew_tube():
+    # NOTE: I need to create this function here, it is required by "TubeSpot" later on.
     # TODO: Find a way to avoid defaulting to the first associated container.
     # NOTE: Perhaps PLR does not consider having different tubes for the same tube rack.
     first_container = platform_data["containers"][0]
@@ -735,7 +755,7 @@ def load_ola_tube_rack(
 class CustomPlatform(Resource):
   pass
 
-def load_ola_custom(platform_item, platform_data, containers_data, **kwargs):
+def load_ola_custom(platform_item, platform_data, containers_data):
   custom = CustomPlatform(
     name=platform_item["name"],
     size_x=platform_data["width"],

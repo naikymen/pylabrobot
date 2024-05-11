@@ -7,12 +7,29 @@ from .utils import get_contents_container
 def load_ola_tip_rack(
   platform_item: dict,
   platform_data: dict,
-  containers_data: list,
-  *args, **kwargs) -> TipRack:
+  containers_data: list) -> TipRack:
   """Create a TipRack resource from Pipettin data objects.
 
-  Notes:
-    - The Z-coordinate of the tip spots is at the bottom of the tip when placed in the tip rack.
+  In pipettin the math for the top height and fitting height of a tip in a tip rack should be:
+
+  1. (+) Workspace's Z origin (usually 0). Get this from the Deck.
+  2. (+) Platform's Z position: usually 0 for all, can be adjusted. Get this from the TipRack's
+         location.
+  3. (+) Platform's activeHeight (i.e. tip slot Z position): height of the surface that supports the
+         tips. This is not defined in PLR (a PW slot is not a PLR spot).
+  4. (+) Container's offset: Distance from the tip's tip to the tip slot, usually negative (i.e. how
+         much the tip "sinks" into the tip slot). This is also undefined in PLR.
+         However, in combination with (3), the equivalent PLR tip spot location can be calculated:
+         (3) - (4) = TipSpot's Z
+  5. (+) Total tip's length. Available in the Tip object.
+         This is now the absolute top Z coordinate of the tip.
+  6. ( ) Tip's activeHeight. The distance from the tip's tip to its fitting height.
+         Available in the Tip object (should be equal to the tip's length minus the tip's active
+         height).
+         To obtain the Z coordinate at which the tip is well fitted: (4) + (6)
+
+  In summary, the TipSpot Z coordinate should be set equal to:
+      `deck_z + plat_z + plat_activeHeight - container_z_offset + tip_active_height = tip_spot_z`
 
   Args:
       platform_item (dict): _description_
@@ -120,7 +137,9 @@ def load_ola_tip_rack(
                               for pc in linked_tips
                               if pc["container"] == tip_container_id)
     # Fix the Z coordinate applying the proper offset.
-    tip_spot.location.z = platform_data["activeHeight"] - container_offset_z
+    tip_spot.location.z = platform_data["activeHeight"]
+    tip_spot.location.z -= container_offset_z
+    tip_spot.location.z += container_data["activeHeight"]
 
   return tip_rack_item
 
@@ -168,7 +187,8 @@ if __name__ == "__main__":
   tip_container = tip_containers[0]
 
   # Get container offset
-  tip_container_offsets = [o for o in pew_tip_rack["containers"] if o["container"] == tip_container["name"]]
+  tip_container_offsets = [o for o in pew_tip_rack["containers"]
+                           if o["container"] == tip_container["name"]]
   tip_container_offset = tip_container_offsets[0]
 
   # Create and populate the tip rack.
