@@ -1,5 +1,8 @@
 import json
-import urllib.request
+import os
+import urllib
+from copy import deepcopy
+from typing import Union
 
 from pylabrobot.resources import Coordinate, Trash, PetriDish, Colony
 from pylabrobot.resources.liquid import Liquid
@@ -63,10 +66,28 @@ def create_petri_dish(platform_item, platform_data, **kwargs):
 
   return dish
 
+def load_objects_from_file(file_path):
+  with open(file_path, "r", encoding="utf-8") as f:
+    objects = json.load(f)
+  return objects
+
 def load_objects_from_url(target_url):
   data = urllib.request.urlopen(target_url)
   objects = json.load(data)
   return objects
+
+def load_objects(tool_defs:Union[str, dict]) -> dict:
+  if isinstance(tool_defs, str):
+    url_scheme: str = urllib.urlparse(tool_defs).scheme
+    if url_scheme in ["http", "https"]:
+      return load_objects_from_url(tool_defs)
+    elif url_scheme == "" and os.path.exists(url_scheme):
+      return load_objects_from_file(tool_defs)
+  elif isinstance(tool_defs, dict):
+    return deepcopy(tool_defs)
+
+  raise ValueError(f"Could not load tool data from the provided definition: '{url_scheme}'")
+
 
 def load_defaults():
   # Example using exported data.
@@ -80,4 +101,7 @@ def load_defaults():
   target_url = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/containers.json'
   containers = load_objects_from_url(target_url)
 
-  return workspace, platforms, containers
+  target_url = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/tools.json'
+  tools = load_objects_from_url(target_url)
+
+  return workspace, platforms, containers, tools

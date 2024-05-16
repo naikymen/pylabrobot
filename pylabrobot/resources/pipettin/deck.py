@@ -7,7 +7,7 @@ Example:
 from pylabrobot.resources import SilverDeck
 from pylabrobot.resources.pipettin.utils import load_defaults
 
-workspace, platforms, containers = load_defaults()
+workspace, platforms, containers, tools = load_defaults()
 
 deck = SilverDeck(workspace, platforms, containers)
 ```
