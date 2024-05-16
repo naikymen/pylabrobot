@@ -53,7 +53,8 @@ from pylabrobot.liquid_handling.errors import NoChannelError
 from piper.coroutines_moon import Controller
 from piper.datatools.nodb import NoObjects
 # from piper.log import setup_logging
-from piper.utils import get_config_path, load_objects
+from piper.utils import get_config_path
+from pylabrobot.resources.pipettin.utils import load_objects
 from piper.config.config_helper import TrackedDict
 # Load newt module.
 import newt

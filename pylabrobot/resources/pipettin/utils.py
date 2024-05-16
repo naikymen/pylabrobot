@@ -78,7 +78,7 @@ def load_objects_from_url(target_url):
 
 def load_objects(tool_defs:Union[str, dict]) -> dict:
   if isinstance(tool_defs, str):
-    url_scheme: str = urllib.urlparse(tool_defs).scheme
+    url_scheme: str = urllib.parse.urlparse(tool_defs).scheme
     if url_scheme in ["http", "https"]:
       return load_objects_from_url(tool_defs)
     elif url_scheme == "" and os.path.exists(url_scheme):
