@@ -304,7 +304,7 @@ class Resource:
     effective_degrees = degrees % 360
 
     if effective_degrees % 90 != 0:
-      raise ValueError(f"Invalid rotation: {degrees}")
+      raise ValueError(f"Invalid rotation angle: {degrees}º is not a multiple of 90.")
 
     for child in self.children:
       assert child.location is not None, "child must have a location when it's assigned."

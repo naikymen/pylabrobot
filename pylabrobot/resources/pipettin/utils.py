@@ -7,6 +7,10 @@ from typing import Union
 from pylabrobot.resources import Coordinate, Trash, PetriDish, Colony
 from pylabrobot.resources.liquid import Liquid
 
+def importer_not_implemented(*args, platform_data, **kwargs):
+  print("Method not implemented for platform type: " + platform_data["type"])
+  # raise NotImplementedError("Method not implemented for platform type: " + platform_data["type"])
+
 def get_items_platform(item, platforms):
   """Get the data for a platform item."""
   platform_data = next(x for x in platforms if x["name"] == item.get("platform"))
@@ -92,16 +96,16 @@ def load_objects(tool_defs:Union[str, dict]) -> dict:
 def load_defaults():
   # Example using exported data.
 
-  target_url = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/workspaces.json'
-  workspace = load_objects_from_url(target_url)[0]
+  d="https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/workspaces.json"
+  workspace = load_objects_from_url(d)[0]
 
-  target_url = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/platforms.json'
-  platforms = load_objects_from_url(target_url)
+  d="https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/platforms.json"
+  platforms = load_objects_from_url(d)
 
-  target_url = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/containers.json'
-  containers = load_objects_from_url(target_url)
+  d="https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/containers.json"
+  containers = load_objects_from_url(d)
 
-  target_url = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/tools.json'
-  tools = load_objects_from_url(target_url)
+  d="https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/tools.json"
+  tools = load_objects_from_url(d)
 
   return workspace, platforms, containers, tools

@@ -20,14 +20,11 @@ import textwrap
 
 from pylabrobot.resources import Coordinate, Deck
 
-from pylabrobot.resources.pipettin.tip_racks import load_ola_tip_rack
-from pylabrobot.resources.pipettin.tube_racks import load_ola_tube_rack, load_ola_custom
+from .tip_racks import load_ola_tip_rack
+from .tube_racks import load_ola_tube_rack, load_ola_custom
+from .anchor import load_ola_anchor
 
-from .utils import get_items_platform, create_trash, create_petri_dish
-
-def importer_not_implemented(platform_item, platform_data, containers_data, *args, **kwargs):
-  print("Method not implemented for platform type: " + platform_data["type"])
-  # raise NotImplementedError("Method not implemented for platform type: " + platform_data["type"])
+from .utils import get_items_platform, create_trash, create_petri_dish, importer_not_implemented
 
 class SilverDeck(Deck):
   """ (Ag)nostic deck object.
@@ -42,7 +39,7 @@ class SilverDeck(Deck):
     "TIP_RACK": load_ola_tip_rack,
     "BUCKET": create_trash,
     "PETRI_DISH": create_petri_dish,
-    "ANCHOR": importer_not_implemented
+    "ANCHOR": load_ola_anchor
   }
 
   def __init__(self,
@@ -99,7 +96,7 @@ class SilverDeck(Deck):
   def assign_platform(self, platform_item, platform_data, containers):
     # Get importer method.
     platform_type = platform_data["type"]
-    importer = self.platform_importers[platform_type]
+    importer = self.platform_importers.get(platform_type, importer_not_implemented)
     # Execute the translation.
     platform_resource = importer(
       platform_item=platform_item,
