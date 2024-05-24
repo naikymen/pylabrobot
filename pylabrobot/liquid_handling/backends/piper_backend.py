@@ -182,9 +182,8 @@ class PiperBackend(LiquidHandlerBackend):
 
   async def _home_machine(self, timeout):
     # TODO: customize parameters.
-    home_action = self.make_home_action()
-    parsed_action: dict = self.controller.builder.parseAction(action=home_action)
-    gcode: list = parsed_action["GCODE"]
+    home_actions = self.make_home_actions()
+    gcode: dict = self.parse_actions(home_actions)
 
     if self.controller.machine.dry:
       print("Dry mode enabled, skipping Homing routine.")
@@ -286,8 +285,8 @@ class PiperBackend(LiquidHandlerBackend):
     index = next(i for i, s in enumerate(itemized_resource.get_all_items()) if s is spot)
     return index
 
-  def make_home_action(self, axes=None) -> List:
-    """make_home_action"""
+  def make_home_actions(self, axes=None) -> List:
+    """make_home_actions"""
     home_action = newt.protocol_actions.action_home(axis=axes)
     return [home_action]
 
