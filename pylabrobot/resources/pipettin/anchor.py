@@ -26,10 +26,15 @@ class Anchor(Resource):
 
     # Assign the resource as usual.
     super().assign_child_resource(resource, location)
+
     # TODO: Check if instead I would like the anchor to assign this
     #       new child to the anchor's parent. This would match the
     #       behavior of anchors in PW, which do not "contain" resources,
     #       technically they only "align" them to the workspace.
+    # NOTE: As of pipttin-gui:9acaae72, any items snapped to an anchor have
+    #       a new property set, indicating its name. Anchors will have their
+    #       children assigned when the platform item resources are created.
+    #
     # For example:
     # self.parent.assign_child_resource(resource, location)
 
