@@ -84,9 +84,18 @@ class SilverDeck(Deck):
     # Load platform items.
     self.assign_platforms(workspace, platforms, containers)
 
-  def assign_platforms(self, workspace, platforms, containers):
-    """ Convert platforms to resources and add them to the deck. """
+  def assign_platforms(self, workspace, platforms, containers, anchors_first=True):
+    """ Convert platforms to resources and add them to the deck.
+    Items are sorted to assign anchors first. This prevents errors when
+    an item's anchor has not been assigned yet. This can be disabled
+    by setting `anchors_first=False`.
+    """
     items = workspace.get("items", [])
+
+    # Sort items with "ANCHOR" type first
+    if anchors_first:
+      items = sorted(items, key=lambda item: item.get("type") != "ANCHOR")
+
     for item in items:
       platform_data = get_items_platform(item, platforms)
       # Create a resource from the item.
