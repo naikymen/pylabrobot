@@ -725,8 +725,9 @@ def load_ola_tube_rack(
     # Create the Tube.
     new_tube = Tube(
       name=content["name"],
-      size_x=container_data["width"],
-      size_y=container_data["width"],
+      # TODO: Reconsider setting "size_x" and "size_y" to something else.
+      size_x=platform_data["wellDiameter"],
+      size_y=platform_data["wellDiameter"],
       size_z=container_data["length"],
       max_volume=container_data["maxVolume"],
       model=container_data["name"],
