@@ -679,7 +679,7 @@ def load_ola_tube_rack(
       size_x=platform_data["width"],
       size_y=platform_data["length"],
       size_z=platform_data["height"],
-      # category = "tip_rack", # The default.
+      category=platform_data.get("type", None), # Optional in PLR.
       model=platform_data["name"], # Optional.
 
       # Use the helper function to create a regular 2D-grid of tip spots.
