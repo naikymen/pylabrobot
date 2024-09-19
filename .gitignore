@@ -11,3 +11,4 @@ build/lib
 *.directory
 .venv/*
 pylabrobot-venv
+.vscode/*
