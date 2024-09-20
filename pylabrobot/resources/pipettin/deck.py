@@ -131,7 +131,11 @@ class SilverDeck(Deck):
       else:
         # Get the resources' location.
         position = platform_item["position"]
+        # Convert position the PLR coordinate system and origin.
+        position["x"], position["y"] = self.xy_to_plr(position["x"], position["y"])
+        # Generate the location coordinate object for PLR.
         location = Coordinate(**position)
+
         # Assign as a direct child.
         self.assign_child_resource(platform_resource, location=location)
 
@@ -158,6 +162,77 @@ class SilverDeck(Deck):
 
     def __str__(self):
       print(self.summary())
+
+  def xy_to_plr(self, x: float, y: float, workspace_width: float = None, workspace_height: float = None):
+    """Convert XY coordinates from top-left origin to bottom-left origin.
+
+    To convert XY coordinates from a coordinate system where the origin is at the top-left
+    (with the positive X direction to the right and the positive Y direction towards the bottom) to
+    another coordinate system where the origin is at the bottom-left, you can apply the following
+    conversion:
+
+    - X coordinate stays the same since both systems have the positive X direction to the right.
+    - Y coordinate needs to be flipped. In the top-left-origin system, Y increases downward, while
+      in the bottom-left-origin system, Y increases upward.
+
+    Given the width and height of the workspace, you can transform the Y-coordinate as follows:
+
+        New Y-coordinate = height_of_workspace - original_y_coordinate
+
+    Args:
+        x (float): X coordinate in the original system (top-left origin, positive to the right).
+        y (float): Y coordinate in the original system (top-left origin, positive "downwards").
+        workspace_width (optional, float): Width of the workspace.
+        workspace_height (optional, float): Height of the workspace.
+
+    Returns:
+        tuple: New (x, y) coordinates in the system with the bottom-left origin.
+    """
+
+    if workspace_width is None:
+      workspace_width = self.get_size_x()
+    if workspace_height is None:
+      workspace_height = self.get_size_y()
+
+    new_x = x  # X stays the same
+    new_y = workspace_height - y  # Flip the Y coordinate
+
+    return new_x, new_y
+
+  def plr_to_xy(self, x: float, y: float, workspace_width: float = None, workspace_height: float = None):
+      """Convert XY coordinates from bottom-left origin to top-left origin.
+
+      Inverse function of xy_to_plr, which converts coordinates from the bottom-left origin
+      (positive Y upward) back to the top-left origin (positive Y downward).
+
+      - X-coordinate stays the same, since the direction doesn't change in either system.
+      - Y-coordinate needs to be inverted by subtracting it from the total workspace height.
+
+      Test:
+        foo = (-10, 10)
+        bar = deck.xy_to_plr(*foo)
+        baz = deck.plr_to_xy(*bar)
+        assert foo == baz
+
+      Args:
+          x (float): X coordinate in the system with the bottom-left origin.
+          y (float): Y coordinate in the system with the bottom-left origin (positive upwards).
+          workspace_width (optional, float): Width of the workspace.
+          workspace_height (optional, float): Height of the workspace.
+
+      Returns:
+          tuple: New (x, y) coordinates in the system with the top-left origin.
+      """
+
+      if workspace_width is None:
+          workspace_width = self.get_size_x()
+      if workspace_height is None:
+          workspace_height = self.get_size_y()
+
+      new_x = x  # X stays the same
+      new_y = workspace_height - y  # Flip the Y coordinate back to top-left origin
+
+      return new_x, new_y
 
 
 def draw_ascii_workspace(workspace: dict, platforms: list, downscale_factor: float = 20, width_scaler: float = 2.2, indent:int=0):
