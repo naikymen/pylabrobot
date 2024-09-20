@@ -112,13 +112,21 @@ class SilverDeck(Deck):
       platform_data=platform_data,
       containers_data=containers
     )
-    # Get the resources' location.
-    position = platform_item["position"]
-    location = Coordinate(**position)
 
     # Assign the translated resource.
     if platform_resource is not None:
-      self.assign_child_resource(platform_resource, location=location)
+      # Check if the item is anchored.
+      anchor_name = platform_item.get("snappedAnchor", None)
+      if anchor_name is not None:
+        # Assign as an anchor's child.
+        anchor = self.get_resource(anchor_name)
+        anchor.assign_child_resource(platform_resource)
+      else:
+        # Get the resources' location.
+        position = platform_item["position"]
+        location = Coordinate(**position)
+        # Assign as a direct child.
+        self.assign_child_resource(platform_resource, location=location)
 
     # Done!
     return platform_resource
