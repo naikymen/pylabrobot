@@ -1,6 +1,6 @@
 import math
 import json
-from typing import Union, List, TYPE_CHECKING, cast
+from typing import Dict, List, Union, TYPE_CHECKING, cast
 
 try:
   import opentrons_shared_data.labware
@@ -14,7 +14,7 @@ from pylabrobot.resources.tip import Tip, TipCreator
 from pylabrobot.resources.tip_rack import TipRack, TipSpot
 from pylabrobot.resources.tube import Tube
 from pylabrobot.resources.tube_rack import TubeRack
-from pylabrobot.resources.well import Well
+from pylabrobot.resources.well import Well, CrossSectionType
 
 
 if TYPE_CHECKING:
@@ -42,9 +42,10 @@ def ot_definition_to_resource(
 
   tube_rack_display_cats = {"adapter", "aluminumBlock", "tubeRack"}
 
-  if display_category in ["wellPlate", "tipRack", "tubeRack", "adapter", "aluminumBlock"]:
+  if display_category in ["wellPlate", "tipRack", "tubeRack", "adapter", "aluminumBlock",
+                          "reservoir"]:
     items = data["ordering"]
-    wells: List[List[Union[TipSpot, Well, Tube]]] = [] # TODO: can we use TypeGuard?
+    wells: List[Union[TipSpot, Well, Tube]] = [] # TODO: can we use TypeGuard?
 
     def volume_from_name(name: str) -> float:
       # like "Opentrons 96 Filter Tip Rack 200 µL"
@@ -54,8 +55,7 @@ def ot_definition_to_resource(
         volume *= 1000
       return float(volume)
 
-    for i, column in enumerate(items):
-      wells.append([])
+    for column in items:
       for item in column:
         well_data = data["wells"][item]
 
@@ -71,17 +71,29 @@ def ot_definition_to_resource(
 
         well_size_z = well_data["depth"]
 
-        location=Coordinate(x=well_data["x"], y=well_data["y"], z=well_data["z"])
+        location=Coordinate(
+          x=well_data["x"] - well_size_x/2,
+          y=well_data["y"] - well_size_y/2,
+          z=well_data["z"]
+        )
+
         if display_category == "wellPlate":
+          if well_data["shape"] == "rectangular":
+            cross_section_type = CrossSectionType.RECTANGLE
+          else:
+            cross_section_type = CrossSectionType.CIRCLE
+
           well = Well(
             name=item,
             size_x=well_size_x,
             size_y=well_size_y,
             size_z=well_size_z,
-            max_volume=well_data["totalLiquidVolume"]
+            material_z_thickness=None,  # not known for OT labware
+            max_volume=well_data["totalLiquidVolume"],
+            cross_section_type=cross_section_type
           )
           well.location = location
-          wells[i].append(well)
+          wells.append(well)
         elif display_category == "tipRack":
           # closure
           def make_make_tip(well_data) -> TipCreator:
@@ -102,7 +114,7 @@ def ot_definition_to_resource(
             make_tip=make_make_tip(well_data)
           )
           tip_spot.location = location
-          wells[i].append(tip_spot)
+          wells.append(tip_spot)
         elif display_category in tube_rack_display_cats:
           tube = Tube(
             name=item,
@@ -112,7 +124,27 @@ def ot_definition_to_resource(
             max_volume=well_data["totalLiquidVolume"]
           )
           tube.location = location
-          wells[i].append(tube)
+          wells.append(tube)
+        elif display_category == "reservoir":
+          if well_data["shape"] == "rectangular":
+            cross_section_type = CrossSectionType.RECTANGLE
+          else:
+            cross_section_type = CrossSectionType.CIRCLE
+
+          well = Well(
+            name=item,
+            size_x=well_size_x,
+            size_y=well_size_y,
+            size_z=well_size_z,
+            max_volume=well_data["totalLiquidVolume"],
+            cross_section_type=cross_section_type
+          )
+          well.location = location
+          wells.append(well)
+
+    ordering = data["ordering"]
+    flattened_ordering = [item for sublist in ordering for item in sublist]
+    ordered_items = dict(zip(flattened_ordering, wells))
 
     if display_category == "wellPlate":
       return Plate(
@@ -120,7 +152,7 @@ def ot_definition_to_resource(
         size_x=size_x,
         size_y=size_y,
         size_z=size_z,
-        items=cast(List[List[Well]], wells),
+        ordered_items=cast(Dict[str, Well], ordered_items),
         model=data["metadata"]["displayName"]
       )
     if display_category == "tipRack":
@@ -129,7 +161,7 @@ def ot_definition_to_resource(
         size_x=size_x,
         size_y=size_y,
         size_z=size_z,
-        items=cast(List[List[TipSpot]], wells),
+        ordered_items=cast(Dict[str, TipSpot], ordered_items),
         model=data["metadata"]["displayName"]
       )
     if display_category in tube_rack_display_cats:
@@ -140,7 +172,16 @@ def ot_definition_to_resource(
         size_x=size_x,
         size_y=size_y,
         size_z=size_z,
-        items=cast(List[List[Tube]], wells),
+        ordered_items=cast(Dict[str, Tube], ordered_items),
+        model=data["metadata"]["displayName"]
+      )
+    if display_category == "reservoir":
+      return Plate(
+        name=name,
+        size_x=size_x,
+        size_y=size_y,
+        size_z=size_z,
+        ordered_items=cast(Dict[str, Well], ordered_items),
         model=data["metadata"]["displayName"]
       )
 

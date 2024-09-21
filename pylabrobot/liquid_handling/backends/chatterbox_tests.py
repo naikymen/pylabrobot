@@ -1,20 +1,20 @@
 import unittest
 
 from pylabrobot.liquid_handling import LiquidHandler
-from pylabrobot.liquid_handling.backends.chatterbox_backend import ChatterBoxBackend
-from pylabrobot.resources import Cos_96_EZWash, HTF_L, Coordinate
+from pylabrobot.liquid_handling.backends.chatterbox import LiquidHandlerChatterboxBackend
+from pylabrobot.resources import Cor_96_wellplate_360ul_Fb, HTF_L, Coordinate
 from pylabrobot.resources.hamilton import STARLetDeck
 
 
-class ChatterBoxBackendTests(unittest.IsolatedAsyncioTestCase):
-  """ Tests for setup and stop """
+class ChatterboxBackendTests(unittest.IsolatedAsyncioTestCase):
+  """ Tests for chatterbox backend """
   def setUp(self) -> None:
     self.deck = STARLetDeck()
-    self.backend = ChatterBoxBackend(num_channels=8)
+    self.backend = LiquidHandlerChatterboxBackend(num_channels=8)
     self.lh = LiquidHandler(self.backend, deck=self.deck)
     self.tip_rack = HTF_L(name="tip_rack")
     self.deck.assign_child_resource(self.tip_rack, rails=3)
-    self.plate = Cos_96_EZWash(name="plate")
+    self.plate = Cor_96_wellplate_360ul_Fb(name="plate")
     self.deck.assign_child_resource(self.plate, rails=9)
 
   async def asyncSetUp(self) -> None:
@@ -41,11 +41,11 @@ class ChatterBoxBackendTests(unittest.IsolatedAsyncioTestCase):
 
   async def test_aspirate(self):
     await self.lh.pick_up_tips(self.tip_rack["A1"])
-    await self.lh.aspirate(self.plate["A1"], vols=10)
+    await self.lh.aspirate(self.plate["A1"], vols=[10])
 
   async def test_dispense(self):
     await self.lh.pick_up_tips(self.tip_rack["A1"])
-    await self.lh.dispense(self.plate["A1"], vols=10)
+    await self.lh.dispense(self.plate["A1"], vols=[10])
 
   async def test_aspirate96(self):
     await self.lh.pick_up_tips96(self.tip_rack)

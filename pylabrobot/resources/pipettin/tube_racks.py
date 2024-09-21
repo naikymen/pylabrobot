@@ -7,7 +7,8 @@ from pylabrobot.resources.container import Container
 from pylabrobot.resources.liquid import Liquid
 #from pylabrobot.resources.plate import Plate
 from pylabrobot.resources.resource import Resource, Coordinate
-from pylabrobot.resources.itemized_resource import ItemizedResource, create_equally_spaced
+from pylabrobot.resources.itemized_resource import ItemizedResource
+from pylabrobot.resources.utils import create_ordered_items_2d
 
 from .utils import get_contents_container
 
@@ -474,10 +475,11 @@ class TubeRack(ItemizedResource[TubeSpot], metaclass=ABCMeta):
     size_x: float,
     size_y: float,
     size_z: float,
-    items: Optional[List[List[TubeSpot]]] = None,
+    ordered_items: Optional[List[List[TubeSpot]]] = None,
     model: Optional[str] = None,
-    num_items_x: Optional[int] = None,
-    num_items_y: Optional[int] = None,
+    # TODO: Merge upstream.
+    # num_items_x: Optional[int] = None,
+    # num_items_y: Optional[int] = None,
     category: str = "rack",
     compute_volume_from_height: Optional[Callable[[float], float]] = None,
     # Fill with tubes.
@@ -511,10 +513,11 @@ class TubeRack(ItemizedResource[TubeSpot], metaclass=ABCMeta):
       size_x=size_x,
       size_y=size_y,
       size_z=size_z,
-      items=items,
+      ordered_items=ordered_items,
       model=model,
-      num_items_x=num_items_x,
-      num_items_y=num_items_y,
+      # TODO: Merge upstream.
+      # num_items_x=num_items_x,
+      # num_items_y=num_items_y,
       category=category)
 
     # TODO: Figure out if this is important,
@@ -675,8 +678,36 @@ def load_ola_tube_rack(
       #       It is needed to get the proper Z coordinate.
     )
 
-  # Prepare parameters for "create_equally_spaced".
+  # Prepare parameters for "create_ordered_items_2d".
   dx, dy, dz = deck.rack_to_plr_dxdydz(platform_data, default_link, container_data)
+
+  # Use the helper function to create a regular 2D-grid of tip spots.
+  ordered_items=create_ordered_items_2d(
+    # NOTE: Parameters for "create_ordered_items_2d".
+    klass=TubeSpot,  # NOTE: the TipRack uses "TipSpot" class here. Should I use "Tube"?
+    num_items_x=platform_data["wellsColumns"],
+    num_items_y=platform_data["wellsRows"],
+    # item_dx: The size of the items in the x direction
+    item_dx=platform_data["wellSeparationX"],
+    # item_dy: The size of the items in the y direction
+    item_dy=platform_data["wellSeparationY"],
+    # dx: The X coordinate of the bottom left corner for items in the left column.
+    # dy: The Y coordinate of the bottom left corner for items in the top row.
+    # dz: The z coordinate for all items.
+    dx=dx, dy=dy, dz=dz,
+    # NOTE: Additional keyword arguments are passed to the "klass" constructor (set above).
+    size_x=platform_data["wellDiameter"],
+    size_y=platform_data["wellDiameter"],
+    # size_z=platform_data["height"]
+    # NOTE: The TubeSpot class will receive this argument (through kwargs) to create its tubes.
+    #       Note that this is not needed for "wells", as there are no "well spots" in PLR.
+    #       There are however, "tube spots" in pipettin, which I don't know how to accommodate.
+    make_tube=make_pew_tube
+
+    # XY distance between adjacent items in the grid.
+    # item_size_x=platform_data["wellSeparationX"],
+    # item_size_y=platform_data["wellSeparationY"],
+  )
 
   # Create the TubeRack instance.
   tube_rack_item = TubeRack(
@@ -686,34 +717,7 @@ def load_ola_tube_rack(
       size_z=platform_data["height"],
       category=platform_data.get("type", None), # Optional in PLR.
       model=platform_data["name"], # Optional.
-
-      # Use the helper function to create a regular 2D-grid of tip spots.
-      items=create_equally_spaced(
-        # NOTE: Parameters for "create_equally_spaced".
-        klass=TubeSpot,  # NOTE: the TipRack uses "TipSpot" class here. Should I use "Tube"?
-        num_items_x=platform_data["wellsColumns"],
-        num_items_y=platform_data["wellsRows"],
-        # item_dx: The size of the items in the x direction
-        item_dx=platform_data["wellSeparationX"],
-        # item_dy: The size of the items in the y direction
-        item_dy=platform_data["wellSeparationY"],
-        # dx: The X coordinate of the bottom left corner for items in the left column.
-        # dy: The Y coordinate of the bottom left corner for items in the top row.
-        # dz: The z coordinate for all items.
-        dx=dx, dy=dy, dz=dz,
-        # NOTE: Additional keyword arguments are passed to the "klass" constructor (set above).
-        size_x=platform_data["wellDiameter"],
-        size_y=platform_data["wellDiameter"],
-        # size_z=platform_data["height"]
-        # NOTE: The TubeSpot class will receive this argument (through kwargs) to create its tubes.
-        #       Note that this is not needed for "wells", as there are no "well spots" in PLR.
-        #       There are however, "tube spots" in pipettin, which I don't know how to accommodate.
-        make_tube=make_pew_tube
-
-        # XY distance between adjacent items in the grid.
-        # item_size_x=platform_data["wellSeparationX"],
-        # item_size_y=platform_data["wellSeparationY"],
-      ),
+      ordered_items=ordered_items,
       # Fill with tubes.
       with_tubes=False
     )

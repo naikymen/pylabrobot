@@ -10,7 +10,7 @@ This package contains APIs for working with scales.
   :nosignatures:
   :recursive:
 
-    pylabrobot.scales.scale.Scale
+    scale.Scale
 
 
 Backends
@@ -21,4 +21,5 @@ Backends
   :nosignatures:
   :recursive:
 
-    pylabrobot.scales.mettler_toledo.MettlerToledoWXS205SDU
+    chatterbox.ScaleChatterboxBackend
+    mettler_toledo.MettlerToledoWXS205SDU

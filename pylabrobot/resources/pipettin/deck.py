@@ -230,7 +230,7 @@ class SilverDeck(Deck):
       return new_x, new_y
 
   def rack_to_plr_dxdydz(self, platform_data, tip_link, centers=False):
-    """Prepare dx, dy, and dz parameters for "create_equally_spaced" given a platform definition.
+    """Prepare dx, dy, and dz parameters for "create_equally_spaced_2d" given a platform definition.
 
     Args:
         platform_data (dict): Rack-type platform definition.
@@ -238,7 +238,7 @@ class SilverDeck(Deck):
         centers (bool, optional): Calculate dx and dy for the center instead. Defaults to False.
 
     Returns:
-        tuple: dx, dy, and dz coordinates for the "create_equally_spaced" function.
+        tuple: dx, dy, and dz coordinates for the "create_equally_spaced_2d" function.
     """
     # dx: The X coordinate of the bottom left corner for items in the left column.
     dx = platform_data["firstWellCenterX"]

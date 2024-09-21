@@ -1,5 +1,5 @@
 # from pylabrobot.resources.tip import Tip
-from pylabrobot.resources.itemized_resource import create_equally_spaced
+from pylabrobot.resources.utils import create_ordered_items_2d
 from pylabrobot.resources.tip_rack import TipRack, TipSpot
 from pylabrobot.resources.tip import Tip
 from .utils import get_contents_container
@@ -57,50 +57,51 @@ def load_ola_tip_rack(
       fitting_depth=container_data["length"]-container_data["activeHeight"]
     )
 
-  # Prepare parameters for "create_equally_spaced".
+  # First spot offsets.
   dx, dy, dz = deck.rack_to_plr_dxdydz(platform_data, default_link, container_data)
+
+  # Use the "create_ordered_items_2d" helper function to create a regular 2D-grid of tip spots.
+  ordered_items = create_ordered_items_2d(
+    # NOTE: Parameters for "create_ordered_items_2d".
+    klass=TipSpot,
+    num_items_x=platform_data["wellsColumns"],
+    num_items_y=platform_data["wellsRows"],
+    # dx: The X coordinate of the bottom left corner for items in the left column.
+    # dy: The Y coordinate of the bottom left corner for items in the top row.
+    # dz: The z coordinate for all items.
+    dx=dx, dy=dy, dz=dz,
+    # item_dx: The size of the items in the x direction
+    item_dx=platform_data["wellSeparationX"],
+    # item_dy: The size of the items in the y direction
+    item_dy=platform_data["wellSeparationY"],
+    # NOTE: Additional keyword arguments are passed to the "klass" constructor set above.
+    size_x=platform_data["wellDiameter"],
+    size_y=platform_data["wellDiameter"],
+    # TODO: Update the function definition above to use tips from the platform definition.
+    make_tip=make_pew_tip
+
+    # XY distance between adjacent items in the grid.
+    # item_size_x=platform_data["wellSeparationX"],
+    # item_size_y=platform_data["wellSeparationY"],
+    # The TipSpot class will receive this argument (through **kwargs) to create its tips,
+    # overriding the default "TipCreator" (see "tip_rack.py"). This is only used to create tips
+    # when "tip tracking" is disabled, and a tip is required from an empty tip-spot.
+    # Note that this is not needed for "wells", as there are no "well spots" in PLR.
+    # There are however, "tube spots" in pipettin, which I don't know how to accommodate.
+  )
 
   # Create the TipRack instance.
   tip_rack_item = TipRack(
-      name=platform_item["name"],
-      size_x=platform_data["width"],
-      size_y=platform_data["length"],
-      size_z=platform_data["height"],
-      category=platform_data.get("type", None), # Optional in PLR.
-      model=platform_data["name"], # Optional.
-
-      # Use the "create_equally_spaced" helper function to create a regular 2D-grid of tip spots.
-      items=create_equally_spaced(
-        # NOTE: Parameters for "create_equally_spaced".
-        klass=TipSpot,
-        num_items_x=platform_data["wellsColumns"],
-        num_items_y=platform_data["wellsRows"],
-        # item_dx: The size of the items in the x direction
-        item_dx=platform_data["wellSeparationX"],
-        # item_dy: The size of the items in the y direction
-        item_dy=platform_data["wellSeparationY"],
-        # dx: The X coordinate of the bottom left corner for items in the left column.
-        # dy: The Y coordinate of the bottom left corner for items in the top row.
-        # dz: The z coordinate for all items.
-        dx=dx, dy=dy, dz=dz,
-        # NOTE: Additional keyword arguments are passed to the "klass" constructor set above.
-        size_x=platform_data["wellDiameter"],
-        size_y=platform_data["wellDiameter"],
-        # TODO: Update the function definition above to use tips from the platform definition.
-        make_tip=make_pew_tip
-
-        # XY distance between adjacent items in the grid.
-        # item_size_x=platform_data["wellSeparationX"],
-        # item_size_y=platform_data["wellSeparationY"],
-        # The TipSpot class will receive this argument (through **kwargs) to create its tips,
-        # overriding the default "TipCreator" (see "tip_rack.py"). This is only used to create tips
-        # when "tip tracking" is disabled, and a tip is required from an empty tip-spot.
-        # Note that this is not needed for "wells", as there are no "well spots" in PLR.
-        # There are however, "tube spots" in pipettin, which I don't know how to accommodate.
-      ),
-      # NOTE: Skipping filling with tips for now.
-      with_tips=False
-    )
+    name=platform_item["name"],
+    size_x=platform_data["width"],
+    size_y=platform_data["length"],
+    size_z=platform_data["height"],
+    category=platform_data.get("type", None), # Optional in PLR.
+    model=platform_data["name"], # Optional.
+    ordered_items=ordered_items,
+    # NOTE: Skipping filling with tips for now.
+    with_tips=False
+  )
 
   # Add tips in the platform item, if any.
   platform_contents = platform_item.get("content", [])
@@ -188,9 +189,9 @@ if __name__ == "__main__":
   tip_container_offset = tip_container_offsets[0]
 
   # Create and populate the tip rack.
-  tip_rack = load_ola_tip_rack(
-     platform_item=pew_item,
-     platform_data=pew_tip_rack,
-     containers_data=containers)
-
-  print(tip_rack)
+  # TODO: Convert this to a test.
+  # tip_rack = load_ola_tip_rack(
+  #    platform_item=pew_item,
+  #    platform_data=pew_tip_rack,
+  #    containers_data=containers)
+  # print(tip_rack)
