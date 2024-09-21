@@ -650,17 +650,20 @@ class TubeRack(ItemizedResource[TubeSpot], metaclass=ABCMeta):
       tube.tracker.set_used_volume(volume)
 
 def load_ola_tube_rack(
+  deck: "SilverDeck",
   platform_item: dict,
   platform_data: dict,
   containers_data: list):
 
+  # TODO: Find a way to avoid defaulting to the first associated container.
+  # NOTE: Perhaps PLR does not consider having different tubes for the same tube rack.
+  linked_containers = platform_data["containers"]
+  default_link = linked_containers[0]
+  container_data = next(x for x in containers_data if x["name"] == default_link["container"])
+
   def make_pew_tube():
     # NOTE: I need to create this function here, it is required by "TubeSpot" later on.
-    # TODO: Find a way to avoid defaulting to the first associated container.
-    # NOTE: Perhaps PLR does not consider having different tubes for the same tube rack.
-    first_container = platform_data["containers"][0]
-    container_data = next(x for x in containers_data if x["name"] == first_container["container"])
-    tube = Tube(
+    return Tube(
       # TODO: Names for tubes should all be different.
       name="placeholder name",
       size_x=container_data["width"],
@@ -671,7 +674,9 @@ def load_ola_tube_rack(
       # TODO: Add "activeHeight" somewhere here.
       #       It is needed to get the proper Z coordinate.
     )
-    return tube
+
+  # Prepare parameters for "create_equally_spaced".
+  dx, dy, dz = deck.rack_to_plr_dxdydz(platform_data, default_link, container_data)
 
   # Create the TubeRack instance.
   tube_rack_item = TubeRack(
@@ -693,14 +698,10 @@ def load_ola_tube_rack(
         # item_dy: The size of the items in the y direction
         item_dy=platform_data["wellSeparationY"],
         # dx: The X coordinate of the bottom left corner for items in the left column.
-        dx=platform_data["firstWellCenterX"] - platform_data["wellSeparationX"]/2,
         # dy: The Y coordinate of the bottom left corner for items in the top row.
-        dy=platform_data["length"]-platform_data["firstWellCenterY"]-platform_data["wellSeparationY"]*(0.5+platform_data["wellsRows"]),
         # dz: The z coordinate for all items.
-        # TODO: I dont know how "dz" is used later on. Check that it corresponds to activeHeight.
-        dz=platform_data["activeHeight"],
-
-        # NOTE: Additional keyword arguments are passed to the "klass" constructor set above.
+        dx=dx, dy=dy, dz=dz,
+        # NOTE: Additional keyword arguments are passed to the "klass" constructor (set above).
         size_x=platform_data["wellDiameter"],
         size_y=platform_data["wellDiameter"],
         # size_z=platform_data["height"]
@@ -756,7 +757,7 @@ def load_ola_tube_rack(
 class CustomPlatform(Resource):
   pass
 
-def load_ola_custom(platform_item, platform_data, containers_data):
+def load_ola_custom(deck: "SilverDeck", platform_item, platform_data, containers_data):
   custom = CustomPlatform(
     name=platform_item["name"],
     size_x=platform_data["width"],
@@ -766,10 +767,14 @@ def load_ola_custom(platform_item, platform_data, containers_data):
     model=platform_data.get("name", None) # Optional in PLR (not documented in Resource).
   )
   # Add tubes in the platform item, if any.
-  platform_contents = platform_item.get("content", [])
-  for content in platform_contents:
-    # Create the Tube.
+  item_contents = platform_item.get("content", [])
+  for content in item_contents:
+    # Get the container data for the tube.
     container_data = get_contents_container(content, containers_data)
+    # Check container type.
+    assert container_data["type"] == "tube", \
+      f"Can't load {container_data['type']}s into a custom platform. Only tubes supported for now."
+    # Create the tube.
     tube = Tube(
       name=content["name"],
       size_x=container_data["width"],
@@ -782,11 +787,16 @@ def load_ola_custom(platform_item, platform_data, containers_data):
       #       It is needed to get the proper Z coordinate.
     )
 
-    # TODO: Add liquid classes to our data schemas, even if it is water everywhere for now.
     # Add liquid to the tracker.
+    # TODO: Add liquid classes to our data schemas, even if it is water everywhere for now.
     tube.tracker.add_liquid(Liquid.WATER, volume=content["volume"])
 
+    # Prepare PLR location object.
+    x, y = deck.xy_to_plr(content["position"]["x"], content["position"]["y"])
+    z = content["position"].get("z", None)
+    location=Coordinate(x, y, z)
+
     # Add the tube as a direct child.
-    custom.assign_child_resource(tube, location=Coordinate(**content["position"]))
+    custom.assign_child_resource(tube, location=location)
 
   return custom

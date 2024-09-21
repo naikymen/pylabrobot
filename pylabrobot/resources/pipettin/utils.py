@@ -21,7 +21,7 @@ def get_contents_container(content, containers):
   container_data = next(x for x in containers if x["name"] == content.get("container"))
   return container_data
 
-def create_trash(platform_item, platform_data, **kwargs):
+def create_trash(deck: "SilverDeck", platform_item, platform_data, **kwargs):
   trash = Trash(
     name=platform_item["name"],
     size_x=platform_data["width"],
@@ -32,7 +32,7 @@ def create_trash(platform_item, platform_data, **kwargs):
   )
   return trash
 
-def create_petri_dish(platform_item, platform_data, **kwargs):
+def create_petri_dish(deck: "SilverDeck", platform_item, platform_data, **kwargs):
   dish = PetriDish(
     name=platform_item["name"],
     diameter=platform_data["diameter"],

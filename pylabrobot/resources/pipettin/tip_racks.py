@@ -5,6 +5,7 @@ from pylabrobot.resources.tip import Tip
 from .utils import get_contents_container
 
 def load_ola_tip_rack(
+  deck: "SilverDeck",
   platform_item: dict,
   platform_data: dict,
   containers_data: list) -> TipRack:
@@ -43,19 +44,21 @@ def load_ola_tip_rack(
   # TODO: Find a way to avoid defaulting to the first associated container.
   # NOTE: Perhaps PLR does not consider having different tips for the same tip rack.
   #       This would be uncommon anyway.
-  linked_tips = platform_data["containers"]
-  default_tip_link = linked_tips[0]
+  linked_containers = platform_data["containers"]
+  default_link = linked_containers[0]
+  container_data = next(x for x in containers_data if x["name"] == default_link["container"])
 
   # NOTE: I need to create this function here, it is required by "TipSpot" later on.
   def make_pew_tip():
-    container_data = next(x for x in containers_data if x["name"] == default_tip_link["container"])
-    tip = Tip(
+    return Tip(
       has_filter=False,
       total_tip_length=container_data["length"],
       maximal_volume=container_data["maxVolume"],
       fitting_depth=container_data["length"]-container_data["activeHeight"]
     )
-    return tip
+
+  # Prepare parameters for "create_equally_spaced".
+  dx, dy, dz = deck.rack_to_plr_dxdydz(platform_data, default_link, container_data)
 
   # Create the TipRack instance.
   tip_rack_item = TipRack(
@@ -66,7 +69,7 @@ def load_ola_tip_rack(
       category=platform_data.get("type", None), # Optional in PLR.
       model=platform_data["name"], # Optional.
 
-      # Use the helper function to create a regular 2D-grid of tip spots.
+      # Use the "create_equally_spaced" helper function to create a regular 2D-grid of tip spots.
       items=create_equally_spaced(
         # NOTE: Parameters for "create_equally_spaced".
         klass=TipSpot,
@@ -77,16 +80,9 @@ def load_ola_tip_rack(
         # item_dy: The size of the items in the y direction
         item_dy=platform_data["wellSeparationY"],
         # dx: The X coordinate of the bottom left corner for items in the left column.
-        dx=platform_data["firstWellCenterX"] - platform_data["wellSeparationX"]/2,
         # dy: The Y coordinate of the bottom left corner for items in the top row.
-        dy=platform_data["length"] -
-           platform_data["firstWellCenterY"] -
-           platform_data["wellSeparationY"]*(0.5+platform_data["wellsRows"]),
         # dz: The z coordinate for all items.
-        # NOTE: According to Rick and the sources, the Z of a TipSpot is the Z of the tip's tip
-        # when sitting on the spot, relative to the base of the tip rack (I guess this last part).
-        dz=platform_data["activeHeight"] - default_tip_link["containerOffsetZ"],
-
+        dx=dx, dy=dy, dz=dz,
         # NOTE: Additional keyword arguments are passed to the "klass" constructor set above.
         size_x=platform_data["wellDiameter"],
         size_y=platform_data["wellDiameter"],
@@ -134,7 +130,7 @@ def load_ola_tip_rack(
 
     # Get the offset for this specific tip model.
     container_offset_z = next(pc["containerOffsetZ"]
-                              for pc in linked_tips
+                              for pc in linked_containers
                               if pc["container"] == tip_container_id)
     # Fix the Z coordinate applying the proper offset.
     tip_spot.location.z = platform_data["activeHeight"]

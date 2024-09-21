@@ -17,6 +17,7 @@ Have fun!
 
 import math
 import textwrap
+from copy import deepcopy
 # from typing import Optional, Callable
 
 from pylabrobot.resources import Coordinate, Deck
@@ -35,9 +36,9 @@ class SilverDeck(Deck):
   """
 
   platform_importers: dict = {
+    "TIP_RACK": load_ola_tip_rack,
     "TUBE_RACK": load_ola_tube_rack,
     "CUSTOM": load_ola_custom,
-    "TIP_RACK": load_ola_tip_rack,
     "BUCKET": create_trash,
     "PETRI_DISH": create_petri_dish,
     "ANCHOR": load_ola_anchor
@@ -58,10 +59,10 @@ class SilverDeck(Deck):
                offset_origin: bool = False
                ):
 
-    self.workspace = workspace
-    self.workspace_items = workspace["items"]
-    self.platforms = platforms
-    self.containers = containers
+    # Save the pipettin objects.
+    self._workspace = workspace
+    self._platforms = platforms
+    self._containers = containers
 
     # Default origin to zero.
     if default_origin is None:
@@ -115,6 +116,7 @@ class SilverDeck(Deck):
     importer = self.platform_importers.get(platform_type, importer_not_implemented)
     # Execute the translation.
     platform_resource = importer(
+      deck=self,
       platform_item=platform_item,
       platform_data=platform_data,
       containers_data=containers
@@ -132,9 +134,9 @@ class SilverDeck(Deck):
         # Get the resources' location.
         position = platform_item["position"]
         # Convert position the PLR coordinate system and origin.
-        position["x"], position["y"] = self.xy_to_plr(position["x"], position["y"])
+        x, y = self.xy_to_plr(position["x"], position["y"])
         # Generate the location coordinate object for PLR.
-        location = Coordinate(**position)
+        location = Coordinate(x, y, position["z"])
 
         # Assign as a direct child.
         self.assign_child_resource(platform_resource, location=location)
@@ -142,26 +144,19 @@ class SilverDeck(Deck):
     # Done!
     return platform_resource
 
-  def summary(self) -> str:
-    """ Generate an ASCII summary of the deck.
-
-    Usage:
-    >>> print(deck.summary())
-    """
-
-    ascii_dck = textwrap.dedent(f"""
-    {self.name}: {self.get_size_x()}mm x {self.get_size_y()}mm x {self.get_size_z()}mm (XYZ)
-    {draw_ascii_workspace(self.workspace, self.platforms, indent=4)[4:]}
-    Origin: {self.location}
-    """)
-
-    if self.workspace_padding and self.offset_origin:
-      ascii_dck += f"\nPadding: {self.workspace_padding}"
-
-    return ascii_dck
-
-    def __str__(self):
-      print(self.summary())
+  # Getter methods for pipettin data objects.
+  @property
+  def workspace(self):
+    return deepcopy(self._workspace)
+  @property
+  def platforms(self):
+    return deepcopy(self._platforms)
+  @property
+  def containers(self):
+    return deepcopy(self._containers)
+  @property
+  def workspace_items(self):
+    return deepcopy(self._workspace["items"])
 
   def xy_to_plr(self, x: float, y: float, workspace_width: float = None, workspace_height: float = None):
     """Convert XY coordinates from top-left origin to bottom-left origin.
@@ -234,8 +229,69 @@ class SilverDeck(Deck):
 
       return new_x, new_y
 
+  def rack_to_plr_dxdydz(self, platform_data, tip_link, centers=False):
+    """Prepare dx, dy, and dz parameters for "create_equally_spaced" given a platform definition.
 
-def draw_ascii_workspace(workspace: dict, platforms: list, downscale_factor: float = 20, width_scaler: float = 2.2, indent:int=0):
+    Args:
+        platform_data (dict): Rack-type platform definition.
+        tip_link (dict): Link object between a platform and a calibrated container.
+        centers (bool, optional): Calculate dx and dy for the center instead. Defaults to False.
+
+    Returns:
+        tuple: dx, dy, and dz coordinates for the "create_equally_spaced" function.
+    """
+    # dx: The X coordinate of the bottom left corner for items in the left column.
+    dx = platform_data["firstWellCenterX"]
+    # Subtract half-diameter to get the X position of its left corner.
+    if centers is False:
+      dx -= platform_data["wellDiameter"]/2
+
+    # dy: The Y coordinate of the bottom left corner for items in the top row.
+    # NOTE: This must be calculated because PLR's origin is on the bottom-left.
+    dy = platform_data["length"] - platform_data["firstWellCenterY"]
+    # Subtract half-diameter to get the Y position of its lower corner.
+    if centers is False:
+      dx -= platform_data["wellDiameter"]/2
+
+    # dz: The z coordinate for all items.
+    # NOTE: According to Rick and the sources, the "Z of a TipSpot" is the "Z of the tip's tip" when
+    # the tip is sitting on its spot, relative to the base of the tip rack (I guessed this last part).
+    dz = platform_data["activeHeight"]  # Height of the "seat" on which the tip "sits" (and touches).
+    dz -= tip_link["containerOffsetZ"]  # Subtract the length of the tip that ends up below the "seat".
+
+    return dx, dy, dz
+
+  def summary(self, **kwargs) -> str:
+    """ Generate an ASCII summary of the deck.
+
+    Usage:
+    >>> print(deck.summary())
+    """
+
+    kwargs.setdefault("indent", 4)
+
+    ascii_dck = textwrap.dedent(f"""
+    {self.name}: {self.get_size_x()}mm x {self.get_size_y()}mm x {self.get_size_z()}mm (XYZ)
+    {draw_ascii_workspace(self.workspace, self.platforms, **kwargs)[kwargs["indent"]:]}
+    Origin: {self.location}
+    """)
+
+    if self.workspace_padding and self.offset_origin:
+      ascii_dck += f"\nPadding: {self.workspace_padding}"
+
+    return ascii_dck
+
+    def __str__(self):
+      print(self.summary())
+
+def draw_ascii_workspace(
+  workspace: dict, platforms: list,
+  downscale_factor: float = 20,
+  width_scaler: float = 2.2,
+  anchor_char: str = "@",
+  item_char: str = "¬",
+  empty_char: str = " ",
+  indent:int = 0):
     """
     Generates an ASCII art representation of platform items in a workspace.
 
@@ -251,16 +307,16 @@ def draw_ascii_workspace(workspace: dict, platforms: list, downscale_factor: flo
         |                                                    |
         |                                                    |
         |                                                    |
-        |                                        +++++++++++ |
-        |                                        +++++++++++ |
-        |                      @@@@+++++++++     +++++++++++ |
-        |                      @++++++++++++     +++++++++++ |
-        |                      +++++++++++++     +++++++++++ |
-        |                      +++++++++++++                 |
+        |                                        ¬¬¬¬¬¬¬¬¬¬¬ |
+        |                                        ¬¬¬¬¬¬¬¬¬¬¬ |
+        |                      @@@@¬¬¬¬¬¬¬¬¬     ¬¬¬¬¬¬¬¬¬¬¬ |
+        |                      @¬¬¬¬¬¬¬¬¬¬¬¬     ¬¬¬¬¬¬¬¬¬¬¬ |
+        |                      ¬¬¬¬¬¬¬¬¬¬¬¬¬     ¬¬¬¬¬¬¬¬¬¬¬ |
+        |                      ¬¬¬¬¬¬¬¬¬¬¬¬¬                 |
         |                                                    |
-        |      @@@@+++++++++   @@@@+++++++++++++++++++       |
-        |      @++++++++++++   @++++++++++++++++++++++       |
-        |      +++++++++++++   +++++++++++++++++++++++       |
+        |      @@@@¬¬¬¬¬¬¬¬¬   @@@@¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬       |
+        |      @¬¬¬¬¬¬¬¬¬¬¬¬   @¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬       |
+        |      ¬¬¬¬¬¬¬¬¬¬¬¬¬   ¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬       |
         '----------------------------------------------------'
         Origin: (000.000, 000.000, 000.000)
     """
@@ -272,7 +328,7 @@ def draw_ascii_workspace(workspace: dict, platforms: list, downscale_factor: flo
     length = math.ceil(workspace["length"] / downscale_factor)
 
     # Create an empty grid to represent the workspace
-    grid = [[' ' for _ in range(width)] for _ in range(length)]
+    grid = [[empty_char for _ in range(width)] for _ in range(length)]
 
     # Add the boundaries of the workspace
     for i in range(width):
@@ -301,10 +357,12 @@ def draw_ascii_workspace(workspace: dict, platforms: list, downscale_factor: flo
         j_range = range(x, min(x + platform_width, width))
         for i in i_range:
             for j in j_range:
-                if grid[i][j] == " ":
-                    grid[i][j] = '+'
                 if platform.get("type") == "ANCHOR" and (i == i_range[0] or j == j_range[0]):
-                    grid[i][j] = '@'
+                    # Mark anchor corners.
+                    grid[i][j] = anchor_char
+                elif grid[i][j] == empty_char:
+                    # Mark platform area.
+                    grid[i][j] = item_char
 
     # Convert grid to a string representation
     result = '\n'.join([indent * ' ' + ''.join(row) for row in grid])
