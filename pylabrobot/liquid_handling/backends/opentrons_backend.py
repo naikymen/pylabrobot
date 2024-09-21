@@ -10,8 +10,10 @@ from pylabrobot.liquid_handling.standard import (
   DropTipRack,
   Aspiration,
   AspirationPlate,
+  AspirationContainer,
   Dispense,
   DispensePlate,
+  DispenseContainer,
   Move
 )
 from pylabrobot.resources import (
@@ -72,6 +74,7 @@ class OpentronsBackend(LiquidHandlerBackend):
     self.host = host
     self.port = port
 
+    # pylint: disable=possibly-used-before-assignment
     ot_api.set_host(host)
     ot_api.set_port(port)
 
@@ -88,6 +91,8 @@ class OpentronsBackend(LiquidHandlerBackend):
     }
 
   async def setup(self):
+    # pylint: disable=possibly-used-before-assignment
+
     # create run
     run_id = ot_api.runs.create()
     ot_api.set_run(run_id)
@@ -148,6 +153,7 @@ class OpentronsBackend(LiquidHandlerBackend):
     # check if resource is actually a Module
     if isinstance(resource, OTModule):
       assert isinstance(ot_location, int)
+      # pylint: disable=possibly-used-before-assignment
       ot_api.modules.load_module(
         slot=ot_location,
         model=resource.model,
@@ -185,14 +191,14 @@ class OpentronsBackend(LiquidHandlerBackend):
 
     well_definitions = {
       child.name: {
-        "depth": child.get_size_z(),
-        "x": cast(Coordinate, child.location).x,
-        "y": cast(Coordinate, child.location).y,
+        "depth": child.get_absolute_size_z(),
+        "x": cast(Coordinate, child.location).x + child.get_absolute_size_x() / 2,
+        "y": cast(Coordinate, child.location).y + child.get_absolute_size_y() / 2,
         "z": cast(Coordinate, child.location).z,
         "shape": "circular",
 
         # inscribed circle has diameter equal to the width of the well
-        "diameter": child.get_size_x(),
+        "diameter": child.get_absolute_size_x(),
 
         # Opentrons requires `totalLiquidVolume`, even for tip racks!
         "totalLiquidVolume": _get_volume(child),
@@ -241,9 +247,9 @@ class OpentronsBackend(LiquidHandlerBackend):
         "z": 0
       },
       "dimensions":{
-        "xDimension": resource.get_size_x(),
-        "yDimension": resource.get_size_y(),
-        "zDimension": resource.get_size_z(),
+        "xDimension": resource.get_absolute_size_x(),
+        "yDimension": resource.get_absolute_size_y(),
+        "zDimension": resource.get_absolute_size_z(),
       },
       "wells": well_definitions,
       "groups": [
@@ -325,10 +331,7 @@ class OpentronsBackend(LiquidHandlerBackend):
     if not pipette_id:
       raise NoChannelError("No pipette channel of right type with no tip available.")
 
-    if op.offset is not None:
-      offset_x, offset_y, offset_z = op.offset.x, op.offset.y, op.offset.z
-    else:
-      offset_x = offset_y = offset_z = 0
+    offset_x, offset_y, offset_z = op.offset.x, op.offset.y, op.offset.z
 
     # ad-hoc offset adjustment that makes it smoother.
     offset_z += 50
@@ -364,10 +367,7 @@ class OpentronsBackend(LiquidHandlerBackend):
     if not pipette_id:
       raise NoChannelError("No pipette channel of right type with tip available.")
 
-    if op.offset is not None:
-      offset_x, offset_y, offset_z = op.offset.x, op.offset.y, op.offset.z
-    else:
-      offset_x = offset_y = offset_z = 0
+    offset_x, offset_y, offset_z = op.offset.x, op.offset.y, op.offset.z
 
     # ad-hoc offset adjustment that makes it smoother.
     offset_z += 10
@@ -466,10 +466,7 @@ class OpentronsBackend(LiquidHandlerBackend):
 
     labware_id = self.defined_labware[op.resource.parent.name]
 
-    if op.offset is not None:
-      offset_x, offset_y, offset_z = op.offset.x, op.offset.y, op.offset.z
-    else:
-      offset_x = offset_y = offset_z = 0
+    offset_x, offset_y, offset_z = op.offset.x, op.offset.y, op.offset.z
 
     ot_api.lh.aspirate(labware_id, well_name=op.resource.name, pipette_id=pipette_id,
       volume=volume, flow_rate=flow_rate, offset_x=offset_x, offset_y=offset_y, offset_z=offset_z)
@@ -519,10 +516,7 @@ class OpentronsBackend(LiquidHandlerBackend):
 
     labware_id = self.defined_labware[op.resource.parent.name]
 
-    if op.offset is not None:
-      offset_x, offset_y, offset_z = op.offset.x, op.offset.y, op.offset.z
-    else:
-      offset_x = offset_y = offset_z = 0
+    offset_x, offset_y, offset_z = op.offset.x, op.offset.y, op.offset.z
 
     ot_api.lh.dispense(labware_id, well_name=op.resource.name, pipette_id=pipette_id,
       volume=volume, flow_rate=flow_rate, offset_x=offset_x, offset_y=offset_y, offset_z=offset_z)
@@ -537,10 +531,10 @@ class OpentronsBackend(LiquidHandlerBackend):
   async def drop_tips96(self, drop: DropTipRack):
     raise NotImplementedError("The Opentrons backend does not support the CoRe 96.")
 
-  async def aspirate96(self, aspiration: AspirationPlate):
+  async def aspirate96(self, aspiration: Union[AspirationPlate, AspirationContainer]):
     raise NotImplementedError("The Opentrons backend does not support the CoRe 96.")
 
-  async def dispense96(self, dispense: DispensePlate):
+  async def dispense96(self, dispense: Union[DispensePlate, DispenseContainer]):
     raise NotImplementedError("The Opentrons backend does not support the CoRe 96.")
 
   async def move_resource(self, move: Move):

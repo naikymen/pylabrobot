@@ -10,7 +10,7 @@ This package contains APIs for working with plate readers.
   :nosignatures:
   :recursive:
 
-    pylabrobot.plate_reading.plate_reader.PlateReader
+    plate_reader.PlateReader
 
 
 Backends
@@ -21,4 +21,5 @@ Backends
   :nosignatures:
   :recursive:
 
-    pylabrobot.plate_reading.clario_star.CLARIOStar
+    chatterbox.PlateReaderChatterboxBackend
+    clario_star.CLARIOStar

@@ -18,8 +18,10 @@ from pylabrobot.liquid_handling.standard import (
   DropTipRack,
   Aspiration,
   AspirationPlate,
+  AspirationContainer,
   Dispense,
   DispensePlate,
+  DispenseContainer,
   Move
 )
 from pylabrobot.resources import (
@@ -144,6 +146,10 @@ class TecanLiquidHandler(LiquidHandlerBackend, USBBackend, metaclass=ABCMeta):
 
     resp = self.read(timeout=read_timeout)
     return self.parse_response(resp)
+
+  async def setup(self):
+    await LiquidHandlerBackend.setup(self)
+    await USBBackend.setup(self)
 
 
 class EVO(TecanLiquidHandler):
@@ -311,10 +317,7 @@ class EVO(TecanLiquidHandler):
         tip_type=op.tip.tip_type
       ) if isinstance(op.tip, TecanTip) else None for op in ops]
 
-    for op, tlc in zip(ops, tecan_liquid_classes):
-      op.volume = tlc.compute_corrected_volume(op.volume) if tlc is not None else op.volume
-
-    ys = int(ops[0].resource.get_size_y() * 10)
+    ys = int(ops[0].resource.get_absolute_size_y() * 10)
     zadd: List[Optional[int]] = [0] * self.num_channels
     for i, channel in enumerate(use_channels):
       par = ops[i].resource.parent
@@ -391,7 +394,7 @@ class EVO(TecanLiquidHandler):
     """
 
     x_positions, y_positions, z_positions = self._liha_positions(ops, use_channels)
-    ys = int(ops[0].resource.get_size_y() * 10)
+    ys = int(ops[0].resource.get_absolute_size_y() * 10)
 
     tecan_liquid_classes = [
       get_liquid_class(
@@ -399,11 +402,6 @@ class EVO(TecanLiquidHandler):
         liquid_class=op.liquids[-1][0] or Liquid.WATER,
         tip_type=op.tip.tip_type
       ) if isinstance(op.tip, TecanTip) else None for op in ops]
-
-    for op, tlc in zip(ops, tecan_liquid_classes):
-      op.volume = tlc.compute_corrected_volume(op.volume) + \
-        tlc.aspirate_lag_volume + tlc.aspirate_tag_volume \
-        if tlc is not None else op.volume
 
     x, _ = self._first_valid(x_positions)
     y, yi = self._first_valid(y_positions)
@@ -437,7 +435,7 @@ class EVO(TecanLiquidHandler):
     x_positions, y_positions, _ = self._liha_positions(ops, use_channels)
 
     # move channels
-    ys = int(ops[0].resource.get_size_y() * 10)
+    ys = int(ops[0].resource.get_absolute_size_y() * 10)
     x, _ = self._first_valid(x_positions)
     y, yi = self._first_valid(y_positions)
     assert x is not None and y is not None
@@ -497,10 +495,10 @@ class EVO(TecanLiquidHandler):
   async def drop_tips96(self, drop: DropTipRack):
     raise NotImplementedError()
 
-  async def aspirate96(self, aspiration: AspirationPlate):
+  async def aspirate96(self, aspiration: Union[AspirationPlate, AspirationContainer]):
     raise NotImplementedError()
 
-  async def dispense96(self, dispense: DispensePlate):
+  async def dispense96(self, dispense: Union[DispensePlate, DispenseContainer]):
     raise NotImplementedError()
 
   async def move_resource(self, move: Move):
@@ -511,7 +509,7 @@ class EVO(TecanLiquidHandler):
 
     z_range = await self.roma.report_z_param(5)
     x, y, z = self._roma_positions(move.resource, move.resource.get_absolute_location(), z_range)
-    h = int(move.resource.get_size_y() * 10)
+    h = int(move.resource.get_absolute_size_y() * 10)
     xt, yt, zt = self._roma_positions(move.resource, move.destination, z_range)
 
     # move to resource
@@ -718,7 +716,8 @@ class EVO(TecanLiquidHandler):
       assert tlc is not None and z is not None
       sep[channel] = int(tlc.aspirate_speed * 12) # 6?
       ssz[channel] = round(z * tlc.aspirate_speed / ops[i].volume)
-      mtr[channel] = round(ops[i].volume * 6) # 3?
+      volume = tlc.compute_corrected_volume(ops[i].volume)
+      mtr[channel] = round(volume * 6) # 3?
       ssz_r[channel] = int(tlc.aspirate_retract_speed * 10)
 
     return ssz, sep, stz, mtr, ssz_r
@@ -749,7 +748,9 @@ class EVO(TecanLiquidHandler):
       sep[channel] = int(tlc.dispense_speed * 12) # 6?
       spp[channel] = int(tlc.dispense_breakoff * 12) # 6?
       stz[channel] = 0
-      mtr[channel] = -round(ops[i].volume * 6) # 3?
+      volume = tlc.compute_corrected_volume(ops[i].volume) + tlc.aspirate_lag_volume + \
+        tlc.aspirate_tag_volume
+      mtr[channel] = -round(volume * 6) # 3?
 
     return sep, spp, stz, mtr
 
@@ -772,7 +773,7 @@ class EVO(TecanLiquidHandler):
       or par.roma_z_travel is None or par.roma_z_end is None:
       raise ValueError(f"Operation is not supported by resource {par}.")
     x_position = int((offset.x - 100)* 10 + par.roma_x)
-    y_position = int((347.1 - (offset.y + resource.get_size_y())) * 10 + par.roma_y)
+    y_position = int((347.1 - (offset.y + resource.get_absolute_size_y())) * 10 + par.roma_y)
     z_positions = {
       "safe": z_range - int(par.roma_z_safe),
       "travel": z_range - int(par.roma_z_travel - offset.z * 10),

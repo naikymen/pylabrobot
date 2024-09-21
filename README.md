@@ -67,7 +67,7 @@ PyLabRobot also provides a layer of general-purpose abstractions for plate reade
 ```python
 from pylabrobot.plate_reading import PlateReader, ClarioStar
 
-pr = PlateReader(name="plate reader", backend=ClarioStar())
+pr = PlateReader(name="plate reader", backend=ClarioStar(), size_x=1, size_y=1, size_z=1)
 await pr.setup()
 
 # Use in combination with a liquid handler
@@ -117,6 +117,19 @@ backend = InhecoThermoShake()
 hs = HeaterShaker(backend=backend, name="HeaterShaker", size_x=0, size_y=0, size_z=0)
 await hs.setup()
 await hs.set_temperature(37)
+```
+
+### Fans ([docs](https://docs.pylabrobot.org/fans.html))
+
+Running a fan at 100% intensity for one minute:
+
+```python
+from pylabrobot.only_fans import Fan
+from pylabrobot.only_fans import HamiltonHepaFan
+
+fan = Fan(backend=HamiltonHepaFan(), name="my fan")
+await fan.setup()
+await fan.turn_on(intensity=100, duration=60)
 ```
 
 ## Resources
