@@ -7,7 +7,8 @@ from pylabrobot.resources.container import Container
 from pylabrobot.resources.liquid import Liquid
 #from pylabrobot.resources.plate import Plate
 from pylabrobot.resources.resource import Resource, Coordinate
-from pylabrobot.resources.itemized_resource import ItemizedResource, create_equally_spaced
+from pylabrobot.resources.itemized_resource import ItemizedResource
+from pylabrobot.resources.utils import create_equally_spaced_2d
 
 from .utils import get_contents_container
 
@@ -675,7 +676,7 @@ def load_ola_tube_rack(
       #       It is needed to get the proper Z coordinate.
     )
 
-  # Prepare parameters for "create_equally_spaced".
+  # Prepare parameters for "create_equally_spaced_2d".
   dx, dy, dz = deck.rack_to_plr_dxdydz(platform_data, default_link, container_data)
 
   # Create the TubeRack instance.
@@ -688,8 +689,8 @@ def load_ola_tube_rack(
       model=platform_data["name"], # Optional.
 
       # Use the helper function to create a regular 2D-grid of tip spots.
-      items=create_equally_spaced(
-        # NOTE: Parameters for "create_equally_spaced".
+      items=create_equally_spaced_2d(
+        # NOTE: Parameters for "create_equally_spaced_2d".
         klass=TubeSpot,  # NOTE: the TipRack uses "TipSpot" class here. Should I use "Tube"?
         num_items_x=platform_data["wellsColumns"],
         num_items_y=platform_data["wellsRows"],

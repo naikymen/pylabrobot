@@ -1,5 +1,5 @@
 # from pylabrobot.resources.tip import Tip
-from pylabrobot.resources.itemized_resource import create_equally_spaced
+from pylabrobot.resources.utils import create_equally_spaced_2d
 from pylabrobot.resources.tip_rack import TipRack, TipSpot
 from pylabrobot.resources.tip import Tip
 from .utils import get_contents_container
@@ -57,7 +57,7 @@ def load_ola_tip_rack(
       fitting_depth=container_data["length"]-container_data["activeHeight"]
     )
 
-  # Prepare parameters for "create_equally_spaced".
+  # Prepare parameters for "create_equally_spaced_2d".
   dx, dy, dz = deck.rack_to_plr_dxdydz(platform_data, default_link, container_data)
 
   # Create the TipRack instance.
@@ -69,9 +69,9 @@ def load_ola_tip_rack(
       category=platform_data.get("type", None), # Optional in PLR.
       model=platform_data["name"], # Optional.
 
-      # Use the "create_equally_spaced" helper function to create a regular 2D-grid of tip spots.
-      items=create_equally_spaced(
-        # NOTE: Parameters for "create_equally_spaced".
+      # Use the "create_equally_spaced_2d" helper function to create a regular 2D-grid of tip spots.
+      items=create_equally_spaced_2d(
+        # NOTE: Parameters for "create_equally_spaced_2d".
         klass=TipSpot,
         num_items_x=platform_data["wellsColumns"],
         num_items_y=platform_data["wellsRows"],
