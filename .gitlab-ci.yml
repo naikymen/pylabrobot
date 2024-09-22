@@ -10,8 +10,7 @@ variables:
 
 before_script:
   - python --version
-  - pip install -r requirements.txt
-  - pip install .[dev]
+  - pip install .
 
 cache:
   paths:
