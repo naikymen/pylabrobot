@@ -54,7 +54,7 @@ from piper.controller import Controller
 from piper.datatools.nodb import NoObjects
 # from piper.log import setup_logging
 from piper.utils import get_config_path
-from pylabrobot.resources.pipettin.utils import load_objects
+from piper.datatools.datautils import load_objects
 from piper.config.config_helper import TrackedDict
 # Load newt module.
 import newt
@@ -161,22 +161,17 @@ class PiperBackend(LiquidHandlerBackend):
 
   async def _start_controller(self, timeout, reset_firmware_on_error):
 
-    if self.controller.machine.dry:
-      print("Dry mode enabled, skipping setup.")
-      return
+    # if self.controller.machine.dry:
+    #   print("Dry mode enabled, skipping setup.")
+    #   return
 
     # Start the controller.
     print("Setting up connections...")
-    self.controller_task: asyncio.Task = asyncio.create_task(self.controller.moon_commander())
+    status = await self.controller.start_and_wait()
 
-    # Wait for readiness.
-    ws_ready = await self.controller.wait_for_setup(timeout=timeout, raise_error=True)
-    printer_ready = await self.controller.wait_for_ready(
-      reset=reset_firmware_on_error, wait_time=1.1, timeout=timeout)
-    if not ws_ready:
-      raise PiperError("Moonraker is not ready, check the logs on the robot's computer.")
-    elif not printer_ready:
-      raise PiperError("Klipper is not ready, check the logs on the robot's computer.")
+    # Check for readiness.
+    if not status:
+      raise PiperError("Firmware not ready, check the logs on the robot's computer.")
     else:
       print("Connections successfully setup.")
 
@@ -245,11 +240,11 @@ class PiperBackend(LiquidHandlerBackend):
   # Resource callback methods ####
 
   async def assigned_resource_callback(self, resource: Resource):
-    print(f"piper_backend: Resource with name='{resource.name}' was assigned to the robot.")
+    print(f"piper_backend: Resource '{resource.name}' assigned to the robot.")
     # TODO: should this update the workspace?
 
   async def unassigned_resource_callback(self, name: str):
-    print(f"piper_backend: Resource with name='{name}' was unassigned from the robot.")
+    print(f"piper_backend: Resource '{name}' unassigned from the robot.")
     # TODO: should this update the workspace?
 
   # Helper methods ####
