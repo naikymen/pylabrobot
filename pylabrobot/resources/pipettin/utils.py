@@ -1,9 +1,3 @@
-import json
-import os
-import urllib
-from copy import deepcopy
-from typing import Union
-
 from pylabrobot.resources import Coordinate, Trash, PetriDish, Colony
 from pylabrobot.resources.liquid import Liquid
 
