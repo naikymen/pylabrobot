@@ -86,6 +86,7 @@ setup(
     "opentrons": extras_opentrons,
     "server": extras_server,
     "agrow": extras_agrow,
+    "piper": extras_piper,
     "dev": extras_dev,
     "all": extras_all,
   },
