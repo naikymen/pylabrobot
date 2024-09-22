@@ -50,7 +50,7 @@ from pylabrobot.liquid_handling.standard import (
 from pylabrobot.liquid_handling.errors import NoChannelError
 
 # Load piper modules.
-from piper.coroutines_moon import Controller
+from piper.controller import Controller
 from piper.datatools.nodb import NoObjects
 # from piper.log import setup_logging
 from piper.utils import get_config_path
