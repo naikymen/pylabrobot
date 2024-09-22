@@ -70,7 +70,10 @@ setup(
   description="A hardware agnostic platform for lab automation",
   long_description=long_description,
   long_description_content_type="text/markdown",
-  install_requires=["typing_extensions"],
+  install_requires=[
+    "typing_extensions",
+    "pylibftdi"  # TODO: Remove when fixed: https://github.com/PyLabRobot/pylabrobot/issues/257
+  ],
   url="https://github.com/pylabrobot/pylabrobot.git",
   package_data={"pylabrobot": ["visualizer/*"]},
   extras_require={
