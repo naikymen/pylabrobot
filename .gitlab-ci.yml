@@ -1,0 +1,24 @@
+# .gitlab-ci.yml
+
+image: python:3.9
+
+stages:
+  - test
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+before_script:
+  - python --version
+  - pip install -r requirements.txt
+  - pip install .[dev]
+
+cache:
+  paths:
+    - .cache/pip
+
+test:
+  stage: test
+  script:
+    - pytest pylabrobot/resources/pipettin/
+    - cat /tmp/piper*.log || echo "No logs found."
