@@ -10,7 +10,8 @@ variables:
 
 before_script:
   - python --version
-  - pip install .[piper]
+  - pip install piper[dev]@git+https://gitlab.com/pipettin-bot/pipettin-piper.git
+  - pip install .
 
 cache:
   paths:
