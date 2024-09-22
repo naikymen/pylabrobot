@@ -20,7 +20,7 @@ import textwrap
 from copy import deepcopy
 # from typing import Optional, Callable
 
-from pylabrobot.resources import Coordinate, Deck
+from pylabrobot.resources import Coordinate, Deck, Resource, ResourceNotFoundError
 
 from .tip_racks import load_ola_tip_rack
 from .tube_racks import load_ola_tube_rack, load_ola_custom
@@ -121,15 +121,18 @@ class SilverDeck(Deck):
       platform_data=platform_data,
       containers_data=containers
     )
+    # print(f"Assigned {platform_resource.name} to {self.name}.")
 
     # Assign the translated resource.
     if platform_resource is not None:
       # Check if the item is anchored.
       anchor_name = platform_item.get("snappedAnchor", None)
+
       if anchor_name is not None:
         # Assign as an anchor's child.
         anchor = self.get_resource(anchor_name)
         anchor.assign_child_resource(platform_resource)
+
       else:
         # Get the resources' location.
         position = platform_item["position"]
@@ -143,6 +146,48 @@ class SilverDeck(Deck):
 
     # Done!
     return platform_resource
+
+  def get_resource(self, name: str, resources_list=None, parent=None, recursing=False) -> Resource:
+    """ Returns the resource with the given name, recursively scanning children.
+
+    This method overrides 'get_resource' from the base Deck class.
+
+    Raises:
+      ResourceNotFoundError: If the resource is not found.
+    """
+
+    if parent is None:
+      parent = self
+    if resources_list is None:
+      resources_list = []
+
+    # print(f"Looking for '{name}' in '{parent.name}'.")
+    for child in parent.children:
+      if child.name == name:
+        # print("Found " + child.name)
+        resources_list.append(child)
+      if isinstance(child, Resource):
+        # print(f"Recursing into {child.name}")
+        self.get_resource(name, resources_list, child, True)
+
+    if recursing:
+      # Skip checks if recursing.
+      return
+    elif not resources_list:
+      # Raise the standard error if not found.
+      msg = f"Resource '{name}' not found after recursion"
+      # print(msg)
+      raise ResourceNotFoundError(msg)
+    if len(resources_list) > 1 and not is_root:
+      # Raise a custom error if multiple matches were found.
+      msg = f"Multiple resources named '{name}' were found, as children of: '"
+      msg += "', '".join([child.parent.name for child in resources_list]) + "'"
+      # print(msg)
+      raise ResourceNotFoundError(msg)
+
+    # Return the first match.
+    # print("Done looking")
+    return resources_list[0]
 
   # Getter methods for pipettin data objects.
   @property
