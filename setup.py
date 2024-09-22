@@ -37,7 +37,7 @@ extras_server = [
 ]
 
 extras_piper= [
-  "piper @ git+https://gitlab.com/pipettin-bot/pipettin-piper.git"
+  "piper@git+https://gitlab.com/pipettin-bot/pipettin-piper.git"
 ]
 
 extras_inheco = [
@@ -48,7 +48,7 @@ extras_agrow = [
   "pymodbus==3.6.8"
 ]
 
-extras_dev = extras_fw + extras_http + extras_plate_reading + extras_websockets + \
+extras_dev = extras_fw + extras_http + extras_plate_reading + extras_websockets + extras_piper + \
     extras_visualizer + extras_opentrons + extras_server + extras_inheco + extras_agrow + [
     "sphinx_book_theme",
     "myst_nb",
