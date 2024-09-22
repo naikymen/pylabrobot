@@ -178,7 +178,7 @@ class SilverDeck(Deck):
       msg = f"Resource '{name}' not found after recursion"
       # print(msg)
       raise ResourceNotFoundError(msg)
-    if len(resources_list) > 1 and not is_root:
+    if len(resources_list) > 1 and not recursing:
       # Raise a custom error if multiple matches were found.
       msg = f"Multiple resources named '{name}' were found, as children of: '"
       msg += "', '".join([child.parent.name for child in resources_list]) + "'"
