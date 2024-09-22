@@ -36,6 +36,9 @@ extras_server = [
   "flask[async]",
 ]
 
+extras_piper= [
+  "piper @ git+https://gitlab.com/pipettin-bot/pipettin-piper.git"
+]
 
 extras_inheco = [
   "hid"
