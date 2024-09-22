@@ -664,13 +664,14 @@ def load_ola_tube_rack(
   default_link = linked_containers[0]
   container_data = next(x for x in containers_data if x["name"] == default_link["container"])
 
-  def make_pew_tube():
+  def make_pew_tube(name="placeholder name"):
+    """Function to create default tubes, passed to create_ordered_items_2d."""
     # NOTE: I need to create this function here, it is required by "TubeSpot" later on.
     return Tube(
       # TODO: Names for tubes should all be different.
-      name="placeholder name",
-      size_x=container_data["width"],
-      size_y=container_data["width"],
+      name=name,
+      size_x=platform_data["wellDiameter"],
+      size_y=platform_data["wellDiameter"],
       size_z=container_data["length"],
       max_volume=container_data["maxVolume"],
       model=container_data["name"]
@@ -695,7 +696,8 @@ def load_ola_tube_rack(
     # dy: The Y coordinate of the bottom left corner for items in the top row.
     # dz: The z coordinate for all items.
     dx=dx, dy=dy, dz=dz,
-    # NOTE: Additional keyword arguments are passed to the "klass" constructor (set above).
+    # NOTE: Additional keyword arguments are passed to the "klass" constructor.
+    # Set the dimensions of the tube spot to the diameter of the well.
     size_x=platform_data["wellDiameter"],
     size_y=platform_data["wellDiameter"],
     # size_z=platform_data["height"]
@@ -718,7 +720,8 @@ def load_ola_tube_rack(
       category=platform_data.get("type", None), # Optional in PLR.
       model=platform_data["name"], # Optional.
       ordered_items=ordered_items,
-      # Fill with tubes.
+      # Don't fill the rack with tubes.
+      # Tubes would otherwise be created and added to the rack, using "make_pew_tube".
       with_tubes=False
     )
 
@@ -781,8 +784,8 @@ def load_ola_custom(deck: "SilverDeck", platform_item, platform_data, containers
     # Create the tube.
     tube = Tube(
       name=content["name"],
-      size_x=container_data["width"],
-      size_y=container_data["width"],
+      size_x=platform_data["wellDiameter"],
+      size_y=platform_data["wellDiameter"],
       size_z=container_data["length"],
       max_volume=container_data["maxVolume"],
       model=container_data["name"],
