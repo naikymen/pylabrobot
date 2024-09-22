@@ -12,7 +12,7 @@ class Anchor(Resource):
                             offset: Coordinate = Coordinate.zero()):
 
     # Check that the anchor is empty.
-    assert self.resource is None, "The anchor is occupied by another resource."
+    assert self.resource is None, f"The anchor is occupied by another resource: '{self.resource.name}'"
 
     # Convert PW rotation angle of anchors to XY offsets for PLR.
     x = (-resource.get_size_x() if self.rotation in [90, 180] else 0.0)
@@ -31,7 +31,7 @@ class Anchor(Resource):
     #       new child to the anchor's parent. This would match the
     #       behavior of anchors in PW, which do not "contain" resources,
     #       technically they only "align" them to the workspace.
-    # NOTE: As of pipttin-gui:9acaae72, any items snapped to an anchor have
+    # NOTE: As of pipettin-gui:9acaae72, any items snapped to an anchor have
     #       a new property set, indicating its name. Anchors will have their
     #       children assigned when the platform item resources are created.
     #
