@@ -15,7 +15,7 @@ from pylabrobot.resources.pipettin.utils import load_defaults
 
 workspace, platforms, containers, tools = load_defaults()
 
-deck = SilverDeck(workspace, platforms, containers)
+deck = SilverDeck(workspace, platforms, containers, tools)
 back = PiperBackend()
 lh = LiquidHandler(backend=back, deck=deck)
 

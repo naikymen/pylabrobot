@@ -1,9 +1,3 @@
-import json
-import os
-import urllib
-from copy import deepcopy
-from typing import Union
-
 from pylabrobot.resources import Coordinate, Trash, PetriDish, Colony
 from pylabrobot.resources.liquid import Liquid
 
@@ -16,12 +10,12 @@ def get_items_platform(item, platforms):
   platform_data = next(x for x in platforms if x["name"] == item.get("platform"))
   return platform_data
 
-def get_contents_container(content, containers):
-  """Get the container data for a content."""
-  container_data = next(x for x in containers if x["name"] == content.get("container"))
+def get_contents_container(container_link, containers):
+  """Get container data for a container link."""
+  container_data = next(x for x in containers if x["name"] == container_link.get("container"))
   return container_data
 
-def create_trash(deck: "SilverDeck", platform_item, platform_data, **kwargs):
+def create_trash(deck: "SilverDeck", platform_item, platform_data, tools_data: dict, **kwargs):
   trash = Trash(
     name=platform_item["name"],
     size_x=platform_data["width"],
@@ -32,7 +26,7 @@ def create_trash(deck: "SilverDeck", platform_item, platform_data, **kwargs):
   )
   return trash
 
-def create_petri_dish(deck: "SilverDeck", platform_item, platform_data, **kwargs):
+def create_petri_dish(deck: "SilverDeck", platform_item, platform_data, tools_data: dict, **kwargs):
   dish = PetriDish(
     name=platform_item["name"],
     diameter=platform_data["diameter"],

@@ -9,7 +9,7 @@ from pylabrobot.resources.pipettin.utils import load_defaults
 
 workspace, platforms, containers, tools = load_defaults()
 
-deck = SilverDeck(workspace, platforms, containers)
+deck = SilverDeck(workspace, platforms, containers, tools)
 ```
 
 Have fun!
@@ -49,6 +49,7 @@ class SilverDeck(Deck):
                workspace: dict,
                platforms: dict,
                containers: dict,
+               tools: dict,
                default_name: str= "silver_deck",
                # TODO: Update default size.
                default_size_x: float = 250,
@@ -63,6 +64,7 @@ class SilverDeck(Deck):
     self._workspace = workspace
     self._platforms = platforms
     self._containers = containers
+    self.tools = tools
 
     # Default origin to zero.
     if default_origin is None:
@@ -90,9 +92,9 @@ class SilverDeck(Deck):
       origin = origin)
 
     # Load platform items.
-    self.assign_platforms(workspace, platforms, containers)
+    self.assign_platforms(workspace, platforms, containers, tools)
 
-  def assign_platforms(self, workspace, platforms, containers, anchors_first=True):
+  def assign_platforms(self, workspace, platforms, containers, tools, anchors_first=True):
     """ Convert platforms to resources and add them to the deck.
     Items are sorted to assign anchors first. This prevents errors when
     an item's anchor has not been assigned yet. This can be disabled
@@ -108,9 +110,9 @@ class SilverDeck(Deck):
       platform_data = get_items_platform(item, platforms)
       # Create a resource from the item.
       # Also add tubes, tips, and other resources in the platform item.
-      self.assign_platform(item, platform_data, containers)
+      self.assign_platform(item, platform_data, containers, tools)
 
-  def assign_platform(self, platform_item, platform_data, containers):
+  def assign_platform(self, platform_item, platform_data, containers, tools):
     # Get importer method.
     platform_type = platform_data["type"]
     importer = self.platform_importers.get(platform_type, importer_not_implemented)
@@ -119,7 +121,8 @@ class SilverDeck(Deck):
       deck=self,
       platform_item=platform_item,
       platform_data=platform_data,
-      containers_data=containers
+      containers_data=containers,
+      tools_data=tools,
     )
     # print(f"Assigned {platform_resource.name} to {self.name}.")
 
@@ -178,7 +181,7 @@ class SilverDeck(Deck):
       msg = f"Resource '{name}' not found after recursion"
       # print(msg)
       raise ResourceNotFoundError(msg)
-    if len(resources_list) > 1 and not is_root:
+    if len(resources_list) > 1 and not recursing:
       # Raise a custom error if multiple matches were found.
       msg = f"Multiple resources named '{name}' were found, as children of: '"
       msg += "', '".join([child.parent.name for child in resources_list]) + "'"
@@ -203,7 +206,9 @@ class SilverDeck(Deck):
   def workspace_items(self):
     return deepcopy(self._workspace["items"])
 
-  def xy_to_plr(self, x: float, y: float, workspace_width: float = None, workspace_height: float = None):
+  def xy_to_plr(self, x: float, y: float,
+                workspace_width: float = None,
+                workspace_height: float = None):
     """Convert XY coordinates from top-left origin to bottom-left origin.
 
     To convert XY coordinates from a coordinate system where the origin is at the top-left
@@ -239,40 +244,42 @@ class SilverDeck(Deck):
 
     return new_x, new_y
 
-  def plr_to_xy(self, x: float, y: float, workspace_width: float = None, workspace_height: float = None):
-      """Convert XY coordinates from bottom-left origin to top-left origin.
+  def plr_to_xy(self, x: float, y: float,
+                workspace_width: float = None,
+                workspace_height: float = None):
+    """Convert XY coordinates from bottom-left origin to top-left origin.
 
-      Inverse function of xy_to_plr, which converts coordinates from the bottom-left origin
-      (positive Y upward) back to the top-left origin (positive Y downward).
+    Inverse function of xy_to_plr, which converts coordinates from the bottom-left origin
+    (positive Y upward) back to the top-left origin (positive Y downward).
 
-      - X-coordinate stays the same, since the direction doesn't change in either system.
-      - Y-coordinate needs to be inverted by subtracting it from the total workspace height.
+    - X-coordinate stays the same, since the direction doesn't change in either system.
+    - Y-coordinate needs to be inverted by subtracting it from the total workspace height.
 
-      Test:
-        foo = (-10, 10)
-        bar = deck.xy_to_plr(*foo)
-        baz = deck.plr_to_xy(*bar)
-        assert foo == baz
+    Test:
+      foo = (-10, 10)
+      bar = deck.xy_to_plr(*foo)
+      baz = deck.plr_to_xy(*bar)
+      assert foo == baz
 
-      Args:
-          x (float): X coordinate in the system with the bottom-left origin.
-          y (float): Y coordinate in the system with the bottom-left origin (positive upwards).
-          workspace_width (optional, float): Width of the workspace.
-          workspace_height (optional, float): Height of the workspace.
+    Args:
+        x (float): X coordinate in the system with the bottom-left origin.
+        y (float): Y coordinate in the system with the bottom-left origin (positive upwards).
+        workspace_width (optional, float): Width of the workspace.
+        workspace_height (optional, float): Height of the workspace.
 
-      Returns:
-          tuple: New (x, y) coordinates in the system with the top-left origin.
-      """
+    Returns:
+        tuple: New (x, y) coordinates in the system with the top-left origin.
+    """
 
-      if workspace_width is None:
-          workspace_width = self.get_size_x()
-      if workspace_height is None:
-          workspace_height = self.get_size_y()
+    if workspace_width is None:
+      workspace_width = self.get_size_x()
+    if workspace_height is None:
+      workspace_height = self.get_size_y()
 
-      new_x = x  # X stays the same
-      new_y = workspace_height - y  # Flip the Y coordinate back to top-left origin
+    new_x = x  # X stays the same
+    new_y = workspace_height - y  # Flip the Y coordinate back to top-left origin
 
-      return new_x, new_y
+    return new_x, new_y
 
   def rack_to_plr_dxdydz(self, platform_data, tip_link, centers=False):
     """Prepare dx, dy, and dz parameters for "create_equally_spaced_2d" given a platform definition.
@@ -300,9 +307,9 @@ class SilverDeck(Deck):
 
     # dz: The z coordinate for all items.
     # NOTE: According to Rick and the sources, the "Z of a TipSpot" is the "Z of the tip's tip" when
-    # the tip is sitting on its spot, relative to the base of the tip rack (I guessed this last part).
-    dz = platform_data["activeHeight"]  # Height of the "seat" on which the tip "sits" (and touches).
-    dz -= tip_link["containerOffsetZ"]  # Subtract the length of the tip that ends up below the "seat".
+    # the tip is in its spot, relative to the base of the tip rack (I guessed this last part).
+    dz = platform_data["activeHeight"]  # Height of the "seat" for the tip "sits" (and touches).
+    dz -= tip_link["containerOffsetZ"]  # Subtract tip's length that ends up below the "seat".
 
     return dx, dy, dz
 
@@ -326,8 +333,8 @@ class SilverDeck(Deck):
 
     return ascii_dck
 
-    def __str__(self):
-      print(self.summary())
+  def __str__(self):
+    return self.summary()
 
 def draw_ascii_workspace(
   workspace: dict, platforms: list,
@@ -337,78 +344,78 @@ def draw_ascii_workspace(
   item_char: str = "¬",
   empty_char: str = " ",
   indent:int = 0):
-    """
-    Generates an ASCII art representation of platform items in a workspace.
+  """
+  Generates an ASCII art representation of platform items in a workspace.
 
-    Args:
-        downscale_factor (float): Factor used to scale the units down.
+  Args:
+      downscale_factor (float): Factor used to scale the units down.
 
-    Returns:
-        str: ASCII art representation of the workspace and platform items.
+  Returns:
+      str: ASCII art representation of the workspace and platform items.
 
-    Example:
-        MK3 Baseplate: 488mm x 290mm x 8mm (XYZ)
-        .----------------------------------------------------.
-        |                                                    |
-        |                                                    |
-        |                                                    |
-        |                                        ¬¬¬¬¬¬¬¬¬¬¬ |
-        |                                        ¬¬¬¬¬¬¬¬¬¬¬ |
-        |                      @@@@¬¬¬¬¬¬¬¬¬     ¬¬¬¬¬¬¬¬¬¬¬ |
-        |                      @¬¬¬¬¬¬¬¬¬¬¬¬     ¬¬¬¬¬¬¬¬¬¬¬ |
-        |                      ¬¬¬¬¬¬¬¬¬¬¬¬¬     ¬¬¬¬¬¬¬¬¬¬¬ |
-        |                      ¬¬¬¬¬¬¬¬¬¬¬¬¬                 |
-        |                                                    |
-        |      @@@@¬¬¬¬¬¬¬¬¬   @@@@¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬       |
-        |      @¬¬¬¬¬¬¬¬¬¬¬¬   @¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬       |
-        |      ¬¬¬¬¬¬¬¬¬¬¬¬¬   ¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬       |
-        '----------------------------------------------------'
-        Origin: (000.000, 000.000, 000.000)
-    """
+  Example:
+      MK3 Baseplate: 488mm x 290mm x 8mm (XYZ)
+      .----------------------------------------------------.
+      |                                                    |
+      |                                                    |
+      |                                                    |
+      |                                        ¬¬¬¬¬¬¬¬¬¬¬ |
+      |                                        ¬¬¬¬¬¬¬¬¬¬¬ |
+      |                      @@@@¬¬¬¬¬¬¬¬¬     ¬¬¬¬¬¬¬¬¬¬¬ |
+      |                      @¬¬¬¬¬¬¬¬¬¬¬¬     ¬¬¬¬¬¬¬¬¬¬¬ |
+      |                      ¬¬¬¬¬¬¬¬¬¬¬¬¬     ¬¬¬¬¬¬¬¬¬¬¬ |
+      |                      ¬¬¬¬¬¬¬¬¬¬¬¬¬                 |
+      |                                                    |
+      |      @@@@¬¬¬¬¬¬¬¬¬   @@@@¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬       |
+      |      @¬¬¬¬¬¬¬¬¬¬¬¬   @¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬       |
+      |      ¬¬¬¬¬¬¬¬¬¬¬¬¬   ¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬       |
+      '----------------------------------------------------'
+      Origin: (000.000, 000.000, 000.000)
+  """
 
-    platform_items = sorted(workspace["items"], key=lambda item: item.get("type") != "ANCHOR")
+  platform_items = sorted(workspace["items"], key=lambda item: item.get("type") != "ANCHOR")
 
-    # Convert workspace dimensions to ASCII grid size (1 char = 20 mm)
-    width = math.ceil(width_scaler * workspace["width"] / downscale_factor)
-    length = math.ceil(workspace["length"] / downscale_factor)
+  # Convert workspace dimensions to ASCII grid size (1 char = 20 mm)
+  width = math.ceil(width_scaler * workspace["width"] / downscale_factor)
+  length = math.ceil(workspace["length"] / downscale_factor)
 
-    # Create an empty grid to represent the workspace
-    grid = [[empty_char for _ in range(width)] for _ in range(length)]
+  # Create an empty grid to represent the workspace
+  grid = [[empty_char for _ in range(width)] for _ in range(length)]
 
-    # Add the boundaries of the workspace
-    for i in range(width):
-        grid[0][i] = '-'
-        grid[length - 1][i] = '-'
-    for i in range(length):
-        grid[i][0] = '|'
-        grid[i][width - 1] = '|'
+  # Add the boundaries of the workspace
+  for i in range(width):
+    grid[0][i] = "-"
+    grid[length - 1][i] = "-"
+  for i in range(length):
+    grid[i][0] = "|"
+    grid[i][width - 1] = "|"
 
-    # Corners
-    grid[0][0]   = '.'
-    grid[0][-1]  = '.'
-    grid[-1][0]  = '\''
-    grid[-1][-1] = '\''
+  # Corners
+  grid[0][0]   = "."
+  grid[0][-1]  = "."
+  grid[-1][0]  = "'"
+  grid[-1][-1] = "'"
 
-    # Draw each platform in the workspace
-    for item in platform_items:
-        platform = next(p for p in platforms if p["name"] == item["platform"])
-        platform_width = round(width_scaler * platform['width'] // downscale_factor)
-        platform_length = round(platform['length'] // downscale_factor)
-        x = round(width_scaler * item['position']["x"] // downscale_factor)
-        y = round(item['position']["y"] // downscale_factor)
+  # Draw each platform in the workspace
+  for item in platform_items:
+    platform = next(p for p in platforms if p["name"] == item["platform"])
+    platform_width = round(width_scaler * platform["width"] // downscale_factor)
+    platform_length = round(platform["length"] // downscale_factor)
+    x = round(width_scaler * item["position"]["x"] // downscale_factor)
+    y = round(item["position"]["y"] // downscale_factor)
 
-        # Draw the item as a filled square in the grid
-        i_range = range(y, min(y + platform_length, length))
-        j_range = range(x, min(x + platform_width, width))
-        for i in i_range:
-            for j in j_range:
-                if platform.get("type") == "ANCHOR" and (i == i_range[0] or j == j_range[0]):
-                    # Mark anchor corners.
-                    grid[i][j] = anchor_char
-                elif grid[i][j] == empty_char:
-                    # Mark platform area.
-                    grid[i][j] = item_char
+    # Draw the item as a filled square in the grid
+    i_range = range(y, min(y + platform_length, length))
+    j_range = range(x, min(x + platform_width, width))
+    for i in i_range:
+      for j in j_range:
+        if platform.get("type") == "ANCHOR" and (i == i_range[0] or j == j_range[0]):
+          # Mark anchor corners.
+          grid[i][j] = anchor_char
+        elif grid[i][j] == empty_char:
+          # Mark platform area.
+          grid[i][j] = item_char
 
-    # Convert grid to a string representation
-    result = '\n'.join([indent * ' ' + ''.join(row) for row in grid])
-    return result
+  # Convert grid to a string representation
+  result = "\n".join([indent * " " + "".join(row) for row in grid])
+  return result
