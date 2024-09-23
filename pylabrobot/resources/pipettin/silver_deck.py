@@ -206,7 +206,9 @@ class SilverDeck(Deck):
   def workspace_items(self):
     return deepcopy(self._workspace["items"])
 
-  def xy_to_plr(self, x: float, y: float, workspace_width: float = None, workspace_height: float = None):
+  def xy_to_plr(self, x: float, y: float,
+                workspace_width: float = None,
+                workspace_height: float = None):
     """Convert XY coordinates from top-left origin to bottom-left origin.
 
     To convert XY coordinates from a coordinate system where the origin is at the top-left
@@ -242,7 +244,9 @@ class SilverDeck(Deck):
 
     return new_x, new_y
 
-  def plr_to_xy(self, x: float, y: float, workspace_width: float = None, workspace_height: float = None):
+  def plr_to_xy(self, x: float, y: float,
+                workspace_width: float = None,
+                workspace_height: float = None):
     """Convert XY coordinates from bottom-left origin to top-left origin.
 
     Inverse function of xy_to_plr, which converts coordinates from the bottom-left origin
@@ -303,9 +307,9 @@ class SilverDeck(Deck):
 
     # dz: The z coordinate for all items.
     # NOTE: According to Rick and the sources, the "Z of a TipSpot" is the "Z of the tip's tip" when
-    # the tip is sitting on its spot, relative to the base of the tip rack (I guessed this last part).
-    dz = platform_data["activeHeight"]  # Height of the "seat" on which the tip "sits" (and touches).
-    dz -= tip_link["containerOffsetZ"]  # Subtract the length of the tip that ends up below the "seat".
+    # the tip is in its spot, relative to the base of the tip rack (I guessed this last part).
+    dz = platform_data["activeHeight"]  # Height of the "seat" for the tip "sits" (and touches).
+    dz -= tip_link["containerOffsetZ"]  # Subtract tip's length that ends up below the "seat".
 
     return dx, dy, dz
 
