@@ -9,6 +9,8 @@ from pylabrobot.resources import set_tip_tracking, set_volume_tracking
 from piper.datatools.datautils import load_objects
 from piper.utils import default_config
 
+from newt.translators.plr import deck_to_workspaces
+
 # Example using exported data.
 db_location = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/databases.json'
 
@@ -102,3 +104,12 @@ async def test_piper_backend():
   print("Dispense operation")
   # await lh.dispense(tubes, vols=[1.0, 1.0, 1.0])
   await lh.dispense(tubes[:1], vols=[10])
+
+def test_translation():
+  """Check that translations work (or at least can run)"""
+  # Instantiate the deck.
+  deck = make_silver_deck()
+  # Serialize deck.
+  deck_data = deck.serialize()
+  # Convert to workspace.
+  deck_to_workspaces(deck_data)
