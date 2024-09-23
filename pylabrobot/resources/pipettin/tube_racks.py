@@ -1,6 +1,6 @@
 import math
 from abc import ABCMeta
-from typing import Optional, Callable, List, Union, Sequence, cast, Any, Dict
+from typing import Optional, Callable, List, Union, Sequence, cast, Any, Dict, Tuple
 
 from pylabrobot.serializer import deserialize
 from pylabrobot.resources.container import Container
@@ -251,14 +251,14 @@ class HasTubeError(Exception):
 class NoTubeError(Exception):
   """ Raised when a tip was expected but none was found. """
 class TubeTracker:
-  """ A tube tracker tracks tube operations and raises errors if the tube operations are invalid. """
+  """ A tube tracker tracks tube operations and raises errors if operations on them are invalid. """
 
   def __init__(self, thing: str):
     self.thing = thing
     self._is_disabled = False
     self._tube: Optional["Tube"] = None
     self._pending_tube: Optional["Tube"] = None
-    self._tube_origin: Optional["TubeSpot"] = None # not currently in a transaction, do we need that?
+    self._tube_origin: Optional["TubeSpot"] = None # not currently in a transaction, is it needed?
 
     self._callback: Optional[TrackerCallback] = None
 
@@ -506,7 +506,8 @@ class TubeRack(ItemizedResource[TubeSpot], metaclass=ABCMeta):
     """
 
     if with_tubes:
-      raise NotImplementedError("Filling a new TubeRack with tubes on startup is not implemented yet (with_tubes=True).")
+      msg = "Filling a new TubeRack with tubes on startup is not implemented yet (with_tubes=True)."
+      raise NotImplementedError(msg)
 
     super().__init__(
       name=name,
@@ -554,6 +555,9 @@ class TubeRack(ItemizedResource[TubeSpot], metaclass=ABCMeta):
     location: Optional[Coordinate],
     reassign: bool = True
   ):
+
+    assert location is not None, "Location in the tube rack must be specified."
+
     return super().assign_child_resource(resource, location=location, reassign=reassign)
 
   # TODO: Should I override these?
@@ -567,35 +571,85 @@ class TubeRack(ItemizedResource[TubeSpot], metaclass=ABCMeta):
             f"size_y={self._size_y}, size_z={self._size_z}, location={self.location})")
 
   @staticmethod
-  def _occupied_func(x: TubeSpot):
-    return "U" if x.has_tube() else "-"
+  def _occupied_func(item: TubeSpot):
+    return "U" if item.has_tube() else "-"
 
   def get_tube(self, identifier: Union[str, int]) -> Tube:
     """ Get the item with the given identifier.
 
-    See :meth:`~.get_item` for more information.
+    NOTE: I think that the "get_item" method in "well plates"
+    returns the resource directly. Here there may be an
+    intermediary "spot" item, thus the difference from
+    "return super().get_item(identifier)".
     """
-    # NOTE: I think that the "get_item" method in "well plates"
-    #       returns the resource directly. Here there may be an
-    #       intermediary "spot" item, thus the difference from
-    #       "return super().get_item(identifier)".
     return super().get_item(identifier).get_tube()
 
   def get_tubes(self, identifier: Union[str, Sequence[int]]) -> List[Tube]:
     """ Get the tubes with the given identifier.
-
-    See :meth:`~.get_items` for more information.
+    NOTE: This differs from the method in "well plates". See note in "get_tube".
     """
-    # NOTE: This differs from the method in "well plates". See note in "get_tube".
     return [ts.get_tube() for ts in super().get_items(identifier)]
 
   def __getitem__(self, identifier):
-    """Overrides [] from ItemizedResource, in order to return tubes instead of TubeSpots"""
+    """Overrides '[]' from ItemizedResource.
+    This is needed to return tubes instead of TubeSpots.
+    """
     tube_spots = super().__getitem__(identifier)
     return [ts.get_tube() for ts in tube_spots]
 
   # TODO: Should I port "set_tip_state" from "TipRack" too?
   #       Fist I need to figure out how "make_tip" works.
+
+  # TODO: Should I add "empty" from "TipRack" here?
+
+  # TODO: Should I add "fill" from "TipRack" here?
+
+  def get_all_tubes(self) -> List[Tube]:
+    """ Get all tubes in the tube rack. """
+    return [ts.get_tube() for ts in super().get_all_items() if ts.has_tube()]
+
+  def set_tube_liquids(
+    self,
+    liquids: Union[
+      List[List[Tuple[Optional["Liquid"], Union[int, float]]]],
+      List[Tuple[Optional["Liquid"], Union[int, float]]],
+      Tuple[Optional["Liquid"], Union[int, float]]]
+  ) -> None:
+    """ Update the volume in the volume tracker of each tube in the rack.
+
+    Based on "set_well_liquids" in the "Plate" class.
+
+    Args:
+      volumes: A list of volumes, one for each tube in the rack. The list can be a list of lists,
+        where each inner list contains the volumes for each tube in a column.  If a single float is
+        given, the volume is assumed to be the same for all tubes. Volumes are in uL.
+
+    Raises:
+      ValueError: If the number of volumes does not match the number of tubes in the rack.
+
+    # TODO: Update this irrelevant example from "Plate".
+    Example:
+      Set the volume of each tube in a 96-tube plate to 10 uL.
+
+      >>> plate = Plate("plate", 127.0, 86.0, 14.5, num_items_x=12, num_items_y=8)
+      >>> plate.update_tube_volumes(10)
+    """
+
+    if isinstance(liquids, tuple):
+      liquids = [liquids] * self.num_items
+    elif isinstance(liquids, list) and all(isinstance(column, list) for column in liquids):
+      # mypy doesn't know that all() checks the type
+      liquids = cast(List[List[Tuple[Optional["Liquid"], float]]], liquids)
+      liquids = [list(column) for column in zip(*liquids)] # transpose the list of lists
+      liquids = [volume for column in liquids for volume in column] # flatten the list of lists
+
+    if len(liquids) != self.num_items:
+      raise ValueError(f"Number of liquids ({len(liquids)}) does not match number of tubes "
+                       f"({self.num_items}) in tube rack '{self.name}'.")
+
+    for i, (liquid, volume) in enumerate(liquids):
+      tube = self.get_tube(i)
+      tube.tracker.set_liquids([(liquid, volume)]) # type: ignore
 
   def disable_volume_trackers(self) -> None:
     """ Disable volume tracking for all tubes in the rack. """
@@ -609,55 +663,12 @@ class TubeRack(ItemizedResource[TubeSpot], metaclass=ABCMeta):
     for tube in self.get_all_items():
       tube.tracker.enable()
 
-  # TODO: Should I add "empty" from "TipRack" here?
-
-  # TODO: Should I add "fill" from "TipRack" here?
-
-  def get_all_tubes(self) -> List[Tube]:
-    """ Get all tubes in the tube rack. """
-    return [ts.get_tube() for ts in super().get_all_items() if ts.has_tube()]
-
-  def set_tube_volumes(self, volumes: Union[List[List[float]], List[float], float]) -> None:
-    """ Update the volume in the volume tracker of each tube in the plate.
-
-    Args:
-      volumes: A list of volumes, one for each tube in the plate. The list can be a list of lists,
-        where each inner list contains the volumes for each tube in a column.  If a single float is
-        given, the volume is assumed to be the same for all tubes. Volumes are in uL.
-
-    Raises:
-      ValueError: If the number of volumes does not match the number of tubes in the plate.
-
-    Example:
-      Set the volume of each tube in a 96-tube plate to 10 uL.
-
-      >>> plate = Plate("plate", 127.0, 86.0, 14.5, num_items_x=12, num_items_y=8)
-      >>> plate.update_tube_volumes(10)
-    """
-
-    if isinstance(volumes, float):
-      volumes = [volumes] * self.num_items
-    elif isinstance(volumes, list) and all(isinstance(column, list) for column in volumes):
-      volumes = cast(List[List[float]], volumes) # mypy doesn't know that all() checks the type
-      volumes = [list(column) for column in zip(*volumes)] # transpose the list of lists
-      volumes = [volume for column in volumes for volume in column] # flatten the list of lists
-
-    volumes = cast(List[float], volumes) # mypy doesn't know type is correct at this point.
-
-    if len(volumes) != self.num_items:
-      raise ValueError(f"Number of volumes ({len(volumes)}) does not match number of tubes "
-                      f"({self.num_items}) in rack '{self.name}'.")
-
-    for i, volume in enumerate(volumes):
-      tube = self.get_tube(i)
-      tube.tracker.set_used_volume(volume)
-
 def load_ola_tube_rack(
   deck: "SilverDeck",
   platform_item: dict,
   platform_data: dict,
   tools_data: dict,
-  containers_data: list):
+  containers_data: list) -> TubeRack:
 
   # TODO: Find a way to avoid defaulting to the first associated container.
   # NOTE: Perhaps PLR does not consider having different tubes for the same tube rack.
