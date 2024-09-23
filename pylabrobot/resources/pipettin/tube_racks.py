@@ -418,6 +418,9 @@ class TubeSpot(Resource):
     return {
       **super().serialize(),
       "prototype_tube": self.make_tube().serialize(),
+      # Add info about the tip. Is there one or not?
+      # TODO: This may be a hack. Review "tip_tracker.py" and "tip.py".
+      "tube_tracker": self.tracker.serialize()
     }
 
   @classmethod
@@ -427,7 +430,7 @@ class TubeSpot(Resource):
     def make_tube() -> Tube:
       return cast(Tube, deserialize(tube_data))
 
-    return cls(
+    tube_spot = cls(
       name=data["name"],
       size_x=data["size_x"],
       size_y=data["size_y"],
@@ -435,6 +438,14 @@ class TubeSpot(Resource):
       make_tube=make_tube,
       category=data.get("category", "tube_spot")
     )
+
+    # Add the tube.
+    # TODO: This may be a hack. Review "tip_tracker.py" and "tip.py".
+    #       For example, it does not restore liquid history.
+    if data.get("tube_tracker", {}).get(["tube"], None):
+      tube_spot.tracker.add_tube(tube_spot.make_tip())
+
+    return tube_spot
 
   def serialize_state(self) -> Dict[str, Any]:
     return self.tracker.serialize()
