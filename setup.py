@@ -37,7 +37,7 @@ extras_server = [
 ]
 
 extras_piper= [
-  "piper @ git+https://gitlab.com/pipettin-bot/pipettin-piper.git"
+  "piper@git+https://gitlab.com/pipettin-bot/pipettin-piper.git"
 ]
 
 extras_inheco = [
