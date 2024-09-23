@@ -22,9 +22,10 @@ def make_silver_deck(workspace_name = "MK3 Baseplate"):
   # Get all platforms and containers.
   platforms = db["platforms"]
   containers = db["containers"]
+  tools = db["tools"]
 
   # Instantiate the deck object.
-  deck = SilverDeck(workspace, platforms, containers)
+  deck = SilverDeck(workspace, platforms, containers, tools)
 
   print("Deck setup done")
   return deck
