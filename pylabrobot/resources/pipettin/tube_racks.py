@@ -656,6 +656,7 @@ def load_ola_tube_rack(
   deck: "SilverDeck",
   platform_item: dict,
   platform_data: dict,
+  tools_data: dict,
   containers_data: list):
 
   # TODO: Find a way to avoid defaulting to the first associated container.
@@ -764,7 +765,11 @@ def load_ola_tube_rack(
 class CustomPlatform(Resource):
   pass
 
-def load_ola_custom(deck: "SilverDeck", platform_item, platform_data, containers_data):
+def load_ola_custom(deck: "SilverDeck",
+                    platform_item: dict,
+                    platform_data: dict,
+                    containers_data: dict,
+                    tools_data: dict):
   custom = CustomPlatform(
     name=platform_item["name"],
     size_x=platform_data["width"],

@@ -8,6 +8,7 @@ def load_ola_tip_rack(
   deck: "SilverDeck",
   platform_item: dict,
   platform_data: dict,
+  tools_data: dict,
   containers_data: list) -> TipRack:
   """Create a TipRack resource from Pipettin data objects.
 
@@ -41,12 +42,25 @@ def load_ola_tip_rack(
       _type_: _description_
   """
 
+  # Get platform-container links.
+  linked_containers = platform_data["containers"]
+
+  # Get container data.
   # TODO: Find a way to avoid defaulting to the first associated container.
   # NOTE: Perhaps PLR does not consider having different tips for the same tip rack.
   #       This would be uncommon anyway.
-  linked_containers = platform_data["containers"]
   default_link = linked_containers[0]
-  container_data = next(x for x in containers_data if x["name"] == default_link["container"])
+  container_data = get_contents_container(default_link, containers_data)
+  tip_container_id = container_data["name"]
+
+  # Get fitting depths.
+  fitting_depths = {}
+  for tool in [td for td in tools_data if td["type"] == "Micropipette"]:
+    tip_stages = tool["parameters"]["tip_stages"]
+    tip_fit_distance = [v["tip_fit_distance"] for k, v in tip_stages.items() if k != "default"]
+    for tfd in tip_fit_distance:
+      fitting_depths.update(tfd)
+  fitting_depth = fitting_depths[tip_container_id]
 
   # NOTE: I need to create this function here, it is required by "TipSpot" later on.
   def make_pew_tip():
@@ -54,10 +68,12 @@ def load_ola_tip_rack(
       has_filter=False,
       total_tip_length=container_data["length"],
       maximal_volume=container_data["maxVolume"],
-      fitting_depth=container_data["length"]-container_data["activeHeight"]
+      fitting_depth=fitting_depth,
+      model=tip_container_id
     )
 
   # First spot offsets.
+  # TODO: Override "dz"/default_link the the appropriate offset for each tip.
   dx, dy, dz = deck.rack_to_plr_dxdydz(platform_data, default_link, container_data)
 
   # Use the "create_ordered_items_2d" helper function to create a regular 2D-grid of tip spots.
@@ -109,16 +125,26 @@ def load_ola_tip_rack(
     # Position of the tip on the rack.
     content_pos = content["position"]
 
-    # Tip properties.
+    # Get this tip's container data.
     container_data = get_contents_container(content, containers_data)
     tip_container_id = container_data["name"]
+
+    # Get fitting depths.
+    fitting_depths = {}
+    for tool in [td for td in tools_data if td["type"] == "Micropipette"]:
+      tip_stages = tool["parameters"]["tip_stages"]
+      tip_fit_distance = [v["tip_fit_distance"] for k, v in tip_stages.items() if k != "default"]
+      for tfd in tip_fit_distance:
+        fitting_depths.update(tfd)
+    fitting_depth = fitting_depths[tip_container_id]
 
     # Create the Tip.
     new_tip = Tip(
       has_filter=container_data.get("has_filter", False),
       total_tip_length=container_data["length"],
       maximal_volume=container_data["maxVolume"],
-      fitting_depth=container_data["length"]-container_data["activeHeight"]
+      fitting_depth=fitting_depth,
+      model=tip_container_id
     )
 
     # Get the tip's position indexes.

@@ -49,6 +49,7 @@ class SilverDeck(Deck):
                workspace: dict,
                platforms: dict,
                containers: dict,
+               tools: dict,
                default_name: str= "silver_deck",
                # TODO: Update default size.
                default_size_x: float = 250,
@@ -63,6 +64,7 @@ class SilverDeck(Deck):
     self._workspace = workspace
     self._platforms = platforms
     self._containers = containers
+    self.tools = tools
 
     # Default origin to zero.
     if default_origin is None:
@@ -90,9 +92,9 @@ class SilverDeck(Deck):
       origin = origin)
 
     # Load platform items.
-    self.assign_platforms(workspace, platforms, containers)
+    self.assign_platforms(workspace, platforms, containers, tools)
 
-  def assign_platforms(self, workspace, platforms, containers, anchors_first=True):
+  def assign_platforms(self, workspace, platforms, containers, tools, anchors_first=True):
     """ Convert platforms to resources and add them to the deck.
     Items are sorted to assign anchors first. This prevents errors when
     an item's anchor has not been assigned yet. This can be disabled
@@ -108,9 +110,9 @@ class SilverDeck(Deck):
       platform_data = get_items_platform(item, platforms)
       # Create a resource from the item.
       # Also add tubes, tips, and other resources in the platform item.
-      self.assign_platform(item, platform_data, containers)
+      self.assign_platform(item, platform_data, containers, tools)
 
-  def assign_platform(self, platform_item, platform_data, containers):
+  def assign_platform(self, platform_item, platform_data, containers, tools):
     # Get importer method.
     platform_type = platform_data["type"]
     importer = self.platform_importers.get(platform_type, importer_not_implemented)
@@ -119,7 +121,8 @@ class SilverDeck(Deck):
       deck=self,
       platform_item=platform_item,
       platform_data=platform_data,
-      containers_data=containers
+      containers_data=containers,
+      tools_data=tools,
     )
     # print(f"Assigned {platform_resource.name} to {self.name}.")
 

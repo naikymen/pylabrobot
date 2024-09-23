@@ -21,6 +21,7 @@ class Tip:
   total_tip_length: float
   maximal_volume: float
   fitting_depth: float
+  model: str = "default"
 
   def __post_init__(self):
     self.tracker = VolumeTracker(max_volume=self.maximal_volume)
@@ -32,6 +33,9 @@ class Tip:
       "has_filter": self.has_filter,
       "maximal_volume": self.maximal_volume,
       "fitting_depth": self.fitting_depth,
+      # TODO: Discuss this with Rick. The tip may be one of several brands/models.
+      #       I need this to know which tip to insert in the rack.
+      "model": self.model
     }
 
 
