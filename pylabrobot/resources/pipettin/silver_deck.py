@@ -28,6 +28,7 @@ from .anchor import load_ola_anchor
 
 from .utils import get_items_platform, create_trash, create_petri_dish, importer_not_implemented
 from newt.translators.utils import xy_to_plr
+from newt.utils import draw_ascii_workspace
 
 class SilverDeck(Deck):
   """ (Ag)nostic deck object.
@@ -230,87 +231,3 @@ class SilverDeck(Deck):
 
   def __str__(self):
     return self.summary()
-
-def draw_ascii_workspace(
-  workspace: dict, platforms: list,
-  downscale_factor: float = 20,
-  width_scaler: float = 2.2,
-  anchor_char: str = "@",
-  item_char: str = "¬",
-  empty_char: str = " ",
-  indent:int = 0):
-  """
-  Generates an ASCII art representation of platform items in a workspace.
-
-  Args:
-      downscale_factor (float): Factor used to scale the units down.
-
-  Returns:
-      str: ASCII art representation of the workspace and platform items.
-
-  Example:
-      MK3 Baseplate: 488mm x 290mm x 8mm (XYZ)
-      .----------------------------------------------------.
-      |                                                    |
-      |                                                    |
-      |                                                    |
-      |                                        ¬¬¬¬¬¬¬¬¬¬¬ |
-      |                                        ¬¬¬¬¬¬¬¬¬¬¬ |
-      |                      @@@@¬¬¬¬¬¬¬¬¬     ¬¬¬¬¬¬¬¬¬¬¬ |
-      |                      @¬¬¬¬¬¬¬¬¬¬¬¬     ¬¬¬¬¬¬¬¬¬¬¬ |
-      |                      ¬¬¬¬¬¬¬¬¬¬¬¬¬     ¬¬¬¬¬¬¬¬¬¬¬ |
-      |                      ¬¬¬¬¬¬¬¬¬¬¬¬¬                 |
-      |                                                    |
-      |      @@@@¬¬¬¬¬¬¬¬¬   @@@@¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬       |
-      |      @¬¬¬¬¬¬¬¬¬¬¬¬   @¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬       |
-      |      ¬¬¬¬¬¬¬¬¬¬¬¬¬   ¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬¬       |
-      '----------------------------------------------------'
-      Origin: (000.000, 000.000, 000.000)
-  """
-
-  platform_items = sorted(workspace["items"], key=lambda item: item.get("type") != "ANCHOR")
-
-  # Convert workspace dimensions to ASCII grid size (1 char = 20 mm)
-  width = math.ceil(width_scaler * workspace["width"] / downscale_factor)
-  length = math.ceil(workspace["length"] / downscale_factor)
-
-  # Create an empty grid to represent the workspace
-  grid = [[empty_char for _ in range(width)] for _ in range(length)]
-
-  # Add the boundaries of the workspace
-  for i in range(width):
-    grid[0][i] = "-"
-    grid[length - 1][i] = "-"
-  for i in range(length):
-    grid[i][0] = "|"
-    grid[i][width - 1] = "|"
-
-  # Corners
-  grid[0][0]   = "."
-  grid[0][-1]  = "."
-  grid[-1][0]  = "'"
-  grid[-1][-1] = "'"
-
-  # Draw each platform in the workspace
-  for item in platform_items:
-    platform = next(p for p in platforms if p["name"] == item["platform"])
-    platform_width = round(width_scaler * platform["width"] // downscale_factor)
-    platform_length = round(platform["length"] // downscale_factor)
-    x = round(width_scaler * item["position"]["x"] // downscale_factor)
-    y = round(item["position"]["y"] // downscale_factor)
-
-    # Draw the item as a filled square in the grid
-    i_range = range(y, min(y + platform_length, length))
-    j_range = range(x, min(x + platform_width, width))
-    for i in i_range:
-      for j in j_range:
-        if platform.get("type") == "ANCHOR" and (i == i_range[0] or j == j_range[0]):
-          # Mark anchor corners.
-          grid[i][j] = anchor_char
-        elif grid[i][j] == empty_char:
-          # Mark platform area.
-          grid[i][j] = item_char
-
-  # Convert grid to a string representation
-  result = "\n".join([indent * " " + "".join(row) for row in grid])
-  return result
