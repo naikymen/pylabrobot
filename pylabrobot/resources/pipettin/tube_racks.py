@@ -10,6 +10,7 @@ from pylabrobot.resources.resource import Resource, Coordinate
 from pylabrobot.resources.itemized_resource import ItemizedResource
 from pylabrobot.resources.utils import create_ordered_items_2d
 
+from newt.translators.utils import rack_to_plr_dxdydz, xy_to_plr
 from .utils import get_contents_container
 
 # TODO: There is already a "Tube" class. Try integrating it to the one below.
@@ -703,7 +704,7 @@ def load_ola_tube_rack(
     )
 
   # Prepare parameters for "create_ordered_items_2d".
-  dx, dy, dz = deck.rack_to_plr_dxdydz(platform_data, default_link, container_data)
+  dx, dy, dz = rack_to_plr_dxdydz(platform_data, default_link)
 
   # Use the helper function to create a regular 2D-grid of tip spots.
   ordered_items=create_ordered_items_2d(
@@ -826,7 +827,9 @@ def load_ola_custom(deck: "SilverDeck",
     tube.tracker.add_liquid(Liquid.WATER, volume=content["volume"])
 
     # Prepare PLR location object.
-    x, y = deck.xy_to_plr(content["position"]["x"], content["position"]["y"])
+    x, y = xy_to_plr(x=content["position"]["x"],
+                     y=content["position"]["y"],
+                     workspace_height=deck.get_size_y())
     z = content["position"].get("z", None)
     location=Coordinate(x, y, z)
 
