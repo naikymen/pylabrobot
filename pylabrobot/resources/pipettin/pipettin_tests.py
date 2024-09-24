@@ -1,5 +1,6 @@
 import asyncio
 import pytest
+from math import isclose
 
 from pylabrobot.liquid_handling.backends.piper_backend import PiperBackend
 from pylabrobot.resources import SilverDeck, Axy_24_DW_10ML, FourmlTF_L, Coordinate
@@ -121,3 +122,36 @@ def test_translation():
   deck_data = deck.serialize()
   # Convert to workspace.
   deck_to_workspaces(deck_data)
+
+def test_reverse_engineering():
+  # Import the resource class
+  from pylabrobot.resources import pipettin_test_plate as test_plate
+
+  # Create an instance
+  well_plate = test_plate(name="plate_01")
+  well_plate.set_well_liquids(liquids=(None, 123))
+
+  dx = well_plate["A1"][0].location.x
+  dy = well_plate["H1"][0].location.y
+  dz = well_plate["H1"][0].location.z
+  item_dx = well_plate["A2"][0].location.x - well_plate["A1"][0].location.x
+  item_dy = well_plate["A1"][0].location.y - well_plate["B1"][0].location.y
+
+  from newt.translators.utils import calculate_plr_grid_parameters, derive_grid_parameters_from_plr
+
+  serialized_well_plate = well_plate.serialize()
+
+  params = calculate_plr_grid_parameters(serialized_well_plate)
+
+  assert isclose(params["dx"], dx)
+  assert isclose(params["dy"], dy)
+  assert isclose(params["dz"], dz)
+  assert isclose(params["item_dx"], item_dx)
+  assert isclose(params["item_dy"], item_dy)
+
+  new_params = derive_grid_parameters_from_plr(serialized_well_plate)
+
+  # Dimensions as shown here:
+  # https://assets.thermofisher.com/TFS-Assets/LSG/manuals/MAN0014419_ABgene_Storage_Plate_96well_1_2mL_QR.pdf
+  assert isclose(new_params["firstWellCenterX"], 14.38)
+  assert isclose(new_params["firstWellCenterY"], 11.24)
