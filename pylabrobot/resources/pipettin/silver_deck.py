@@ -27,6 +27,7 @@ from .tube_racks import load_ola_tube_rack, load_ola_custom
 from .anchor import load_ola_anchor
 
 from .utils import get_items_platform, create_trash, create_petri_dish, importer_not_implemented
+from newt.translators.utils import xy_to_plr
 
 class SilverDeck(Deck):
   """ (Ag)nostic deck object.
@@ -140,7 +141,8 @@ class SilverDeck(Deck):
         # Get the resources' location.
         position = platform_item["position"]
         # Convert position the PLR coordinate system and origin.
-        x, y = self.xy_to_plr(position["x"], position["y"])
+        x, y = xy_to_plr(position["x"], position["y"],
+                         workspace_height=self.get_size_y())
         # Generate the location coordinate object for PLR.
         location = Coordinate(x, y, position["z"])
 
@@ -205,113 +207,6 @@ class SilverDeck(Deck):
   @property
   def workspace_items(self):
     return deepcopy(self._workspace["items"])
-
-  def xy_to_plr(self, x: float, y: float,
-                workspace_width: float = None,
-                workspace_height: float = None):
-    """Convert XY coordinates from top-left origin to bottom-left origin.
-
-    To convert XY coordinates from a coordinate system where the origin is at the top-left
-    (with the positive X direction to the right and the positive Y direction towards the bottom) to
-    another coordinate system where the origin is at the bottom-left, you can apply the following
-    conversion:
-
-    - X coordinate stays the same since both systems have the positive X direction to the right.
-    - Y coordinate needs to be flipped. In the top-left-origin system, Y increases downward, while
-      in the bottom-left-origin system, Y increases upward.
-
-    Given the width and height of the workspace, you can transform the Y-coordinate as follows:
-
-        New Y-coordinate = height_of_workspace - original_y_coordinate
-
-    Args:
-        x (float): X coordinate in the original system (top-left origin, positive to the right).
-        y (float): Y coordinate in the original system (top-left origin, positive "downwards").
-        workspace_width (optional, float): Width of the workspace.
-        workspace_height (optional, float): Height of the workspace.
-
-    Returns:
-        tuple: New (x, y) coordinates in the system with the bottom-left origin.
-    """
-
-    if workspace_width is None:
-      workspace_width = self.get_size_x()
-    if workspace_height is None:
-      workspace_height = self.get_size_y()
-
-    new_x = x  # X stays the same
-    new_y = workspace_height - y  # Flip the Y coordinate
-
-    return new_x, new_y
-
-  def plr_to_xy(self, x: float, y: float,
-                workspace_width: float = None,
-                workspace_height: float = None):
-    """Convert XY coordinates from bottom-left origin to top-left origin.
-
-    Inverse function of xy_to_plr, which converts coordinates from the bottom-left origin
-    (positive Y upward) back to the top-left origin (positive Y downward).
-
-    - X-coordinate stays the same, since the direction doesn't change in either system.
-    - Y-coordinate needs to be inverted by subtracting it from the total workspace height.
-
-    Test:
-      foo = (-10, 10)
-      bar = deck.xy_to_plr(*foo)
-      baz = deck.plr_to_xy(*bar)
-      assert foo == baz
-
-    Args:
-        x (float): X coordinate in the system with the bottom-left origin.
-        y (float): Y coordinate in the system with the bottom-left origin (positive upwards).
-        workspace_width (optional, float): Width of the workspace.
-        workspace_height (optional, float): Height of the workspace.
-
-    Returns:
-        tuple: New (x, y) coordinates in the system with the top-left origin.
-    """
-
-    if workspace_width is None:
-      workspace_width = self.get_size_x()
-    if workspace_height is None:
-      workspace_height = self.get_size_y()
-
-    new_x = x  # X stays the same
-    new_y = workspace_height - y  # Flip the Y coordinate back to top-left origin
-
-    return new_x, new_y
-
-  def rack_to_plr_dxdydz(self, platform_data, tip_link, centers=False):
-    """Prepare dx, dy, and dz parameters for "create_equally_spaced_2d" given a platform definition.
-
-    Args:
-        platform_data (dict): Rack-type platform definition.
-        tip_link (dict): Link object between a platform and a calibrated container.
-        centers (bool, optional): Calculate dx and dy for the center instead. Defaults to False.
-
-    Returns:
-        tuple: dx, dy, and dz coordinates for the "create_equally_spaced_2d" function.
-    """
-    # dx: The X coordinate of the bottom left corner for items in the left column.
-    dx = platform_data["firstWellCenterX"]
-    # Subtract half-diameter to get the X position of its left corner.
-    if centers is False:
-      dx -= platform_data["wellDiameter"]/2
-
-    # dy: The Y coordinate of the bottom left corner for items in the top row.
-    # NOTE: This must be calculated because PLR's origin is on the bottom-left.
-    dy = platform_data["length"] - platform_data["firstWellCenterY"]
-    # Subtract half-diameter to get the Y position of its lower corner.
-    if centers is False:
-      dx -= platform_data["wellDiameter"]/2
-
-    # dz: The z coordinate for all items.
-    # NOTE: According to Rick and the sources, the "Z of a TipSpot" is the "Z of the tip's tip" when
-    # the tip is in its spot, relative to the base of the tip rack (I guessed this last part).
-    dz = platform_data["activeHeight"]  # Height of the "seat" for the tip "sits" (and touches).
-    dz -= tip_link["containerOffsetZ"]  # Subtract tip's length that ends up below the "seat".
-
-    return dx, dy, dz
 
   def summary(self, **kwargs) -> str:
     """ Generate an ASCII summary of the deck.

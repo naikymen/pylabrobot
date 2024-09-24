@@ -3,6 +3,7 @@ from pylabrobot.resources.utils import create_ordered_items_2d
 from pylabrobot.resources.tip_rack import TipRack, TipSpot
 from pylabrobot.resources.tip import Tip
 from .utils import get_contents_container
+from newt.translators.utils import rack_to_plr_dxdydz
 
 def load_ola_tip_rack(
   deck: "SilverDeck",
@@ -74,7 +75,7 @@ def load_ola_tip_rack(
 
   # First spot offsets.
   # TODO: Override "dz"/default_link the the appropriate offset for each tip.
-  dx, dy, dz = deck.rack_to_plr_dxdydz(platform_data, default_link, container_data)
+  dx, dy, dz = rack_to_plr_dxdydz(platform_data, default_link, container_data)
 
   # Use the "create_ordered_items_2d" helper function to create a regular 2D-grid of tip spots.
   ordered_items = create_ordered_items_2d(
