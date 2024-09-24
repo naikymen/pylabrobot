@@ -15,7 +15,6 @@ deck = SilverDeck(workspace, platforms, containers, tools)
 Have fun!
 """
 
-import math
 import textwrap
 from copy import deepcopy
 # from typing import Optional, Callable

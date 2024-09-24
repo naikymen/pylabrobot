@@ -704,7 +704,7 @@ def load_ola_tube_rack(
     )
 
   # Prepare parameters for "create_ordered_items_2d".
-  dx, dy, dz = rack_to_plr_dxdydz(platform_data, default_link, container_data)
+  dx, dy, dz = rack_to_plr_dxdydz(platform_data, default_link)
 
   # Use the helper function to create a regular 2D-grid of tip spots.
   ordered_items=create_ordered_items_2d(

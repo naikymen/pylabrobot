@@ -75,7 +75,7 @@ def load_ola_tip_rack(
 
   # First spot offsets.
   # TODO: Override "dz"/default_link the the appropriate offset for each tip.
-  dx, dy, dz = rack_to_plr_dxdydz(platform_data, default_link, container_data)
+  dx, dy, dz = rack_to_plr_dxdydz(platform_data, default_link)
 
   # Use the "create_ordered_items_2d" helper function to create a regular 2D-grid of tip spots.
   ordered_items = create_ordered_items_2d(
@@ -87,10 +87,11 @@ def load_ola_tip_rack(
     # dy: The Y coordinate of the bottom left corner for items in the top row.
     # dz: The z coordinate for all items.
     dx=dx, dy=dy, dz=dz,
-    # item_dx: The size of the items in the x direction
+    # item_dx: The separation of the items in the x direction
     item_dx=platform_data["wellSeparationX"],
-    # item_dy: The size of the items in the y direction
+    # item_dy: The separation of the items in the y direction
     item_dy=platform_data["wellSeparationY"],
+
     # NOTE: Additional keyword arguments are passed to the "klass" constructor set above.
     size_x=platform_data["wellDiameter"],
     size_y=platform_data["wellDiameter"],
