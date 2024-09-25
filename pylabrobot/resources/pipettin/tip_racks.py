@@ -3,7 +3,7 @@ from pylabrobot.resources.utils import create_ordered_items_2d
 from pylabrobot.resources.tip_rack import TipRack, TipSpot
 from pylabrobot.resources.tip import Tip
 from .utils import get_contents_container
-from newt.translators.utils import rack_to_plr_dxdydz
+from newt.translators.utils import rack_to_plr_dxdydz, guess_shape
 
 def load_ola_tip_rack(
   deck: "SilverDeck",
@@ -54,6 +54,30 @@ def load_ola_tip_rack(
   container_data = get_contents_container(default_link, containers_data)
   tip_container_id = container_data["name"]
 
+  # "tip_stages": {
+  #   "default": "p200",
+  #   "p200": {
+  #     "vol_max": 200,
+  #     "flowrate": 100,
+  #     "z_offset": 0,
+  #     "z_offset.description": "Distance at which the stip stage begins, relative to the end of the tip holder.",
+  #     "tip_fit_distance": {
+  #       "200 uL Tip": 4.8,
+  #       "200 uL Tip Tarsons": 4.3
+  #     },
+  #     "tip_fit_distance.description": "Fitting depth for each tip definition in the containers database.",
+  #     "probe_extra_dist": 1,
+  #     "tip_ejector": {
+  #       "e_start": 22,
+  #       "e_end": 27,
+  #       "eject_feedrate": 200
+  #     },
+  #     "tension_correction": {
+  #       "start_vol": 20,
+  #       "max_correction": 2
+  #     }
+  #   }
+  # },
   # Get fitting depths.
   fitting_depths = {}
   for tool in [td for td in tools_data if td["type"] == "Micropipette"]:
@@ -108,11 +132,14 @@ def load_ola_tip_rack(
     # There are however, "tube spots" in pipettin, which I don't know how to accommodate.
   )
 
+  # Guess the shape of the platform.
+  size_x, size_y, shape = guess_shape(platform_data)
+
   # Create the TipRack instance.
   tip_rack_item = TipRack(
     name=platform_item["name"],
-    size_x=platform_data["width"],
-    size_y=platform_data["length"],
+    size_x=size_x,
+    size_y=size_y,
     size_z=platform_data["height"],
     category=platform_data.get("type", None), # Optional in PLR.
     model=platform_data["name"], # Optional.
@@ -120,6 +147,12 @@ def load_ola_tip_rack(
     # NOTE: Skipping filling with tips for now.
     with_tips=False
   )
+
+  # Save the platform's active height.
+  # This will help recover some information later.
+  tip_rack_item.active_z = platform_data["activeHeight"]
+  # Save the platform's shape.
+  tip_rack_item.shape = shape
 
   # Add tips in the platform item, if any.
   platform_contents = platform_item.get("content", [])
