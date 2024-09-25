@@ -97,6 +97,7 @@ class Resource:
       "size_y": self._size_y,
       "size_z": self._size_z,
       "active_z": self.active_z,
+      "shape": self.shape,
       "location": serialize(self.location),
       "rotation": serialize(self.rotation),
       "category": self.category,
