@@ -1,5 +1,7 @@
 import pytest
 from math import isclose
+from copy import deepcopy
+from pprint import pformat
 
 from deepdiff import DeepDiff
 
@@ -172,18 +174,10 @@ def test_conversions():
   pocket_serialized = pocket.serialize()
 
   data_converted = convert_custom(pocket_serialized, deck.get_size_y())
-  converted_platform = data_converted["piper_platform"]
 
-  # import json
-  # from collections import OrderedDict
-  # # with open('pocket_platform.json', 'w', encoding='utf-8') as f:
-  # #     json.dump(next(p for p in deck.platforms if p["name"] == pocket.name), f, indent=4, sort_keys=True)
-  # with open('pocket_deck.json', 'w', encoding='utf-8') as f:
-  #     json.dump(pocket_serialized, f, indent=4, sort_keys=True)
-  # with open('pocket_converted.json', 'w', encoding='utf-8') as f:
-  #     json.dump(data_converted, f, indent=4, sort_keys=True)
-  # with open('pocket_converted_platform.json', 'w', encoding='utf-8') as f:
-  #     json.dump(data_converted["piper_platform"], f, indent=4, sort_keys=True)
+  converted_platform = data_converted["piper_platform"]
+  # converted_containers = data_converted["container_data"]
+  converted_item = data_converted["piper_item"]
 
   def format_number(x, significant_digits=4, number_format_notation=None):
     """function for DeepDiff's number_to_string_func argument.
@@ -193,18 +187,36 @@ def test_conversions():
     fstring = "{0:." + str(significant_digits+1) + "g}"
     return fstring.format(x)
 
-  pocket_platform = next(p for p in deck.platforms if p["name"] == pocket.name)
+  pocket_item = deepcopy(next(p for p in deck.workspace["items"] if p["name"] == pocket.name))
+  del converted_item["platformData"]
+  del converted_item["containerData"]
+  pocket_platform = deepcopy(next(p for p in deck.platforms if p["name"] == pocket.name))
   del pocket_platform["color"]
   del pocket_platform["description"]
   del pocket_platform["rotation"]
 
   # Compare
   diff_result = DeepDiff(
-    t1 = pocket_platform,
-    t2 = converted_platform,
-    # math_epsilon=0.001
-    number_to_string_func = format_number, significant_digits=4,
-    ignore_numeric_type_changes=True
+      t1 = pocket_platform,
+      t2 = converted_platform,
+      # math_epsilon=0.001
+      number_to_string_func = format_number, significant_digits=4,
+      ignore_numeric_type_changes=True
   )
+  if not diff_result:
+    print(f"No differences in {pocket_platform['name']} platform.")
   # Assert that there are no differences
-  assert not diff_result
+  assert not diff_result, f"Differences found in platform translation of the {pocket_platform['name']} platform:\n" + pformat(diff_result)
+
+  # Compare
+  diff_result = DeepDiff(
+      t1 = pocket_item,
+      t2 = converted_item,
+      # math_epsilon=0.001
+      number_to_string_func = format_number, significant_digits=4,
+      ignore_numeric_type_changes=True
+  )
+  if not diff_result:
+     print(f"No differences in {converted_item['name']} item.")
+  # Assert that there are no differences
+  assert not diff_result, f"Differences found in platform translation of the {converted_item['name']} item:\n" + pformat(diff_result)
