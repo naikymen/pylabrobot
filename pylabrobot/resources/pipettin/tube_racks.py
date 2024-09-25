@@ -775,6 +775,11 @@ def load_ola_tube_rack(
       # TODO: Add "activeHeight" somewhere here.
       #       It is needed to get the proper Z coordinate.
     )
+    # Add "activeHeight" somewhere here.
+    # It is needed to get the proper Z coordinate.
+    new_tube.active_z = container_data["activeHeight"]
+    # Save tags.
+    new_tube.tags = content["tags"]
 
     # Add liquid to the tracker.
     # TODO: Add liquid classes to our data schemas, even if it is water everywhere for now.
