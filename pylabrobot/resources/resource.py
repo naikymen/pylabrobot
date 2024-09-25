@@ -54,7 +54,8 @@ class Resource:
     model: Optional[str] = None,
     active_z: Optional[float] = None,
     shape: Optional[str] = None,
-    tags: Optional[list] = None
+    tags: Optional[list] = None,
+    locked: Optional[bool] = None,
   ):
     self._name = name
     self._size_x = size_x
@@ -69,6 +70,7 @@ class Resource:
     self.tags = []
     if tags is not None:
       self.tags = tags
+    self.locked = locked
 
     self.location: Optional[Coordinate] = None
     self.parent: Optional[Resource] = None
@@ -103,6 +105,7 @@ class Resource:
       "active_z": self.active_z,
       "shape": self.shape,
       "tags": self.tags,
+      "locked": self.locked,
       "location": serialize(self.location),
       "rotation": serialize(self.rotation),
       "category": self.category,
