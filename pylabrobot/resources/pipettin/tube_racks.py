@@ -859,7 +859,7 @@ def load_ola_custom(deck: "SilverDeck",
   for index, slot in enumerate(platform_data.get("slots", [])):
 
     # Get the content in the slot (if any).
-    content = next((c for c in platform_contents if c["index"] == index), None)
+    content = next((c for c in platform_contents if c["index"] - 1 == index), None)
 
     # Add the content if any.
     if content:
