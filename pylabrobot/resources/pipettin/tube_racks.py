@@ -876,7 +876,7 @@ def load_ola_custom(deck: "SilverDeck",
 
       # Check container type.
       assert container_data["type"] == "tube", \
-        f"Can't load {container_data['type']}s into a custom platform. Only tubes supported for now."
+        f"Can't load {container_data['type']}s into a custom platform. Only tubes are supported."
 
       # Create the tube.
       # "content": [
@@ -902,9 +902,10 @@ def load_ola_custom(deck: "SilverDeck",
         max_volume=container_data["maxVolume"],
         model=container_data["name"],
         category=container_data["type"]  # "tube"
-        # TODO: Add "activeHeight" somewhere here.
-        #       It is needed to get the proper Z coordinate.
       )
+      # Add "activeHeight" somewhere here.
+      # It is needed to get the proper Z coordinate.
+      tube_content.active_z = container_data["activeHeight"]
 
       # Add liquid to the tracker.
       # TODO: Add liquid classes to our data schemas, even if it is water everywhere for now.
@@ -959,6 +960,7 @@ def load_ola_custom(deck: "SilverDeck",
         )
       else:
         raise NotImplementedError(f"No container data available for slot {slot['slotName']}.")
+
     # Make a tube spot from the slot.
     tube_spot = TubeSpot(
       name=slot["slotName"],
@@ -970,32 +972,33 @@ def load_ola_custom(deck: "SilverDeck",
       model=link.get("container", None)
     )
     # Set a default container offset.
-    tube_spot.active_z = link.get("containerOffsetZ", None)
+    tube_spot.active_z = slot["slotActiveHeight"]
 
     # Prepare PLR location object for the slot.
     x, y = xy_to_plr(slot["slotPosition"]["slotX"],
                      slot["slotPosition"]["slotY"],
-                     platform_data["height"])
+                     platform_data["length"])
     slot_location=Coordinate(x=x, y=y,
-      # NOTE: Must add the platform's active height here.
+      # NOTE: Must add the slots's active height here.
       #       The slot's is an offset respect to it.
-      z=slot["slotActiveHeight"] + custom.active_z
+      z=tube_spot.active_z
     )
     # Add the tube spot as a direct child.
     custom.assign_child_resource(tube_spot, location=slot_location)
 
     # Add a tube to teh spot if a content was found.
     if content:
-        # Prepare PLR location object.
-        # NOTE: In this case, the content's position is equal to
-        #       the position of the slot, which has already been set.
-        #       We only need to add the active height here.
-        location=Coordinate(z=container_data["activeHeight"])
+      # Prepare PLR location object.
+      # NOTE: In this case, the content's position is equal to
+      #       the position of the slot, which has already been set.
+      #       We only need to add the active height here.
+      tube_z = tube_content.active_z + link["containerOffsetZ"]
+      location=Coordinate(z=tube_z)
 
-        # Add the Tube to the tracker.
-        tube_spot.tracker.add_tube(tube_content, commit=True)
-        # Add the Tube to the TubeSpot as a child resource.
-        # NOTE: This is required, otherwise it does not show up in the deck by name.
-        tube_spot.assign_child_resource(tube_content, location=location)
+      # Add the Tube to the tracker.
+      tube_spot.tracker.add_tube(tube_content, commit=True)
+      # Add the Tube to the TubeSpot as a child resource.
+      # NOTE: This is required, otherwise it does not show up in the deck by name.
+      tube_spot.assign_child_resource(tube_content, location=location)
 
   return custom
