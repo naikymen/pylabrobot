@@ -1,6 +1,7 @@
-import asyncio
 import pytest
 from math import isclose
+
+from deepdiff import DeepDiff
 
 from pylabrobot.liquid_handling.backends.piper_backend import PiperBackend
 from pylabrobot.resources import SilverDeck, Axy_24_DW_10ML, FourmlTF_L, Coordinate
@@ -10,7 +11,7 @@ from pylabrobot.resources import set_tip_tracking, set_volume_tracking
 from piper.datatools.datautils import load_objects
 from piper.utils import default_config
 
-from newt.translators.plr import deck_to_workspaces
+from newt.translators.plr import deck_to_workspaces, convert_custom
 
 # Example using exported data.
 db_location = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/databases.json'
@@ -114,6 +115,9 @@ async def test_piper_backend():
   # await lh.dispense(tubes, vols=[1.0, 1.0, 1.0])
   await lh.dispense(tubes[:1], vols=[10])
 
+  # Cleanup.
+  await lh.stop()
+
 def test_translation():
   """Check that translations work (or at least can run)"""
   # Instantiate the deck.
@@ -155,3 +159,52 @@ def test_reverse_engineering():
   # https://assets.thermofisher.com/TFS-Assets/LSG/manuals/MAN0014419_ABgene_Storage_Plate_96well_1_2mL_QR.pdf
   assert isclose(new_params["firstWellCenterX"], 14.38)
   assert isclose(new_params["firstWellCenterY"], 11.24)
+
+def test_conversions():
+
+  # Choose the database and a workspace.
+  workspace_name = "Basic Workspace"
+
+  # Instantiate the deck object.
+  deck = SilverDeck(db=db_location, workspace_name=workspace_name)
+
+  pocket = deck.get_resource("Pocket PCR")
+  pocket_serialized = pocket.serialize()
+
+  data_converted = convert_custom(pocket_serialized, deck.get_size_y())
+  converted_platform = data_converted["piper_platform"]
+
+  # import json
+  # from collections import OrderedDict
+  # # with open('pocket_platform.json', 'w', encoding='utf-8') as f:
+  # #     json.dump(next(p for p in deck.platforms if p["name"] == pocket.name), f, indent=4, sort_keys=True)
+  # with open('pocket_deck.json', 'w', encoding='utf-8') as f:
+  #     json.dump(pocket_serialized, f, indent=4, sort_keys=True)
+  # with open('pocket_converted.json', 'w', encoding='utf-8') as f:
+  #     json.dump(data_converted, f, indent=4, sort_keys=True)
+  # with open('pocket_converted_platform.json', 'w', encoding='utf-8') as f:
+  #     json.dump(data_converted["piper_platform"], f, indent=4, sort_keys=True)
+
+  def format_number(x, significant_digits=4, number_format_notation=None):
+    """function for DeepDiff's number_to_string_func argument.
+    Example:
+    format_number(3.123123), format_number(0), format_number(0.0)
+    """
+    fstring = "{0:." + str(significant_digits+1) + "g}"
+    return fstring.format(x)
+
+  pocket_platform = next(p for p in deck.platforms if p["name"] == pocket.name)
+  del pocket_platform["color"]
+  del pocket_platform["description"]
+  del pocket_platform["rotation"]
+
+  # Compare
+  diff_result = DeepDiff(
+    t1 = pocket_platform,
+    t2 = converted_platform,
+    # math_epsilon=0.001
+    number_to_string_func = format_number, significant_digits=4,
+    ignore_numeric_type_changes=True
+  )
+  # Assert that there are no differences
+  assert not diff_result
