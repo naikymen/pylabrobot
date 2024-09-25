@@ -372,7 +372,7 @@ class TubeSpot(Resource):
   """ A tube spot, a location in a tube rack where there may or may not be a tube. """
 
   def __init__(self, name: str, size_x: float, size_y: float, make_tube: TubeCreator,
-    size_z: float = 0, category: str = "tube_spot"):
+    size_z: float = 0, category: str = "tube_spot", **kwargs):
     """ Initialize a tube spot.
 
     Args:
@@ -385,7 +385,7 @@ class TubeSpot(Resource):
     """
 
     super().__init__(name, size_x=size_y, size_y=size_x, size_z=size_z,
-      category=category)
+      category=category, **kwargs)
     # TODO: Write a "TubeTracker" similar to "TipTracker".
     self.tracker = TubeTracker(thing="Tube spot")
     self.parent: Optional["TubeRack"] = None
