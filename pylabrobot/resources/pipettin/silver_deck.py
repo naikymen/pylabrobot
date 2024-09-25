@@ -118,33 +118,36 @@ class SilverDeck(Deck):
     self.assign_platforms(workspace, platforms, containers, tools)
 
   def load_objects(self, db_location, db_name, workspace_name: str,
-                   workspace, platforms, containers, tools):
-      # Load the database.
-      db = load_objects(db_location)[db_name]
+                   workspace, platforms, containers, tools, subset_platforms = False):
+    # Load the database.
+    db = load_objects(db_location)[db_name]
 
-      if workspace_name is None:
-        raise ValueError("workspace_name must be provided, and can't be None.")
+    if workspace_name is None:
+      raise ValueError("workspace_name must be provided, and can't be None.")
 
-      # Get the workspace and discard its thumbnail.
-      if not workspace:
-        workspace = next(w for w in db["workspaces"] if w["name"] == workspace_name)
-      del workspace["thumbnail"]
+    # Get the workspace and discard its thumbnail.
+    if not workspace:
+      workspace = next(w for w in db["workspaces"] if w["name"] == workspace_name)
+    del workspace["thumbnail"]
 
-      # Get all platforms and containers.
-      workspace_items = workspace["items"]
-      platforms_in_workspace = [item["platform"] for item in workspace_items]
-      if not platforms:
+    # Get all platforms and containers.
+    if not platforms:
+      if subset_platforms:
+        workspace_items = workspace["items"]
+        platforms_in_workspace = [item["platform"] for item in workspace_items]
         platforms = [p for p in db["platforms"] if p["name"] in platforms_in_workspace]
+      else:
+        platforms = db["platforms"]
 
-      # Get all containers.
-      if not containers:
-        containers = db["containers"]
+    # Get all containers.
+    if not containers:
+      containers = db["containers"]
 
-      # Get all tools.
-      if not tools:
-        tools = db["tools"]
+    # Get all tools.
+    if not tools:
+      tools = db["tools"]
 
-      return workspace, platforms, containers, tools
+    return workspace, platforms, containers, tools
 
   def assign_platforms(self, workspace, platforms, containers, tools, anchors_first=True):
     """ Convert platforms to resources and add them to the deck.
