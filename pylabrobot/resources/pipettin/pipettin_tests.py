@@ -176,8 +176,10 @@ def test_conversions():
   data_converted = convert_custom(pocket_serialized, deck.get_size_y())
 
   converted_platform = data_converted["piper_platform"]
-  # converted_containers = data_converted["container_data"]
   converted_item = data_converted["piper_item"]
+  converted_containers = data_converted["container_data"]
+  # TODO: Allow and test descriptions.
+  converted_containers = [{k:v for k, v in cntnr.items() if k != "description"} for cntnr in converted_containers]
 
   def format_number(x, significant_digits=4, number_format_notation=None):
     """function for DeepDiff's number_to_string_func argument.
@@ -187,13 +189,22 @@ def test_conversions():
     fstring = "{0:." + str(significant_digits+1) + "g}"
     return fstring.format(x)
 
+  # Item
   pocket_item = deepcopy(next(p for p in deck.workspace["items"] if p["name"] == pocket.name))
   del converted_item["platformData"]
   del converted_item["containerData"]
+
+  # Platform
   pocket_platform = deepcopy(next(p for p in deck.platforms if p["name"] == pocket.name))
   del pocket_platform["color"]
   del pocket_platform["description"]
   del pocket_platform["rotation"]
+
+  # Containers
+  pocket_container_names = [cntnt["container"] for cntnt in pocket_item["content"] ]
+  pocket_containers = deepcopy([cntnr for cntnr in deck.containers if cntnr["name"] in pocket_container_names])
+  # Remove description.
+  pocket_containers = [{k:v for k, v in cntnr.items() if k != "description"} for cntnr in pocket_containers]
 
   # Compare
   diff_result = DeepDiff(
@@ -220,3 +231,16 @@ def test_conversions():
      print(f"No differences in {converted_item['name']} item.")
   # Assert that there are no differences
   assert not diff_result, f"Differences found in platform translation of the {converted_item['name']} item:\n" + pformat(diff_result)
+
+  # Compare
+  diff_result = DeepDiff(
+      t1 = converted_containers,
+      t2 = pocket_containers,
+      # math_epsilon=0.001
+      number_to_string_func = format_number, significant_digits=4,
+      ignore_numeric_type_changes=True
+  )
+  if not diff_result:
+     print(f"No differences in {converted_item['name']} used containers.")
+  # Assert that there are no differences
+  assert not diff_result, f"Differences found in container translation of the {converted_item['name']} item:\n" + pformat(diff_result)
