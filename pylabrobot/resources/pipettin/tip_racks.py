@@ -161,10 +161,15 @@ def load_ola_tip_rack(
     container_offset_z = next(pc["containerOffsetZ"]
                               for pc in linked_containers
                               if pc["container"] == tip_container_id)
-    # Fix the Z coordinate applying the proper offset.
+    # Fix the Z coordinate applying the offset
+    # of this particular tip.
     tip_spot.location.z = platform_data["activeHeight"]
     tip_spot.location.z -= container_offset_z
-    tip_spot.location.z += container_data["activeHeight"]
+
+  # Save the platform's active height such that "container_offset_z" can
+  # be recovered later on (e.g. during an export) with the following formula:
+  #   "container_offset_z = tip_rack_item.active_z - tip_spot.location.z"
+  tip_rack_item.active_z = platform_data["activeHeight"]
 
   return tip_rack_item
 
