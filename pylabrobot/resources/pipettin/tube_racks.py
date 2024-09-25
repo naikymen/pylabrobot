@@ -906,6 +906,7 @@ def load_ola_custom(deck: "SilverDeck",
       # Add "activeHeight" somewhere here.
       # It is needed to get the proper Z coordinate.
       tube_content.active_z = container_data["activeHeight"]
+      tube_content.tags = content["tags"]
 
       # Add liquid to the tracker.
       # TODO: Add liquid classes to our data schemas, even if it is water everywhere for now.
