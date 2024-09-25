@@ -783,6 +783,11 @@ def load_ola_tube_rack(
     # NOTE: This is required, otherwise it does not show up in the deck by name.
     tube_spot.assign_child_resource(new_tube, location=Coordinate(0,0,0))
 
+  # Save the platform's active height such that "container_offset_z" can
+  # be recovered later on (e.g. during an export) with the following formula:
+  #   "container_offset_z = tube_rack_item.active_z - tube_spot.location.z"
+  tube_rack_item.active_z = platform_data["activeHeight"]
+
   return tube_rack_item
 
 class CustomPlatform(Resource):
