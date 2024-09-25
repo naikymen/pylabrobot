@@ -40,6 +40,7 @@ class Resource:
       (see :meth:`get_absolute_location`)
     category: The category of the resource, e.g. `tips`, `plate_carrier`, etc.
     active_z: The active height of the resource (e.g. where it activates) relative to itself.
+    shape: The shape of the resource as seen from above ("circular", "rectangular", etc.).
   """
 
   def __init__(
@@ -52,6 +53,7 @@ class Resource:
     category: Optional[str] = None,
     model: Optional[str] = None,
     active_z: Optional[float] = None,
+    shape: Optional[str] = None
   ):
     self._name = name
     self._size_x = size_x
@@ -62,6 +64,7 @@ class Resource:
     self.category = category
     self.model = model
     self.active_z = active_z
+    self.shape = shape
 
     self.location: Optional[Coordinate] = None
     self.parent: Optional[Resource] = None
