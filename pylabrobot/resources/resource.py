@@ -39,6 +39,7 @@ class Resource:
     location: The location of the resource, relative to its parent.
       (see :meth:`get_absolute_location`)
     category: The category of the resource, e.g. `tips`, `plate_carrier`, etc.
+    active_z: The active height of the resource (e.g. where it activates) relative to itself.
   """
 
   def __init__(
@@ -50,6 +51,7 @@ class Resource:
     rotation: Optional[Rotation] = None,
     category: Optional[str] = None,
     model: Optional[str] = None,
+    active_z: Optional[float] = None,
   ):
     self._name = name
     self._size_x = size_x
@@ -59,6 +61,7 @@ class Resource:
     self.rotation = rotation or Rotation()
     self.category = category
     self.model = model
+    self.active_z = active_z
 
     self.location: Optional[Coordinate] = None
     self.parent: Optional[Resource] = None
@@ -90,6 +93,7 @@ class Resource:
       "size_x": self._size_x,
       "size_y": self._size_y,
       "size_z": self._size_z,
+      "active_z": self.active_z,
       "location": serialize(self.location),
       "rotation": serialize(self.rotation),
       "category": self.category,
