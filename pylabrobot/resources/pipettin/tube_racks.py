@@ -10,7 +10,7 @@ from pylabrobot.resources.resource import Resource, Coordinate
 from pylabrobot.resources.itemized_resource import ItemizedResource
 from pylabrobot.resources.utils import create_ordered_items_2d
 
-from newt.translators.utils import rack_to_plr_dxdydz, xy_to_plr
+from newt.translators.utils import rack_to_plr_dxdydz, xy_to_plr, guess_shape
 from .utils import get_contents_container
 
 # TODO: There is already a "Tube" class. Try integrating it to the one below.
@@ -735,19 +735,27 @@ def load_ola_tube_rack(
     # item_size_y=platform_data["wellSeparationY"],
   )
 
+  # Guess the shape of the platform.
+  size_x, size_y, shape = guess_shape(platform_data)
+
   # Create the TubeRack instance.
   tube_rack_item = TubeRack(
       name=platform_item["name"],
-      size_x=platform_data["width"],
-      size_y=platform_data["length"],
+      size_x=size_x,
+      size_y=size_y,
       size_z=platform_data["height"],
       category=platform_data.get("type", None), # Optional in PLR.
       model=platform_data["name"], # Optional.
       ordered_items=ordered_items,
       # Don't fill the rack with tubes.
       # Tubes would otherwise be created and added to the rack, using "make_pew_tube".
-      with_tubes=False
+      with_tubes=False,
     )
+  # Save the platform's active height.
+  # This will help recover some information later.
+  tube_rack_item.active_z = platform_data["activeHeight"]
+  # Save the platform's shape.
+  tube_rack_item.shape = shape
 
   # Add tubes in the platform item, if any.
   platform_contents = platform_item.get("content", [])
@@ -826,19 +834,23 @@ def load_ola_custom(deck: "SilverDeck",
   #     "locked": false
   #   }
 
+  # Guess the shape of the platform.
+  size_x, size_y, shape = guess_shape(platform_data)
+
   # Create the custom platform item.
   custom = CustomPlatform(
     name=platform_item["name"],
-    size_x=platform_data["width"],
-    size_y=platform_data["length"],
+    size_x=size_x,
+    size_y=size_y,
     size_z=platform_data["height"],
     category=platform_data["type"], # "CUSTOM", Optional in PLR.
-    model=platform_data["name"] # "Pocket PCR", Optional in PLR (not documented in Resource).
+    model=platform_data["name"]  # "Pocket PCR", Optional in PLR (not documented in Resource).
   )
-
   # Save the platform's active height.
   # This will help recover some information later.
   custom.active_z = platform_data["activeHeight"]
+  # Save the platform's shape.
+  custom.shape = shape
 
   # Get the item's content.
   platform_contents = platform_item.get("content", [])
