@@ -24,6 +24,7 @@ def create_trash(deck: "SilverDeck", platform_item, platform_data, tools_data: d
     category=platform_data.get("type", None), # Optional in PLR.
     model=platform_data.get("name", None) # Optional in PLR (not documented in Resource).
   )
+  trash.active_z = platform_data["activeHeight"]
   return trash
 
 def create_petri_dish(deck: "SilverDeck", platform_item, platform_data, tools_data: dict, **kwargs):
