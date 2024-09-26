@@ -118,7 +118,7 @@ class SilverDeck(Deck):
     self.assign_platforms(workspace, platforms, containers, tools)
 
   def load_objects(self, db_location, db_name, workspace_name: str,
-                   workspace, platforms, containers, tools, subset_platforms = False):
+                   workspace, platforms, containers, tools, subset_platforms = True):
     # Load the database.
     db = load_objects(db_location)[db_name]
 
