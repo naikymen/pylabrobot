@@ -43,9 +43,12 @@ def create_petri_dish(deck: "SilverDeck", platform_item, platform_data, tools_da
     name=platform_item["name"],
     diameter=platform_data["diameter"],
     height=platform_data["height"],
-    category=platform_data.get("type", None),
-    model=platform_data.get("name", None)
+    category=platform_data["type"],
+    model=platform_data["name"],
+    max_volume=platform_data["maxVolume"],
   )
+  dish.active_z = platform_data["activeHeight"]
+  dish.shape = "circular"
 
   # Add tubes in the platform item, if any.
   platform_contents = platform_item.get("content", [])
