@@ -283,76 +283,89 @@ def compare(t1, t2):
   return diff_result
 
 def test_translation_advanced():
+
+  db = load_objects(db_location)["pipettin"]
+  workspace_names = [w["name"] for w in db["workspaces"]]
+
   # Choose the database and a workspace.
-  workspace_name = "MK3 Baseplate"
-  workspace_name = "Basic Workspace"
+  # workspace_name = "Basic Workspace"
+  # workspace_name = "MK3 Baseplate"
 
-  # Instantiate the deck object.
-  deck = SilverDeck(db=db_location, workspace_name=workspace_name)
+  # Iterate over all workspaces.
+  for workspace_name in workspace_names:
 
-  # Serialize deck.
-  deck_data = deck.serialize()
+    # Instantiate the deck object.
+    deck = SilverDeck(db=db_location, workspace_name=workspace_name)
 
-  # Convert to workspace.
-  new_workspaces, new_items, new_platforms, new_containers = deck_to_workspaces(deck_data)
-  new_workspace = deepcopy(new_workspaces[0])
-  workspace = deepcopy(deck.workspace)
+    # Serialize deck.
+    deck_data = deck.serialize()
 
-  # Remove "stuff"
-  for item in new_workspace["items"]:
-    if "platformData" in item:
-      del item["platformData"]
-  scrub(new_workspace, "description")
-  scrub(workspace, "description")
+    # Convert to workspace.
+    new_workspaces, new_items, new_platforms, new_containers = deck_to_workspaces(deck_data)
+    new_workspace = deepcopy(new_workspaces[0])
+    workspace = deepcopy(deck.workspace)
 
-  # Platforms
-  platforms = deck.platforms
-  scrub(platforms, "description")
-  scrub(new_platforms, "description")
-  scrub(platforms, "color")
-  scrub(new_platforms, "color")
-  platforms = sorted(platforms, key=lambda x: x["name"]),
-  new_platforms = sorted(new_platforms, key=lambda x: x["name"]),
-  diff_result = compare(
-    platforms,
-    new_platforms,
-  )
-  assert not diff_result, "Differences found in translation of new_platforms:\n" + \
-    pformat(diff_result)
+    # Remove "stuff"
+    for item in new_workspace["items"]:
+      if "platformData" in item:
+        del item["platformData"]
+    scrub(new_workspace, "description")
+    scrub(workspace, "description")
+
+    # Platforms
+    platforms = deck.platforms
+    scrub(platforms, "description")
+    scrub(new_platforms, "description")
+    scrub(platforms, "color")
+    scrub(new_platforms, "color")
+    platforms = sorted(platforms, key=lambda x: x["name"]),
+    new_platforms = sorted(new_platforms, key=lambda x: x["name"]),
+    diff_result = compare(
+      platforms,
+      new_platforms,
+    )
+    assert not diff_result, "Differences found in translation of new_platforms:\n" + \
+      pformat(diff_result)
 
 
-  # Containers
-  containers = deck.containers
-  scrub(containers, "description")
-  scrub(new_containers, "description")
+    # Containers
+    containers = deck.containers
+    scrub(containers, "description")
+    scrub(new_containers, "description")
 
-  new_containers_names = [c["name"] for c in new_containers]
-  containers = [c for c in containers if c["name"] in new_containers_names]
-  diff_result = compare(
-    sorted(containers, key=lambda x: x["name"]),
-    sorted(new_containers, key=lambda x: x["name"]),
-  )
-  assert not diff_result, "Differences found in translation of new_containers:\n" + \
-    pformat(diff_result, width=200)
-
-  # Workspaces
-  for item in workspace["items"]:
-    new_item = next(i for i in new_items if i["name"] == item["name"])
-
-    new_item["content"] = sorted(new_item["content"], key=lambda x: x["index"])
-    item["content"] = sorted(item["content"], key=lambda x: x["index"])
-
-    if "platformData" in new_item:
-      del new_item["platformData"]
+    new_containers_names = [c["name"] for c in new_containers]
+    containers = [c for c in containers if c["name"] in new_containers_names]
+    containers = sorted(containers, key=lambda x: x["name"]),
+    new_containers = sorted(new_containers, key=lambda x: x["name"]),
 
     import json
     with open("/tmp/object_original.json", "w", encoding="utf-8") as f:
-      f.write(json.dumps(item, indent = 4, sort_keys=True))
+      f.write(json.dumps(containers, indent = 4, sort_keys=True))
     with open("/tmp/object_new.json", "w", encoding="utf-8") as f:
-      f.write(json.dumps(new_item, indent = 4, sort_keys=True))
+      f.write(json.dumps(new_containers, indent = 4, sort_keys=True))
 
     # Compare
-    diff_result = compare(t1 = item, t2 = new_item)
-    # Assert that there are no differences
-    assert not diff_result, f"Differences found in translation of item {item['name']}:\n" + \
-        pformat(diff_result, width=200) # + "\n" + pformat(pocket_containers) + "\n" + pformat(converted_containers)
+    diff_result = compare(containers, new_containers)
+    assert not diff_result, f"Differences found in containers from {workspace_name}:\n" + \
+      pformat(diff_result, width=200)
+
+    # Workspaces
+    for item in workspace["items"]:
+      new_item = next(i for i in new_items if i["name"] == item["name"])
+
+      new_item["content"] = sorted(new_item["content"], key=lambda x: x["index"])
+      item["content"] = sorted(item["content"], key=lambda x: x["index"])
+
+      if "platformData" in new_item:
+        del new_item["platformData"]
+
+      with open("/tmp/object_original.json", "w", encoding="utf-8") as f:
+        f.write(json.dumps(item, indent = 4, sort_keys=True))
+      with open("/tmp/object_new.json", "w", encoding="utf-8") as f:
+        f.write(json.dumps(new_item, indent = 4, sort_keys=True))
+
+      # Compare
+      diff_result = compare(t1 = item, t2 = new_item)
+      # Assert that there are no differences
+      assert not diff_result, f"Differences found in translation of item {item['name']}:\n" + \
+          pformat(diff_result, width=200) # + "\n" + pformat(pocket_containers) + "\n" + pformat(converted_containers)
