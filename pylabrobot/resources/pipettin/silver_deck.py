@@ -23,7 +23,7 @@ from pylabrobot.resources import Coordinate, Deck, Resource, ResourceNotFoundErr
 
 from .tip_racks import load_ola_tip_rack
 from .tube_racks import load_ola_tube_rack, load_ola_custom
-from .anchor import load_ola_anchor
+from .anchor import load_ola_anchor, Anchor
 
 from .utils import get_items_platform, create_trash, create_petri_dish, importer_not_implemented
 from newt.translators.utils import xy_to_plr
@@ -188,7 +188,7 @@ class SilverDeck(Deck):
 
       if anchor_name is not None:
         # Assign as an anchor's child.
-        anchor = self.get_resource(anchor_name)
+        anchor: Anchor = self.get_resource(anchor_name)
         anchor.assign_child_resource(platform_resource)
 
       else:
