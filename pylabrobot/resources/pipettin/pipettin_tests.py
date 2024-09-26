@@ -1,5 +1,4 @@
 import pytest
-import json
 from math import isclose
 from copy import deepcopy
 from pprint import pformat
@@ -12,9 +11,11 @@ from pylabrobot.liquid_handling import LiquidHandler
 from pylabrobot.resources import set_tip_tracking, set_volume_tracking
 
 from piper.datatools.datautils import load_objects
-from piper.utils import default_config, scrub
+from piper.utils import default_config
 
-from newt.translators.plr import deck_to_workspaces, convert_custom, convert_item
+from newt.translators.plr import deck_to_workspaces, convert_item
+from newt.translators.utils import scrub
+from newt.translators.utils import calculate_plr_grid_parameters, derive_grid_parameters_from_plr
 
 # Example using exported data.
 db_location = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/databases.json'
@@ -143,8 +144,6 @@ def test_reverse_engineering():
   dz = well_plate["H1"][0].location.z
   item_dx = well_plate["A2"][0].location.x - well_plate["A1"][0].location.x
   item_dy = well_plate["A1"][0].location.y - well_plate["B1"][0].location.y
-
-  from newt.translators.utils import calculate_plr_grid_parameters, derive_grid_parameters_from_plr
 
   serialized_well_plate = well_plate.serialize()
 
@@ -285,8 +284,8 @@ def compare(t1, t2):
 
 def test_translation_advanced():
   # Choose the database and a workspace.
-  # workspace_name = "Basic Workspace"
   workspace_name = "MK3 Baseplate"
+  workspace_name = "Basic Workspace"
 
   # Instantiate the deck object.
   deck = SilverDeck(db=db_location, workspace_name=workspace_name)
@@ -306,11 +305,37 @@ def test_translation_advanced():
   scrub(new_workspace, "description")
   scrub(workspace, "description")
 
-  with open("/tmp/workspace.json", "w", encoding="utf-8") as f:
-    f.write(json.dumps(workspace, indent = 4, sort_keys=True))
-  with open("/tmp/new_workspace.json", "w", encoding="utf-8") as f:
-    f.write(json.dumps(new_workspace, indent = 4, sort_keys=True))
+  # Platforms
+  platforms = deck.platforms
+  scrub(platforms, "description")
+  scrub(new_platforms, "description")
+  scrub(platforms, "color")
+  scrub(new_platforms, "color")
+  platforms = sorted(platforms, key=lambda x: x["name"]),
+  new_platforms = sorted(new_platforms, key=lambda x: x["name"]),
+  diff_result = compare(
+    platforms,
+    new_platforms,
+  )
+  assert not diff_result, "Differences found in translation of new_platforms:\n" + \
+    pformat(diff_result)
 
+
+  # Containers
+  containers = deck.containers
+  scrub(containers, "description")
+  scrub(new_containers, "description")
+
+  new_containers_names = [c["name"] for c in new_containers]
+  containers = [c for c in containers if c["name"] in new_containers_names]
+  diff_result = compare(
+    sorted(containers, key=lambda x: x["name"]),
+    sorted(new_containers, key=lambda x: x["name"]),
+  )
+  assert not diff_result, "Differences found in translation of new_containers:\n" + \
+    pformat(diff_result, width=200)
+
+  # Workspaces
   for item in workspace["items"]:
     new_item = next(i for i in new_items if i["name"] == item["name"])
 
@@ -320,8 +345,14 @@ def test_translation_advanced():
     if "platformData" in new_item:
       del new_item["platformData"]
 
+    import json
+    with open("/tmp/object_original.json", "w", encoding="utf-8") as f:
+      f.write(json.dumps(item, indent = 4, sort_keys=True))
+    with open("/tmp/object_new.json", "w", encoding="utf-8") as f:
+      f.write(json.dumps(new_item, indent = 4, sort_keys=True))
+
     # Compare
     diff_result = compare(t1 = item, t2 = new_item)
     # Assert that there are no differences
-    assert not diff_result, f"Differences found in translation of {item['name']}:\n" + \
+    assert not diff_result, f"Differences found in translation of item {item['name']}:\n" + \
         pformat(diff_result, width=200) # + "\n" + pformat(pocket_containers) + "\n" + pformat(converted_containers)
