@@ -1,10 +1,38 @@
 from pylabrobot.resources import Coordinate, Resource
+from pylabrobot.resources.resource import Rotation
+from pylabrobot.serializer import serialize
+from typing import Optional
 
 class Anchor(Resource):
   """A carrier-like resource for PW Anchors."""
 
   resource: Resource = None
   active_height: float = 0.0
+
+  def __init__(self,
+    name: str,
+    size_x: float,
+    size_y: float,
+    size_z: float,
+    rotation: Optional[Rotation] = None,
+    category: Optional[str] = None,
+    model: Optional[str] = None,
+    # Visual anchor offset for the UI.
+    anchor_offset: Coordinate = Coordinate.zero()
+  ):
+
+    super().__init__(
+      name=name,
+      size_x=size_x,
+      size_y=size_y,
+      size_z=size_z,
+      rotation=rotation,
+      category=category,
+      model=model
+    )
+
+    # Save curb offset.
+    self.anchor_offset = anchor_offset
 
   def assign_child_resource(self,
                             resource: Resource,
@@ -41,6 +69,11 @@ class Anchor(Resource):
     # Save the resource to the anchor.
     self.resource = resource
 
+  def serialize(self) -> dict:
+    output = super().serialize()
+    output["anchor_offset"] = serialize(self.anchor_offset)
+    return output
+
   def unassign_child_resource(self, resource):
     self.resource = None
     return super().unassign_child_resource(resource)
@@ -52,7 +85,12 @@ def load_ola_anchor(deck: "SilverDeck", platform_item, platform_data, tools_data
     size_y=platform_data["length"],
     size_z=platform_data["height"],
     category=platform_data.get("type", None), # Optional in PLR.
-    model=platform_data.get("name", None) # Optional in PLR (not documented in Resource).
+    model=platform_data.get("name", None), # Optional in PLR (not documented in Resource).
+    anchor_offset = Coordinate(
+      x=platform_data["anchorOffsetX"],
+      y=platform_data["anchorOffsetY"],
+      z=platform_data["anchorOffsetZ"],
+    )
   )
   anchor.locked = platform_item.get("locked", None)
   # NOTE: Because "size_z" is not propagated to the location of child resources,
