@@ -695,12 +695,13 @@ def load_ola_tube_rack(
       size_y=platform_data["wellDiameter"],
       size_z=container_data["length"],
       max_volume=container_data["maxVolume"],
-      model=container_data["name"]
+      model=container_data["name"],
+      category=container_data["type"]
     )
     compatible_tube.active_z = container_data["activeHeight"]
     compatible_tubes.append({
       "content": compatible_tube,
-    # Save the "containerOffsetZ" here, to restore it later on export.
+      # Save the "containerOffsetZ" here, to restore it later on export.
       "link": link
     })
 
@@ -758,7 +759,7 @@ def load_ola_tube_rack(
       # Don't fill the rack with tubes.
       # Tubes would otherwise be created and added to the rack, using "make_pew_tube".
       with_tubes=False,
-    )
+  )
   # Save the platform's active height.
   # This will help recover some information later.
   tube_rack_item.active_z = platform_data["activeHeight"]
