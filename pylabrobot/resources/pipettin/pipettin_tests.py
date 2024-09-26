@@ -1,4 +1,5 @@
 import pytest
+import json
 from math import isclose
 from copy import deepcopy
 from pprint import pformat
@@ -11,9 +12,9 @@ from pylabrobot.liquid_handling import LiquidHandler
 from pylabrobot.resources import set_tip_tracking, set_volume_tracking
 
 from piper.datatools.datautils import load_objects
-from piper.utils import default_config
+from piper.utils import default_config, scrub
 
-from newt.translators.plr import deck_to_workspaces, convert_custom
+from newt.translators.plr import deck_to_workspaces, convert_custom, convert_item
 
 # Example using exported data.
 db_location = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/databases.json'
@@ -120,7 +121,7 @@ async def test_piper_backend():
   # Cleanup.
   await lh.stop()
 
-def test_translation():
+def test_translation_basic():
   """Check that translations work (or at least can run)"""
   # Instantiate the deck.
   deck = make_silver_deck()
@@ -162,43 +163,56 @@ def test_reverse_engineering():
   assert isclose(new_params["firstWellCenterX"], 14.38)
   assert isclose(new_params["firstWellCenterY"], 11.24)
 
+def format_number(x, significant_digits=4, number_format_notation=None):
+  """function for DeepDiff's number_to_string_func argument.
+  Example:
+  format_number(3.123123), format_number(0), format_number(0.0)
+  """
+  fstring = "{0:." + str(significant_digits+1) + "g}"
+  return fstring.format(x)
+
 def test_conversions():
 
   # Choose the database and a workspace.
+  # workspace_name = "MK3 Baseplate"
   workspace_name = "Basic Workspace"
 
   # Instantiate the deck object.
   deck = SilverDeck(db=db_location, workspace_name=workspace_name)
 
-  pocket = deck.get_resource("Pocket PCR")
-  pocket_serialized = pocket.serialize()
+  item_name = "Pocket PCR"
 
-  data_converted = convert_custom(pocket_serialized, deck.get_size_y())
+  # Get the item.
+  item_resource = deck.get_resource(item_name)  # "Pocket PCR"
 
-  converted_platform = data_converted["piper_platform"]
-  converted_item = data_converted["piper_item"]
-  converted_containers = data_converted["container_data"]
+  # Serialize the resource.
+  serialized_resource = item_resource.serialize()
+
+  # Convert the resource.
+  # data_converted = convert_custom(serialized_resource, deck.get_size_y())
+  data_converted = convert_item(serialized_resource, deck.get_size_y())
+
+  converted_item = data_converted[0]  # ["piper_item"]
+  converted_platform = data_converted[1]  # ["piper_platform"]
+  converted_containers = data_converted[2]  # ["container_data"]
   # TODO: Allow and test descriptions.
   converted_containers = [{k:v for k, v in cntnr.items() if k != "description"} for cntnr in converted_containers]
 
-  def format_number(x, significant_digits=4, number_format_notation=None):
-    """function for DeepDiff's number_to_string_func argument.
-    Example:
-    format_number(3.123123), format_number(0), format_number(0.0)
-    """
-    fstring = "{0:." + str(significant_digits+1) + "g}"
-    return fstring.format(x)
-
   # Item
-  pocket_item = deepcopy(next(p for p in deck.workspace["items"] if p["name"] == pocket.name))
-  del converted_item["platformData"]
-  del converted_item["containerData"]
+  pocket_item = deepcopy(next(p for p in deck.workspace_items if p["name"] == item_resource.name))
+  if "platformData" in converted_item:
+    del converted_item["platformData"]
+  if "containerData" in converted_item:
+    del converted_item["containerData"]
 
   # Platform
-  pocket_platform = deepcopy(next(p for p in deck.platforms if p["name"] == pocket.name))
-  del pocket_platform["color"]
-  del pocket_platform["description"]
-  del pocket_platform["rotation"]
+  pocket_platform = deepcopy(next(p for p in deck.platforms if p["name"] == item_resource.model))
+  if "color" in pocket_platform:
+    del pocket_platform["color"]
+  if "description" in pocket_platform:
+    del pocket_platform["description"]
+  if "rotation" in pocket_platform:
+    del pocket_platform["rotation"]
 
   # Containers
   pocket_container_names = [cntnt["container"] for cntnt in pocket_item["content"] ]
@@ -217,7 +231,8 @@ def test_conversions():
   if not diff_result:
     print(f"No differences in {pocket_platform['name']} platform.")
   # Assert that there are no differences
-  assert not diff_result, f"Differences found in platform translation of the {pocket_platform['name']} platform:\n" + pformat(diff_result)
+  assert not diff_result, f"Differences found in platform translation of the {pocket_platform['name']} platform:\n" + \
+    pformat(diff_result) #+ "\n" + pformat(converted_platform)
 
   # Compare
   diff_result = DeepDiff(
@@ -228,19 +243,85 @@ def test_conversions():
       ignore_numeric_type_changes=True
   )
   if not diff_result:
-     print(f"No differences in {converted_item['name']} item.")
+    print(f"No differences in {converted_item['name']} item.")
   # Assert that there are no differences
-  assert not diff_result, f"Differences found in platform translation of the {converted_item['name']} item:\n" + pformat(diff_result)
+  assert not diff_result, f"Differences found in platform translation of the {converted_item['name']} item:\n" + \
+    pformat(diff_result) # + "\n" + pformat(converted_item)
 
   # Compare
   diff_result = DeepDiff(
-      t1 = converted_containers,
-      t2 = pocket_containers,
+      t1 = pocket_containers,
+      t2 = converted_containers,
       # math_epsilon=0.001
       number_to_string_func = format_number, significant_digits=4,
       ignore_numeric_type_changes=True
   )
   if not diff_result:
-     print(f"No differences in {converted_item['name']} used containers.")
+    print(f"No differences in {converted_item['name']} used containers.")
   # Assert that there are no differences
-  assert not diff_result, f"Differences found in container translation of the {converted_item['name']} item:\n" + pformat(diff_result)
+  assert not diff_result, f"Differences found in container translation of the {converted_item['name']} item:\n" + \
+      pformat(diff_result) # + "\n" + pformat(pocket_containers) + "\n" + pformat(converted_containers)
+
+# def sortedDeep(d):
+#   if isinstance(d,list):
+#     if len(d) > 0:
+#       if isinstance(d[0],dict):
+#         return [sortedDeep(v) for v in d]
+#     return sorted( sortedDeep(v) for v in d )
+#   if isinstance(d,dict):
+#     return { k: sortedDeep(d[k]) for k in sorted(d)}
+#   return d
+
+def compare(t1, t2):
+  # Compare
+  diff_result = DeepDiff(
+      t1 = t1, # sortedDeep(t1),
+      t2 = t2, # sortedDeep(t2),
+      # math_epsilon=0.001
+      number_to_string_func = format_number, significant_digits=4,
+      ignore_numeric_type_changes=True
+  )
+  return diff_result
+
+def test_translation_advanced():
+  # Choose the database and a workspace.
+  # workspace_name = "Basic Workspace"
+  workspace_name = "MK3 Baseplate"
+
+  # Instantiate the deck object.
+  deck = SilverDeck(db=db_location, workspace_name=workspace_name)
+
+  # Serialize deck.
+  deck_data = deck.serialize()
+
+  # Convert to workspace.
+  new_workspaces, new_items, new_platforms, new_containers = deck_to_workspaces(deck_data)
+  new_workspace = deepcopy(new_workspaces[0])
+  workspace = deepcopy(deck.workspace)
+
+  # Remove "stuff"
+  for item in new_workspace["items"]:
+    if "platformData" in item:
+      del item["platformData"]
+  scrub(new_workspace, "description")
+  scrub(workspace, "description")
+
+  with open("/tmp/workspace.json", "w", encoding="utf-8") as f:
+    f.write(json.dumps(workspace, indent = 4, sort_keys=True))
+  with open("/tmp/new_workspace.json", "w", encoding="utf-8") as f:
+    f.write(json.dumps(new_workspace, indent = 4, sort_keys=True))
+
+  for item in workspace["items"]:
+    new_item = next(i for i in new_items if i["name"] == item["name"])
+
+    new_item["content"] = sorted(new_item["content"], key=lambda x: x["index"])
+    item["content"] = sorted(item["content"], key=lambda x: x["index"])
+
+    if "platformData" in new_item:
+      del new_item["platformData"]
+
+    # Compare
+    diff_result = compare(t1 = item, t2 = new_item)
+    # Assert that there are no differences
+    assert not diff_result, f"Differences found in translation of {item['name']}:\n" + \
+        pformat(diff_result, width=200) # + "\n" + pformat(pocket_containers) + "\n" + pformat(converted_containers)

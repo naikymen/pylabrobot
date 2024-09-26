@@ -454,7 +454,6 @@ class TubeSpot(Resource):
   def load_state(self, state: Dict[str, Any]):
     self.tracker.load_state(state)
 
-
 class TubeRack(ItemizedResource[TubeSpot], metaclass=ABCMeta):
   """ Abstract base class for Tube Rack resources.
 
@@ -685,28 +684,35 @@ def load_ola_tube_rack(
   # TODO: Find a way to avoid defaulting to the first associated container.
   # NOTE: Perhaps PLR does not consider having different tubes for the same tube rack.
   linked_containers = platform_data["containers"]
-  default_link = linked_containers[0]
-  container_data = next(x for x in containers_data if x["name"] == default_link["container"])
-
-  def make_pew_tube(name="placeholder name"):
-    """Function to create default tubes, passed to create_ordered_items_2d."""
-    # NOTE: I need to create this function here, it is required by "TubeSpot" later on.
-    return Tube(
-      # TODO: Names for tubes should all be different.
-      name=name,
+  compatible_tubes = []
+  for link in linked_containers:
+    container_data = get_contents_container(link, containers_data)
+    # Get fitting depths.
+    compatible_tube = Tube(
+      # Use the container name here, not important.
+      name=container_data["name"],
       size_x=platform_data["wellDiameter"],
       size_y=platform_data["wellDiameter"],
       size_z=container_data["length"],
       max_volume=container_data["maxVolume"],
       model=container_data["name"]
-      # TODO: Add "activeHeight" somewhere here.
-      #       It is needed to get the proper Z coordinate.
     )
+    # Save the "containerOffsetZ" here, to restore it later on export.
+    # TODO: Check that it does not interfere with "make_pew_tube" when used.
+    compatible_tube.active_z = link["containerOffsetZ"]
+    compatible_tubes.append(compatible_tube)
 
+  # NOTE: I need to create this function here, it is required by "TubeSpot" later on.
+  def make_pew_tube():
+    return compatible_tubes[0]
+
+  # First spot offsets.
+  # TODO: Override "dz"/default_link the the appropriate offset for each tube.
+  default_link = linked_containers[0]
   # Prepare parameters for "create_ordered_items_2d".
   dx, dy, dz = rack_to_plr_dxdydz(platform_data, default_link)
 
-  # Use the helper function to create a regular 2D-grid of tip spots.
+  # Use the helper function to create a regular 2D-grid of tube spots.
   ordered_items=create_ordered_items_2d(
     # NOTE: Parameters for "create_ordered_items_2d".
     klass=TubeSpot,  # NOTE: the TipRack uses "TipSpot" class here. Should I use "Tube"?
@@ -756,6 +762,10 @@ def load_ola_tube_rack(
   tube_rack_item.active_z = platform_data["activeHeight"]
   # Save the platform's shape.
   tube_rack_item.shape = shape
+  # Compatible children.
+  tube_rack_item.compatibles = compatible_tubes
+  # Locked state.
+  tube_rack_item.locked = platform_item.get("locked", None)
 
   # Add tubes in the platform item, if any.
   platform_contents = platform_item.get("content", [])
@@ -856,6 +866,8 @@ def load_ola_custom(deck: "SilverDeck",
   custom.active_z = platform_data["activeHeight"]
   # Save the platform's shape.
   custom.shape = shape
+  # Locked state.
+  custom.locked = platform_item.get("locked", None)
 
   # Get the item's content.
   platform_contents = platform_item.get("content", [])

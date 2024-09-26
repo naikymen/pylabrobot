@@ -2,7 +2,7 @@
 from pylabrobot.resources.utils import create_ordered_items_2d
 from pylabrobot.resources.tip_rack import TipRack, TipSpot
 from pylabrobot.resources.tip import Tip
-from .utils import get_contents_container
+from .utils import get_contents_container, get_fitting_depth
 from newt.translators.utils import rack_to_plr_dxdydz, guess_shape
 
 def load_ola_tip_rack(
@@ -43,17 +43,6 @@ def load_ola_tip_rack(
       _type_: _description_
   """
 
-  # Get platform-container links.
-  linked_containers = platform_data["containers"]
-
-  # Get container data.
-  # TODO: Find a way to avoid defaulting to the first associated container.
-  # NOTE: Perhaps PLR does not consider having different tips for the same tip rack.
-  #       This would be uncommon anyway.
-  default_link = linked_containers[0]
-  container_data = get_contents_container(default_link, containers_data)
-  tip_container_id = container_data["name"]
-
   # "tip_stages": {
   #   "default": "p200",
   #   "p200": {
@@ -78,27 +67,34 @@ def load_ola_tip_rack(
   #     }
   #   }
   # },
-  # Get fitting depths.
-  fitting_depths = {}
-  for tool in [td for td in tools_data if td["type"] == "Micropipette"]:
-    tip_stages = tool["parameters"]["tip_stages"]
-    tip_fit_distance = [v["tip_fit_distance"] for k, v in tip_stages.items() if k != "default"]
-    for tfd in tip_fit_distance:
-      fitting_depths.update(tfd)
-  fitting_depth = fitting_depths[tip_container_id]
 
-  # NOTE: I need to create this function here, it is required by "TipSpot" later on.
-  def make_pew_tip():
-    return Tip(
+  # Get platform-container links.
+  linked_containers = platform_data["containers"]
+  compatible_tips = []
+  for link in linked_containers:
+    container_data = get_contents_container(link, containers_data)
+    tip_container_id = container_data["name"]
+    # Get fitting depths.
+    fitting_depth = get_fitting_depth(tools_data, tip_container_id)
+    compatible_tip = Tip(
       has_filter=False,
       total_tip_length=container_data["length"],
       maximal_volume=container_data["maxVolume"],
       fitting_depth=fitting_depth,
       model=tip_container_id
     )
+    # Save the "containerOffsetZ" here, to restore it later on export.
+    compatible_tip.active_z = link["containerOffsetZ"]
+    compatible_tips.append(compatible_tip)
+
+  # NOTE: I need to create this function here, it is required by "TipSpot" later on.
+  def make_pew_tip():
+    return compatible_tips[0]
 
   # First spot offsets.
   # TODO: Override "dz"/default_link the the appropriate offset for each tip.
+  default_link = linked_containers[0]
+  # TODO: Consider setting "dz" to zero in this case, and apply "containerOffsetZ" later.
   dx, dy, dz = rack_to_plr_dxdydz(platform_data, default_link)
 
   # Use the "create_ordered_items_2d" helper function to create a regular 2D-grid of tip spots.
@@ -153,6 +149,10 @@ def load_ola_tip_rack(
   tip_rack_item.active_z = platform_data["activeHeight"]
   # Save the platform's shape.
   tip_rack_item.shape = shape
+  # Compatible children.
+  tip_rack_item.compatibles = compatible_tips
+  # Locked state.
+  tip_rack_item.locked = platform_item.get("locked", None)
 
   # Add tips in the platform item, if any.
   platform_contents = platform_item.get("content", [])
