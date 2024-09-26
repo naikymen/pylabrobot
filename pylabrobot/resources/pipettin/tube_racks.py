@@ -6,7 +6,7 @@ from pylabrobot.serializer import deserialize
 from pylabrobot.resources.container import Container
 from pylabrobot.resources.liquid import Liquid
 #from pylabrobot.resources.plate import Plate
-from pylabrobot.resources.resource import Resource, Coordinate
+from pylabrobot.resources.resource import Resource, Coordinate, Rotation
 from pylabrobot.resources.itemized_resource import ItemizedResource
 from pylabrobot.resources.utils import create_ordered_items_2d
 
@@ -768,6 +768,8 @@ def load_ola_tube_rack(
   tube_rack_item.compatibles = compatible_tubes
   # Locked state.
   tube_rack_item.locked = platform_item.get("locked", None)
+  # TODO: Add rotation, even though it wont be usable and cause crashes.
+  tube_rack_item.rotation = Rotation(z=platform_data["rotation"])
 
   # Add tubes in the platform item, if any.
   platform_contents = platform_item.get("content", [])
@@ -776,6 +778,7 @@ def load_ola_tube_rack(
 
     # Create the Tube.
     new_tube = Tube(
+      # TODO: Names must be unique. This should be checked for tips and tubes.
       name=content["name"],
       # TODO: Reconsider setting "size_x" and "size_y" to something else.
       size_x=platform_data["wellDiameter"],
@@ -870,6 +873,8 @@ def load_ola_custom(deck: "SilverDeck",
   custom.shape = shape
   # Locked state.
   custom.locked = platform_item.get("locked", None)
+  # TODO: Add rotation, even though it wont be usable and cause crashes.
+  custom.rotation = Rotation(z=platform_data["rotation"])
 
   # Get the item's content.
   platform_contents = platform_item.get("content", [])

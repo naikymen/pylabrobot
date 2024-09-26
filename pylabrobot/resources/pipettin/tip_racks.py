@@ -2,6 +2,7 @@
 from pylabrobot.resources.utils import create_ordered_items_2d
 from pylabrobot.resources.tip_rack import TipRack, TipSpot
 from pylabrobot.resources.tip import Tip
+from pylabrobot.resources.resource import Rotation, Coordinate
 from .utils import get_contents_container, get_fitting_depth
 from newt.translators.utils import rack_to_plr_dxdydz, guess_shape
 
@@ -146,7 +147,6 @@ def load_ola_tip_rack(
     # NOTE: Skipping filling with tips for now.
     with_tips=False
   )
-
   # Save the platform's active height.
   # This will help recover some information later.
   tip_rack_item.active_z = platform_data["activeHeight"]
@@ -156,6 +156,8 @@ def load_ola_tip_rack(
   tip_rack_item.compatibles = compatible_tips
   # Locked state.
   tip_rack_item.locked = platform_item.get("locked", None)
+  # TODO: Add rotation, even though it wont be usable and cause crashes.
+  tip_rack_item.rotation = Rotation(z=platform_data["rotation"])
 
   # Add tips in the platform item, if any.
   platform_contents = platform_item.get("content", [])
@@ -168,13 +170,7 @@ def load_ola_tip_rack(
     tip_container_id = container_data["name"]
 
     # Get fitting depths.
-    fitting_depths = {}
-    for tool in [td for td in tools_data if td["type"] == "Micropipette"]:
-      tip_stages = tool["parameters"]["tip_stages"]
-      tip_fit_distance = [v["tip_fit_distance"] for k, v in tip_stages.items() if k != "default"]
-      for tfd in tip_fit_distance:
-        fitting_depths.update(tfd)
-    fitting_depth = fitting_depths[tip_container_id]
+    fitting_depth = get_fitting_depth(tools_data, tip_container_id)
 
     # Create the Tip.
     new_tip = Tip(
@@ -236,8 +232,6 @@ if __name__ == "__main__":
   # Get the item's position in the workspace.
   pew_item_pos = pew_item["position"]
   #pew_item_pos
-
-  from pylabrobot.resources.coordinate import Coordinate
 
   pew_item_location = Coordinate(**pew_item_pos)
   #pew_item_location
