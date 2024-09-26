@@ -55,7 +55,7 @@ class Resource:
     active_z: Optional[float] = None,
     shape: Optional[str] = None,
     tags: Optional[list] = None,
-    locked: Optional[bool] = None,
+    locked: Optional[bool] = None
   ):
     self._name = name
     self._size_x = size_x
@@ -65,12 +65,15 @@ class Resource:
     self.rotation = rotation or Rotation()
     self.category = category
     self.model = model
+
     self.active_z = active_z
     self.shape = shape
+    self.locked = locked
     self.tags = []
     if tags is not None:
       self.tags = tags
-    self.locked = locked
+    # Compatible resources.
+    self.compatibles: List[Resource] = []
 
     self.location: Optional[Coordinate] = None
     self.parent: Optional[Resource] = None
@@ -102,16 +105,19 @@ class Resource:
       "size_x": self._size_x,
       "size_y": self._size_y,
       "size_z": self._size_z,
-      "active_z": self.active_z,
-      "shape": self.shape,
-      "tags": self.tags,
-      "locked": self.locked,
       "location": serialize(self.location),
       "rotation": serialize(self.rotation),
       "category": self.category,
       "model": self.model,
       "children": [child.serialize() for child in self.children],
-      "parent_name": self.parent.name if self.parent is not None else None
+      "parent_name": self.parent.name if self.parent is not None else None,
+
+      # Additional properties for pipettin.
+      "active_z": self.active_z,
+      "shape": self.shape,
+      "tags": self.tags,
+      "locked": self.locked,
+      "compatibles": [c.serialize() for c in self.compatibles],
     }
 
   @property
