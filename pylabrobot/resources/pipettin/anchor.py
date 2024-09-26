@@ -57,7 +57,7 @@ def load_ola_anchor(deck: "SilverDeck", platform_item, platform_data, tools_data
   anchor.locked = platform_item.get("locked", None)
   # NOTE: Because "size_z" is not propagated to the location of child resources,
   #       I will save the "activeHeight" to a new class attribute.
-  anchor.active_height = platform_data["activeHeight"]
+  anchor.active_z = platform_data["activeHeight"]
   # Apply rotations using the method from Resource.
   # TODO: Check that it works as expected.
   anchor.rotate(platform_data.get("rotation", 0))
