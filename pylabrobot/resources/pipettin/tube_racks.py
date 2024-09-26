@@ -697,14 +697,16 @@ def load_ola_tube_rack(
       max_volume=container_data["maxVolume"],
       model=container_data["name"]
     )
+    compatible_tube.active_z = container_data["activeHeight"]
+    compatible_tubes.append({
+      "content": compatible_tube,
     # Save the "containerOffsetZ" here, to restore it later on export.
-    # TODO: Check that it does not interfere with "make_pew_tube" when used.
-    compatible_tube.active_z = link["containerOffsetZ"]
-    compatible_tubes.append(compatible_tube)
+      "link": link
+    })
 
   # NOTE: I need to create this function here, it is required by "TubeSpot" later on.
   def make_pew_tube():
-    return compatible_tubes[0]
+    return compatible_tubes[0]["content"]
 
   # First spot offsets.
   # TODO: Override "dz"/default_link the the appropriate offset for each tube.

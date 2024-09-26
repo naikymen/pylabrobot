@@ -83,13 +83,16 @@ def load_ola_tip_rack(
       fitting_depth=fitting_depth,
       model=tip_container_id
     )
+    compatible_tip.active_z = container_data["activeHeight"]
+    compatible_tips.append({
+      "content": compatible_tip,
     # Save the "containerOffsetZ" here, to restore it later on export.
-    compatible_tip.active_z = link["containerOffsetZ"]
-    compatible_tips.append(compatible_tip)
+      "link": link
+    })
 
   # NOTE: I need to create this function here, it is required by "TipSpot" later on.
   def make_pew_tip():
-    return compatible_tips[0]
+    return compatible_tips[0]["content"]
 
   # First spot offsets.
   # TODO: Override "dz"/default_link the the appropriate offset for each tip.

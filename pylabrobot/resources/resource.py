@@ -117,7 +117,9 @@ class Resource:
       "shape": self.shape,
       "tags": self.tags,
       "locked": self.locked,
-      "compatibles": [c.serialize() for c in self.compatibles],
+      "compatibles": [
+        {"content": c["content"].serialize(), "link": c["link"]} for c in self.compatibles
+      ],
     }
 
   @property
