@@ -22,7 +22,9 @@ class Tip:
   maximal_volume: float
   fitting_depth: float
   model: str = "default"
+  category: str = "tip"
   active_z: float = 0.0
+  name: str = "tip"
 
   def __post_init__(self):
     self.tracker = VolumeTracker(max_volume=self.maximal_volume)
@@ -36,7 +38,9 @@ class Tip:
       "fitting_depth": self.fitting_depth,
       # TODO: Discuss this with Rick. The tip may be one of several brands/models.
       #       I need this to know which tip to insert in the rack.
+      "name": self.name,
       "model": self.model,
+      "category": self.category,
       "active_z": self.active_z, # Used for compatible tip tracking of "containerOffsetZ".
       # TODO: Deduplicate these keys.
       #       Added it with another key for consistency with Tubes.
