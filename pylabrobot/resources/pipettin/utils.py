@@ -1,6 +1,16 @@
 from pylabrobot.resources import Coordinate, Trash, PetriDish, Colony
 from pylabrobot.resources.liquid import Liquid
 
+def get_fitting_depth(tools_data: dict, tip_container_id: str):
+  fitting_depths = {}
+  for tool in [td for td in tools_data if td["type"] == "Micropipette"]:
+    tip_stages = tool["parameters"]["tip_stages"]
+    tip_fit_distance = [v["tip_fit_distance"] for k, v in tip_stages.items() if k != "default"]
+    for tfd in tip_fit_distance:
+      fitting_depths.update(tfd)
+  fitting_depth = fitting_depths[tip_container_id]
+  return fitting_depth
+
 def importer_not_implemented(*args, platform_data, **kwargs):
   print("Method not implemented for platform type: " + platform_data["type"])
   # raise NotImplementedError("Method not implemented for platform type: " + platform_data["type"])
@@ -25,6 +35,7 @@ def create_trash(deck: "SilverDeck", platform_item, platform_data, tools_data: d
     model=platform_data.get("name", None) # Optional in PLR (not documented in Resource).
   )
   trash.active_z = platform_data["activeHeight"]
+  trash.locked = platform_item["locked"]
   return trash
 
 def create_petri_dish(deck: "SilverDeck", platform_item, platform_data, tools_data: dict, **kwargs):
