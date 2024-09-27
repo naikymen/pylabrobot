@@ -36,7 +36,7 @@ extras_server = [
   "flask[async]",
 ]
 
-extras_piper= [
+extras_piper = [
   "piper@git+https://gitlab.com/pipettin-bot/pipettin-piper.git",
   # For tests.
   "deepdiff"

@@ -224,8 +224,6 @@ def test_conversions():
     del pocket_platform["color"]
   if "description" in pocket_platform:
     del pocket_platform["description"]
-  if "rotation" in pocket_platform:
-    del pocket_platform["rotation"]
 
   # Containers
   pocket_container_names = [cntnt["container"] for cntnt in pocket_item["content"] ]
