@@ -179,7 +179,6 @@ class SilverDeck(Deck):
       containers_data=containers,
       tools_data=tools,
     )
-    # print(f"Assigned {platform_resource.name} to {self.name}.")
 
     # Assign the translated resource.
     if platform_resource is not None:
@@ -220,13 +219,10 @@ class SilverDeck(Deck):
     if resources_list is None:
       resources_list = []
 
-    # print(f"Looking for '{name}' in '{parent.name}'.")
     for child in parent.children:
       if child.name == name:
-        # print("Found " + child.name)
         resources_list.append(child)
       if isinstance(child, Resource):
-        # print(f"Recursing into {child.name}")
         self.get_resource(name, resources_list, child, True)
 
     if recursing:
@@ -235,17 +231,14 @@ class SilverDeck(Deck):
     elif not resources_list:
       # Raise the standard error if not found.
       msg = f"Resource '{name}' not found after recursion"
-      # print(msg)
       raise ResourceNotFoundError(msg)
     if len(resources_list) > 1 and not recursing:
       # Raise a custom error if multiple matches were found.
       msg = f"Multiple resources named '{name}' were found, as children of: '"
       msg += "', '".join([child.parent.name for child in resources_list]) + "'"
-      # print(msg)
       raise ResourceNotFoundError(msg)
 
     # Return the first match.
-    # print("Done looking")
     return resources_list[0]
 
   # Getter methods for pipettin data objects.

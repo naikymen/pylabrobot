@@ -974,7 +974,7 @@ def load_ola_custom(deck: "SilverDeck",
       """Generate a default tube for the slot / tube spot"""
       if container:
         return Tube(
-          name=f"{container["name"]} in {slot["slotName"]}",
+          name=f"{container['name']} in {slot['slotName']}",
           size_x=slot["slotSize"],  # Same as the slot.
           size_y=slot["slotSize"],  # Same as the slot.
           size_z=container["length"],
