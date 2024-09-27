@@ -216,9 +216,7 @@ class PiperBackend(LiquidHandlerBackend):
       await self._home_machine(timeout)
 
     if self.controller.machine.dry:
-      print("Dry mode enabled, skipping Backend cleanup.")
-      await super().stop()
-      return
+      print("Dry mode enabled, skipping machine cleanup.")
     else:
       print("Stopping the robot.")
 
@@ -231,11 +229,11 @@ class PiperBackend(LiquidHandlerBackend):
       if not result:
         self.controller.firmware_restart()
 
-      # TODO: comment on what this does.
-      await super().stop()
+    # TODO: comment on what this does.
+    await super().stop()
 
-      # Close the connection to moonraker.
-      await self.controller.stop()
+    # Close the connection to moonraker.
+    await self.controller.stop()
 
   # Resource callback methods ####
 

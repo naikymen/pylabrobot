@@ -2,8 +2,9 @@
 from pylabrobot.resources.utils import create_ordered_items_2d
 from pylabrobot.resources.tip_rack import TipRack, TipSpot
 from pylabrobot.resources.tip import Tip
-from .utils import get_contents_container
-from newt.translators.utils import rack_to_plr_dxdydz
+from pylabrobot.resources.resource import Rotation, Coordinate
+from .utils import get_contents_container, get_fitting_depth
+from newt.translators.utils import rack_to_plr_dxdydz, guess_shape
 
 def load_ola_tip_rack(
   deck: "SilverDeck",
@@ -43,38 +44,62 @@ def load_ola_tip_rack(
       _type_: _description_
   """
 
+  # "tip_stages": {
+  #   "default": "p200",
+  #   "p200": {
+  #     "vol_max": 200,
+  #     "flowrate": 100,
+  #     "z_offset": 0,
+  #     "z_offset.description": "Distance at which the stip stage begins, relative to the end of the tip holder.",
+  #     "tip_fit_distance": {
+  #       "200 uL Tip": 4.8,
+  #       "200 uL Tip Tarsons": 4.3
+  #     },
+  #     "tip_fit_distance.description": "Fitting depth for each tip definition in the containers database.",
+  #     "probe_extra_dist": 1,
+  #     "tip_ejector": {
+  #       "e_start": 22,
+  #       "e_end": 27,
+  #       "eject_feedrate": 200
+  #     },
+  #     "tension_correction": {
+  #       "start_vol": 20,
+  #       "max_correction": 2
+  #     }
+  #   }
+  # },
+
   # Get platform-container links.
   linked_containers = platform_data["containers"]
-
-  # Get container data.
-  # TODO: Find a way to avoid defaulting to the first associated container.
-  # NOTE: Perhaps PLR does not consider having different tips for the same tip rack.
-  #       This would be uncommon anyway.
-  default_link = linked_containers[0]
-  container_data = get_contents_container(default_link, containers_data)
-  tip_container_id = container_data["name"]
-
-  # Get fitting depths.
-  fitting_depths = {}
-  for tool in [td for td in tools_data if td["type"] == "Micropipette"]:
-    tip_stages = tool["parameters"]["tip_stages"]
-    tip_fit_distance = [v["tip_fit_distance"] for k, v in tip_stages.items() if k != "default"]
-    for tfd in tip_fit_distance:
-      fitting_depths.update(tfd)
-  fitting_depth = fitting_depths[tip_container_id]
-
-  # NOTE: I need to create this function here, it is required by "TipSpot" later on.
-  def make_pew_tip():
-    return Tip(
+  compatible_tips = []
+  for link in linked_containers:
+    container_data = get_contents_container(link, containers_data)
+    tip_container_id = container_data["name"]
+    # Get fitting depths.
+    fitting_depth = get_fitting_depth(tools_data, tip_container_id)
+    compatible_tip = Tip(
       has_filter=False,
       total_tip_length=container_data["length"],
       maximal_volume=container_data["maxVolume"],
       fitting_depth=fitting_depth,
+      category=container_data["type"],  # "tip"
       model=tip_container_id
     )
+    compatible_tip.active_z = container_data["activeHeight"]
+    compatible_tips.append({
+      "content": compatible_tip,
+      # Save the "containerOffsetZ" here, to restore it later on export.
+      "link": link
+    })
+
+  # NOTE: I need to create this function here, it is required by "TipSpot" later on.
+  def make_pew_tip():
+    return compatible_tips[0]["content"]
 
   # First spot offsets.
   # TODO: Override "dz"/default_link the the appropriate offset for each tip.
+  default_link = linked_containers[0]
+  # TODO: Consider setting "dz" to zero in this case, and apply "containerOffsetZ" later.
   dx, dy, dz = rack_to_plr_dxdydz(platform_data, default_link)
 
   # Use the "create_ordered_items_2d" helper function to create a regular 2D-grid of tip spots.
@@ -108,11 +133,14 @@ def load_ola_tip_rack(
     # There are however, "tube spots" in pipettin, which I don't know how to accommodate.
   )
 
+  # Guess the shape of the platform.
+  size_x, size_y, shape = guess_shape(platform_data)
+
   # Create the TipRack instance.
   tip_rack_item = TipRack(
     name=platform_item["name"],
-    size_x=platform_data["width"],
-    size_y=platform_data["length"],
+    size_x=size_x,
+    size_y=size_y,
     size_z=platform_data["height"],
     category=platform_data.get("type", None), # Optional in PLR.
     model=platform_data["name"], # Optional.
@@ -120,6 +148,17 @@ def load_ola_tip_rack(
     # NOTE: Skipping filling with tips for now.
     with_tips=False
   )
+  # Save the platform's active height.
+  # This will help recover some information later.
+  tip_rack_item.active_z = platform_data["activeHeight"]
+  # Save the platform's shape.
+  tip_rack_item.shape = shape
+  # Compatible children.
+  tip_rack_item.compatibles = compatible_tips
+  # Locked state.
+  tip_rack_item.locked = platform_item.get("locked", None)
+  # TODO: Add rotation, even though it wont be usable and cause crashes.
+  tip_rack_item.rotation = Rotation(z=platform_data["rotation"])
 
   # Add tips in the platform item, if any.
   platform_contents = platform_item.get("content", [])
@@ -132,13 +171,7 @@ def load_ola_tip_rack(
     tip_container_id = container_data["name"]
 
     # Get fitting depths.
-    fitting_depths = {}
-    for tool in [td for td in tools_data if td["type"] == "Micropipette"]:
-      tip_stages = tool["parameters"]["tip_stages"]
-      tip_fit_distance = [v["tip_fit_distance"] for k, v in tip_stages.items() if k != "default"]
-      for tfd in tip_fit_distance:
-        fitting_depths.update(tfd)
-    fitting_depth = fitting_depths[tip_container_id]
+    fitting_depth = get_fitting_depth(tools_data, tip_container_id)
 
     # Create the Tip.
     new_tip = Tip(
@@ -146,7 +179,10 @@ def load_ola_tip_rack(
       total_tip_length=container_data["length"],
       maximal_volume=container_data["maxVolume"],
       fitting_depth=fitting_depth,
-      model=tip_container_id
+      model=tip_container_id,
+      category=container_data["type"],  # "tip"
+      # # TODO: Names must be unique. This should be checked for tips and tubes.
+      name=content["name"]
     )
 
     # Get the tip's position indexes.
@@ -161,10 +197,15 @@ def load_ola_tip_rack(
     container_offset_z = next(pc["containerOffsetZ"]
                               for pc in linked_containers
                               if pc["container"] == tip_container_id)
-    # Fix the Z coordinate applying the proper offset.
+    # Fix the Z coordinate applying the offset
+    # of this particular tip.
     tip_spot.location.z = platform_data["activeHeight"]
     tip_spot.location.z -= container_offset_z
-    tip_spot.location.z += container_data["activeHeight"]
+
+  # Save the platform's active height such that "container_offset_z" can
+  # be recovered later on (e.g. during an export) with the following formula:
+  #   "container_offset_z = tip_rack_item.active_z - tip_spot.location.z"
+  tip_rack_item.active_z = platform_data["activeHeight"]
 
   return tip_rack_item
 
@@ -195,8 +236,6 @@ if __name__ == "__main__":
   # Get the item's position in the workspace.
   pew_item_pos = pew_item["position"]
   #pew_item_pos
-
-  from pylabrobot.resources.coordinate import Coordinate
 
   pew_item_location = Coordinate(**pew_item_pos)
   #pew_item_location

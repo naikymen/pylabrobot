@@ -1,16 +1,25 @@
-import asyncio
 import pytest
 from math import isclose
+from copy import deepcopy
+from pprint import pformat
+import json
+
+from deepdiff import DeepDiff
 
 from pylabrobot.liquid_handling.backends.piper_backend import PiperBackend
-from pylabrobot.resources import SilverDeck, Axy_24_DW_10ML, FourmlTF_L, Coordinate
+from pylabrobot.resources import Deck, SilverDeck, Axy_24_DW_10ML, FourmlTF_L, Coordinate
 from pylabrobot.liquid_handling import LiquidHandler
 from pylabrobot.resources import set_tip_tracking, set_volume_tracking
+from pylabrobot.resources import pipettin_test_plate
+
+from pylabrobot.resources.pipettin.utils import format_number, compare, json_dump
 
 from piper.datatools.datautils import load_objects
 from piper.utils import default_config
 
-from newt.translators.plr import deck_to_workspaces
+from newt.translators.plr import deck_to_workspaces, convert_item, deck_to_db
+from newt.translators.utils import scrub
+from newt.translators.utils import calculate_plr_grid_parameters, derive_grid_parameters_from_plr
 
 # Example using exported data.
 db_location = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/databases.json'
@@ -114,21 +123,12 @@ async def test_piper_backend():
   # await lh.dispense(tubes, vols=[1.0, 1.0, 1.0])
   await lh.dispense(tubes[:1], vols=[10])
 
-def test_translation():
-  """Check that translations work (or at least can run)"""
-  # Instantiate the deck.
-  deck = make_silver_deck()
-  # Serialize deck.
-  deck_data = deck.serialize()
-  # Convert to workspace.
-  deck_to_workspaces(deck_data)
+  # Cleanup.
+  await lh.stop()
 
 def test_reverse_engineering():
-  # Import the resource class
-  from pylabrobot.resources import pipettin_test_plate as test_plate
-
   # Create an instance
-  well_plate = test_plate(name="plate_01")
+  well_plate = pipettin_test_plate(name="plate_01")
   well_plate.set_well_liquids(liquids=(None, 123))
 
   dx = well_plate["A1"][0].location.x
@@ -136,8 +136,6 @@ def test_reverse_engineering():
   dz = well_plate["H1"][0].location.z
   item_dx = well_plate["A2"][0].location.x - well_plate["A1"][0].location.x
   item_dy = well_plate["A1"][0].location.y - well_plate["B1"][0].location.y
-
-  from newt.translators.utils import calculate_plr_grid_parameters, derive_grid_parameters_from_plr
 
   serialized_well_plate = well_plate.serialize()
 
@@ -155,3 +153,211 @@ def test_reverse_engineering():
   # https://assets.thermofisher.com/TFS-Assets/LSG/manuals/MAN0014419_ABgene_Storage_Plate_96well_1_2mL_QR.pdf
   assert isclose(new_params["firstWellCenterX"], 14.38)
   assert isclose(new_params["firstWellCenterY"], 11.24)
+
+def test_translation_basic():
+  """Check that translations work (or at least can run)"""
+  # Instantiate the deck.
+  deck = make_silver_deck()
+  # Serialize deck.
+  deck_data = deck.serialize()
+  # Convert to workspace.
+  deck_to_workspaces(deck_data)
+
+
+def test_translation_plr_plate():
+  """Check that translations work (or at least can run)"""
+  # Create an instance
+  well_plate = pipettin_test_plate(name="plate_01")
+  well_plate.set_well_liquids(liquids=(None, 123))
+
+  # well_plate.print_grid()
+
+  deck = Deck(size_x=300, size_y=200)
+
+  deck.assign_child_resource(well_plate, location=Coordinate(100,100,0))
+
+  # Serialize deck.
+  deck_data = deck.serialize()
+  # Convert to workspace.
+  result = deck_to_db(deck_data)
+
+  json_dump(deck_data, "/tmp/deck_original.json")
+  json_dump(result["workspaces"], "/tmp/workspaces_converted.json")
+
+def test_conversions():
+
+  # Choose the database and a workspace.
+  # workspace_name = "MK3 Baseplate"
+  workspace_name = "Basic Workspace"
+
+  # Instantiate the deck object.
+  deck = SilverDeck(db=db_location, workspace_name=workspace_name)
+
+  item_name = "Pocket PCR"
+
+  # Get the item.
+  item_resource = deck.get_resource(item_name)  # "Pocket PCR"
+
+  # Serialize the resource.
+  serialized_resource = item_resource.serialize()
+
+  # Convert the resource.
+  # data_converted = convert_custom(serialized_resource, deck.get_size_y())
+  data_converted = convert_item(serialized_resource, deck.get_size_y())
+
+  converted_item = data_converted[0]  # ["piper_item"]
+  converted_platform = data_converted[1]  # ["piper_platform"]
+  converted_containers = data_converted[2]  # ["container_data"]
+  # TODO: Allow and test descriptions.
+  converted_containers = [{k:v for k, v in cntnr.items() if k != "description"} for cntnr in converted_containers]
+
+  # Item
+  pocket_item = deepcopy(next(p for p in deck.workspace_items if p["name"] == item_resource.name))
+  if "platformData" in converted_item:
+    del converted_item["platformData"]
+  if "containerData" in converted_item:
+    del converted_item["containerData"]
+
+  # Platform
+  pocket_platform = deepcopy(next(p for p in deck.platforms if p["name"] == item_resource.model))
+  if "color" in pocket_platform:
+    del pocket_platform["color"]
+  if "description" in pocket_platform:
+    del pocket_platform["description"]
+  if "rotation" in pocket_platform:
+    del pocket_platform["rotation"]
+
+  # Containers
+  pocket_container_names = [cntnt["container"] for cntnt in pocket_item["content"] ]
+  pocket_containers = deepcopy([cntnr for cntnr in deck.containers if cntnr["name"] in pocket_container_names])
+  # Remove description.
+  pocket_containers = [{k:v for k, v in cntnr.items() if k != "description"} for cntnr in pocket_containers]
+
+  # Compare
+  diff_result = DeepDiff(
+      t1 = pocket_platform,
+      t2 = converted_platform,
+      # math_epsilon=0.001
+      number_to_string_func = format_number, significant_digits=4,
+      ignore_numeric_type_changes=True
+  )
+  if not diff_result:
+    print(f"No differences in {pocket_platform['name']} platform.")
+  else:
+    json_dump(pocket_platform, "/tmp/pocket_platform.json")
+    json_dump(converted_platform, "/tmp/pocket_converted.json")
+  # Assert that there are no differences
+  assert not diff_result, f"Differences found in platform translation of the {pocket_platform['name']} platform:\n" + \
+    pformat(diff_result) #+ "\n" + pformat(converted_platform)
+
+  # Compare
+  diff_result = DeepDiff(
+      t1 = pocket_item,
+      t2 = converted_item,
+      # math_epsilon=0.001
+      number_to_string_func = format_number, significant_digits=4,
+      ignore_numeric_type_changes=True
+  )
+  if not diff_result:
+    print(f"No differences in {converted_item['name']} item.")
+  # Assert that there are no differences
+  assert not diff_result, f"Differences found in platform translation of the {converted_item['name']} item:\n" + \
+    pformat(diff_result) # + "\n" + pformat(converted_item)
+
+  # Compare
+  diff_result = DeepDiff(
+      t1 = pocket_containers,
+      t2 = converted_containers,
+      # math_epsilon=0.001
+      number_to_string_func = format_number, significant_digits=4,
+      ignore_numeric_type_changes=True
+  )
+  if not diff_result:
+    print(f"No differences in {converted_item['name']} used containers.")
+  # Assert that there are no differences
+  assert not diff_result, f"Differences found in container translation of the {converted_item['name']} item:\n" + \
+      pformat(diff_result) # + "\n" + pformat(pocket_containers) + "\n" + pformat(converted_containers)
+
+def test_translation_advanced():
+
+  db = load_objects(db_location)["pipettin"]
+
+  # Test all workspaces.
+  workspace_names = [w["name"] for w in db["workspaces"]]
+
+  # Iterate over all workspaces.
+  for workspace_name in workspace_names:
+
+    # Instantiate the deck object.
+    deck = SilverDeck(db=db_location, workspace_name=workspace_name)
+
+    # Serialize deck.
+    deck_data = deck.serialize()
+
+    # Convert to workspace.
+    new_workspaces, new_items, new_platforms, new_containers = deck_to_workspaces(deck_data)
+    new_workspace = deepcopy(new_workspaces[0])
+    workspace = deepcopy(deck.workspace)
+
+    json_dump(new_workspaces, "/tmp/workspaces.json")
+
+    # Remove "stuff"
+    for item in new_workspace["items"]:
+      if "platformData" in item:
+        del item["platformData"]
+    scrub(new_workspace, "description")
+    scrub(workspace, "description")
+
+    # Platforms
+    platforms = deck.platforms
+    scrub(platforms, "description")
+    scrub(new_platforms, "description")
+    scrub(platforms, "color")
+    scrub(new_platforms, "color")
+    platforms = sorted(platforms, key=lambda x: x["name"]),
+    new_platforms = sorted(new_platforms, key=lambda x: x["name"]),
+    diff_result = compare(
+      platforms,
+      new_platforms,
+    )
+    assert not diff_result, "Differences found in translation of new_platforms:\n" + \
+      pformat(diff_result)
+
+    # Containers
+    containers = deck.containers
+    scrub(containers, "description")
+    scrub(new_containers, "description")
+
+    new_containers_names = [c["name"] for c in new_containers]
+    containers = [c for c in containers if c["name"] in new_containers_names]
+    containers = sorted(containers, key=lambda x: x["name"]),
+    new_containers = sorted(new_containers, key=lambda x: x["name"]),
+
+    json_dump(containers, "/tmp/object_original.json")
+    json_dump(new_containers, "/tmp/object_new.json")
+
+    # Compare
+    diff_result = compare(containers, new_containers)
+    assert not diff_result, f"Differences found in containers from {workspace_name}:\n" + \
+      pformat(diff_result, width=200)
+
+    # Workspaces
+    for item in workspace["items"]:
+      new_item = next(i for i in new_items if i["name"] == item["name"])
+
+      new_item["content"] = sorted(new_item["content"], key=lambda x: x["index"])
+      item["content"] = sorted(item["content"], key=lambda x: x["index"])
+
+      if "platformData" in new_item:
+        del new_item["platformData"]
+      if "containerData" in new_item:
+        del new_item["containerData"]
+
+      json_dump(item, "/tmp/object_original.json")
+      json_dump(new_item, "/tmp/object_new.json")
+
+      # Compare
+      diff_result = compare(t1 = item, t2 = new_item)
+      # Assert that there are no differences
+      assert not diff_result, f"Differences found in translation of item {item['name']}:\n" + \
+          pformat(diff_result, width=200) # + "\n" + pformat(pocket_containers) + "\n" + pformat(converted_containers)

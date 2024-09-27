@@ -39,6 +39,8 @@ class Resource:
     location: The location of the resource, relative to its parent.
       (see :meth:`get_absolute_location`)
     category: The category of the resource, e.g. `tips`, `plate_carrier`, etc.
+    active_z: The active height of the resource (e.g. where it activates) relative to itself.
+    shape: The shape of the resource as seen from above ("circular", "rectangular", etc.).
   """
 
   def __init__(
@@ -50,6 +52,10 @@ class Resource:
     rotation: Optional[Rotation] = None,
     category: Optional[str] = None,
     model: Optional[str] = None,
+    active_z: Optional[float] = None,
+    shape: Optional[str] = None,
+    tags: Optional[list] = None,
+    locked: Optional[bool] = None
   ):
     self._name = name
     self._size_x = size_x
@@ -59,6 +65,15 @@ class Resource:
     self.rotation = rotation or Rotation()
     self.category = category
     self.model = model
+
+    self.active_z = active_z
+    self.shape = shape
+    self.locked = locked
+    self.tags = []
+    if tags is not None:
+      self.tags = tags
+    # Compatible resources.
+    self.compatibles: List[Resource] = []
 
     self.location: Optional[Coordinate] = None
     self.parent: Optional[Resource] = None
@@ -95,7 +110,16 @@ class Resource:
       "category": self.category,
       "model": self.model,
       "children": [child.serialize() for child in self.children],
-      "parent_name": self.parent.name if self.parent is not None else None
+      "parent_name": self.parent.name if self.parent is not None else None,
+
+      # Additional properties for pipettin.
+      "active_z": self.active_z,
+      "shape": self.shape,
+      "tags": self.tags,
+      "locked": self.locked,
+      "compatibles": [
+        {"content": c["content"].serialize(), "link": c["link"]} for c in self.compatibles
+      ],
     }
 
   @property

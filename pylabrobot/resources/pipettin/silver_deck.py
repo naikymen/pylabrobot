@@ -23,11 +23,13 @@ from pylabrobot.resources import Coordinate, Deck, Resource, ResourceNotFoundErr
 
 from .tip_racks import load_ola_tip_rack
 from .tube_racks import load_ola_tube_rack, load_ola_custom
-from .anchor import load_ola_anchor
+from .anchor import load_ola_anchor, Anchor
 
 from .utils import get_items_platform, create_trash, create_petri_dish, importer_not_implemented
 from newt.translators.utils import xy_to_plr
 from newt.utils import draw_ascii_workspace
+
+from piper.datatools.datautils import load_objects
 
 class SilverDeck(Deck):
   """ (Ag)nostic deck object.
@@ -47,10 +49,13 @@ class SilverDeck(Deck):
 
   def __init__(self,
                # Create from workspace and platforms.
-               workspace: dict,
-               platforms: dict,
-               containers: dict,
-               tools: dict,
+               workspace: dict = None,
+               platforms: dict = None,
+               containers: dict = None,
+               tools: dict = None,
+               db: dict = None,
+               workspace_name: str = None,
+               db_name = "pipettin",
                default_name: str= "silver_deck",
                # TODO: Update default size.
                default_size_x: float = 250,
@@ -61,11 +66,28 @@ class SilverDeck(Deck):
                offset_origin: bool = False
                ):
 
+    if db:
+      workspace, platforms, containers, tools = self.load_objects(
+        db, db_name, workspace_name, workspace, platforms, containers, tools
+      )
+
     # Save the pipettin objects.
-    self._workspace = workspace
-    self._platforms = platforms
-    self._containers = containers
-    self.tools = tools
+    if workspace is None:
+      raise ValueError("workspace or database details not provided.")
+    else:
+      self._workspace = workspace
+    if platforms is None:
+      raise ValueError("platforms or database details not provided.")
+    else:
+      self._platforms = platforms
+    if containers is None:
+      raise ValueError("containers or database details not provided.")
+    else:
+      self._containers = containers
+    if tools is None:
+      raise ValueError("tools or database details not provided.")
+    else:
+      self.tools = tools
 
     # Default origin to zero.
     if default_origin is None:
@@ -94,6 +116,38 @@ class SilverDeck(Deck):
 
     # Load platform items.
     self.assign_platforms(workspace, platforms, containers, tools)
+
+  def load_objects(self, db_location, db_name, workspace_name: str,
+                   workspace, platforms, containers, tools, subset_platforms = True):
+    # Load the database.
+    db = load_objects(db_location)[db_name]
+
+    if workspace_name is None:
+      raise ValueError("workspace_name must be provided, and can't be None.")
+
+    # Get the workspace and discard its thumbnail.
+    if not workspace:
+      workspace = next(w for w in db["workspaces"] if w["name"] == workspace_name)
+    del workspace["thumbnail"]
+
+    # Get all platforms and containers.
+    if not platforms:
+      if subset_platforms:
+        workspace_items = workspace["items"]
+        platforms_in_workspace = [item["platform"] for item in workspace_items]
+        platforms = [p for p in db["platforms"] if p["name"] in platforms_in_workspace]
+      else:
+        platforms = db["platforms"]
+
+    # Get all containers.
+    if not containers:
+      containers = db["containers"]
+
+    # Get all tools.
+    if not tools:
+      tools = db["tools"]
+
+    return workspace, platforms, containers, tools
 
   def assign_platforms(self, workspace, platforms, containers, tools, anchors_first=True):
     """ Convert platforms to resources and add them to the deck.
@@ -134,7 +188,7 @@ class SilverDeck(Deck):
 
       if anchor_name is not None:
         # Assign as an anchor's child.
-        anchor = self.get_resource(anchor_name)
+        anchor: Anchor = self.get_resource(anchor_name)
         anchor.assign_child_resource(platform_resource)
 
       else:
