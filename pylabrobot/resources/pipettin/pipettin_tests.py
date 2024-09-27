@@ -2,18 +2,22 @@ import pytest
 from math import isclose
 from copy import deepcopy
 from pprint import pformat
+import json
 
 from deepdiff import DeepDiff
 
 from pylabrobot.liquid_handling.backends.piper_backend import PiperBackend
-from pylabrobot.resources import SilverDeck, Axy_24_DW_10ML, FourmlTF_L, Coordinate
+from pylabrobot.resources import Deck, SilverDeck, Axy_24_DW_10ML, FourmlTF_L, Coordinate
 from pylabrobot.liquid_handling import LiquidHandler
 from pylabrobot.resources import set_tip_tracking, set_volume_tracking
+from pylabrobot.resources import pipettin_test_plate
+
+from pylabrobot.resources.pipettin.utils import format_number, compare, json_dump
 
 from piper.datatools.datautils import load_objects
 from piper.utils import default_config
 
-from newt.translators.plr import deck_to_workspaces, convert_item
+from newt.translators.plr import deck_to_workspaces, convert_item, deck_to_db
 from newt.translators.utils import scrub
 from newt.translators.utils import calculate_plr_grid_parameters, derive_grid_parameters_from_plr
 
@@ -122,21 +126,9 @@ async def test_piper_backend():
   # Cleanup.
   await lh.stop()
 
-def test_translation_basic():
-  """Check that translations work (or at least can run)"""
-  # Instantiate the deck.
-  deck = make_silver_deck()
-  # Serialize deck.
-  deck_data = deck.serialize()
-  # Convert to workspace.
-  deck_to_workspaces(deck_data)
-
 def test_reverse_engineering():
-  # Import the resource class
-  from pylabrobot.resources import pipettin_test_plate as test_plate
-
   # Create an instance
-  well_plate = test_plate(name="plate_01")
+  well_plate = pipettin_test_plate(name="plate_01")
   well_plate.set_well_liquids(liquids=(None, 123))
 
   dx = well_plate["A1"][0].location.x
@@ -162,13 +154,41 @@ def test_reverse_engineering():
   assert isclose(new_params["firstWellCenterX"], 14.38)
   assert isclose(new_params["firstWellCenterY"], 11.24)
 
-def format_number(x, significant_digits=4, number_format_notation=None):
-  """function for DeepDiff's number_to_string_func argument.
-  Example:
-  format_number(3.123123), format_number(0), format_number(0.0)
-  """
-  fstring = "{0:." + str(significant_digits+1) + "g}"
-  return fstring.format(x)
+def test_translation_basic():
+  """Check that translations work (or at least can run)"""
+  # Instantiate the deck.
+  deck = make_silver_deck()
+  # Serialize deck.
+  deck_data = deck.serialize()
+  # Convert to workspace.
+  deck_to_workspaces(deck_data)
+
+
+def test_translation_plr_plate():
+  """Check that translations work (or at least can run)"""
+  # Create an instance
+  well_plate = pipettin_test_plate(name="plate_01")
+  well_plate.set_well_liquids(liquids=(None, 123))
+
+  # well_plate.print_grid()
+
+  deck = Deck(size_x=300, size_y=200)
+
+  deck.assign_child_resource(well_plate, location=Coordinate(100,100,0))
+
+  # Serialize deck.
+  deck_data = deck.serialize()
+  # Convert to workspace.
+  result = deck_to_db(deck_data)
+
+  # Write.
+  # data = json.dumps(deck_data, indent = 4)
+  # with open("deck.json", "w", encoding="utf-8") as f:
+  #   f.write(data)
+  # data = json.dumps(result, indent = 4)
+  # with open("db.json", "w", encoding="utf-8") as f:
+  #   f.write(data)
+
 
 def test_conversions():
 
@@ -229,6 +249,9 @@ def test_conversions():
   )
   if not diff_result:
     print(f"No differences in {pocket_platform['name']} platform.")
+  else:
+    json_dump(pocket_platform, "/tmp/pocket_platform.json")
+    json_dump(converted_platform, "/tmp/pocket_converted.json")
   # Assert that there are no differences
   assert not diff_result, f"Differences found in platform translation of the {pocket_platform['name']} platform:\n" + \
     pformat(diff_result) #+ "\n" + pformat(converted_platform)
@@ -260,27 +283,6 @@ def test_conversions():
   # Assert that there are no differences
   assert not diff_result, f"Differences found in container translation of the {converted_item['name']} item:\n" + \
       pformat(diff_result) # + "\n" + pformat(pocket_containers) + "\n" + pformat(converted_containers)
-
-# def sortedDeep(d):
-#   if isinstance(d,list):
-#     if len(d) > 0:
-#       if isinstance(d[0],dict):
-#         return [sortedDeep(v) for v in d]
-#     return sorted( sortedDeep(v) for v in d )
-#   if isinstance(d,dict):
-#     return { k: sortedDeep(d[k]) for k in sorted(d)}
-#   return d
-
-def compare(t1, t2):
-  # Compare
-  diff_result = DeepDiff(
-      t1 = t1, # sortedDeep(t1),
-      t2 = t2, # sortedDeep(t2),
-      # math_epsilon=0.001
-      number_to_string_func = format_number, significant_digits=4,
-      ignore_numeric_type_changes=True
-  )
-  return diff_result
 
 def test_translation_advanced():
 
@@ -327,7 +329,6 @@ def test_translation_advanced():
     assert not diff_result, "Differences found in translation of new_platforms:\n" + \
       pformat(diff_result)
 
-
     # Containers
     containers = deck.containers
     scrub(containers, "description")
@@ -338,7 +339,6 @@ def test_translation_advanced():
     containers = sorted(containers, key=lambda x: x["name"]),
     new_containers = sorted(new_containers, key=lambda x: x["name"]),
 
-    import json
     with open("/tmp/object_original.json", "w", encoding="utf-8") as f:
       f.write(json.dumps(containers, indent = 4, sort_keys=True))
     with open("/tmp/object_new.json", "w", encoding="utf-8") as f:

@@ -1,5 +1,43 @@
+import json
+
 from pylabrobot.resources import Coordinate, Trash, PetriDish, Colony
 from pylabrobot.resources.liquid import Liquid
+
+from deepdiff import DeepDiff
+
+# def sortedDeep(d):
+#   if isinstance(d,list):
+#     if len(d) > 0:
+#       if isinstance(d[0],dict):
+#         return [sortedDeep(v) for v in d]
+#     return sorted( sortedDeep(v) for v in d )
+#   if isinstance(d,dict):
+#     return { k: sortedDeep(d[k]) for k in sorted(d)}
+#   return d
+
+def json_dump(data, path, indent=4, sort_keys=True):
+  d = json.dumps(data, indent = indent, sort_keys=sort_keys)
+  with open(path, "w", encoding="utf-8") as f:
+    f.write(d)
+
+def compare(t1, t2):
+  # Compare
+  diff_result = DeepDiff(
+      t1 = t1, # sortedDeep(t1),
+      t2 = t2, # sortedDeep(t2),
+      # math_epsilon=0.001
+      number_to_string_func = format_number, significant_digits=4,
+      ignore_numeric_type_changes=True
+  )
+  return diff_result
+
+def format_number(x, significant_digits=4, number_format_notation=None):
+  """function for DeepDiff's number_to_string_func argument.
+  Example:
+  format_number(3.123123), format_number(0), format_number(0.0)
+  """
+  fstring = "{0:." + str(significant_digits+1) + "g}"
+  return fstring.format(x)
 
 def get_fitting_depth(tools_data: dict, tip_container_id: str):
   fitting_depths = {}
