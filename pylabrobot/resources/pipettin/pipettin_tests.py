@@ -181,14 +181,8 @@ def test_translation_plr_plate():
   # Convert to workspace.
   result = deck_to_db(deck_data)
 
-  # Write.
-  # data = json.dumps(deck_data, indent = 4)
-  # with open("deck.json", "w", encoding="utf-8") as f:
-  #   f.write(data)
-  # data = json.dumps(result, indent = 4)
-  # with open("db.json", "w", encoding="utf-8") as f:
-  #   f.write(data)
-
+  json_dump(deck_data, "/tmp/deck_original.json")
+  json_dump(result["workspaces"], "/tmp/workspaces_converted.json")
 
 def test_conversions():
 
@@ -287,11 +281,9 @@ def test_conversions():
 def test_translation_advanced():
 
   db = load_objects(db_location)["pipettin"]
-  workspace_names = [w["name"] for w in db["workspaces"]]
 
-  # Choose the database and a workspace.
-  # workspace_name = "Basic Workspace"
-  # workspace_name = "MK3 Baseplate"
+  # Test all workspaces.
+  workspace_names = [w["name"] for w in db["workspaces"]]
 
   # Iterate over all workspaces.
   for workspace_name in workspace_names:
@@ -306,6 +298,8 @@ def test_translation_advanced():
     new_workspaces, new_items, new_platforms, new_containers = deck_to_workspaces(deck_data)
     new_workspace = deepcopy(new_workspaces[0])
     workspace = deepcopy(deck.workspace)
+
+    json_dump(new_workspaces, "/tmp/workspaces.json")
 
     # Remove "stuff"
     for item in new_workspace["items"]:
@@ -339,10 +333,8 @@ def test_translation_advanced():
     containers = sorted(containers, key=lambda x: x["name"]),
     new_containers = sorted(new_containers, key=lambda x: x["name"]),
 
-    with open("/tmp/object_original.json", "w", encoding="utf-8") as f:
-      f.write(json.dumps(containers, indent = 4, sort_keys=True))
-    with open("/tmp/object_new.json", "w", encoding="utf-8") as f:
-      f.write(json.dumps(new_containers, indent = 4, sort_keys=True))
+    json_dump(containers, "/tmp/object_original.json")
+    json_dump(new_containers, "/tmp/object_new.json")
 
     # Compare
     diff_result = compare(containers, new_containers)
@@ -358,11 +350,11 @@ def test_translation_advanced():
 
       if "platformData" in new_item:
         del new_item["platformData"]
+      if "containerData" in new_item:
+        del new_item["containerData"]
 
-      with open("/tmp/object_original.json", "w", encoding="utf-8") as f:
-        f.write(json.dumps(item, indent = 4, sort_keys=True))
-      with open("/tmp/object_new.json", "w", encoding="utf-8") as f:
-        f.write(json.dumps(new_item, indent = 4, sort_keys=True))
+      json_dump(item, "/tmp/object_original.json")
+      json_dump(new_item, "/tmp/object_new.json")
 
       # Compare
       diff_result = compare(t1 = item, t2 = new_item)
