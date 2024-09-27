@@ -267,8 +267,8 @@ class PiperBackend(LiquidHandlerBackend):
 
       # Wait for idle printer.
       return await self.controller.wait_for_idle_printer(timeout=1.0)
-    else:
-      print(f"Backend in dry mode, commands ignored:\n{pformat(gcode)}")
+    # else:
+    #   print(f"Backend in dry mode, commands ignored:\n{pformat(gcode)}")
 
   # Action generators ####
   @staticmethod
@@ -376,6 +376,7 @@ class PiperBackend(LiquidHandlerBackend):
     return gcode_list
 
   async def run_gcode(self, gcode_list:list, timeout:float):
+    print(f"Backend in dry mode: {len(gcode_list)} commands will be ignored.")
     for gcode in gcode_list:
       await self._send_command_wait_and_check(gcode, timeout=timeout)
 
