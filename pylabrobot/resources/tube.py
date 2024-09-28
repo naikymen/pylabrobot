@@ -11,8 +11,10 @@ class Tube(Container):
       """
 
   def __init__(self, name: str, size_x: float, size_y: float, size_z: float, max_volume: float,
-               material_z_thickness: Optional[float] = None, category: str = "tube",
-               model: Optional[str] = None):
+               material_z_thickness: Optional[float] = None,
+               category: str = "tube",      # container type: "tip"
+               model: Optional[str] = None  # container ID: "200 uL Tip Tarsons"
+               ):
     """ Create a new tube.
 
     Args:
