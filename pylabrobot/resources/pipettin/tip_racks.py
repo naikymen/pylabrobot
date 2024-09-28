@@ -78,6 +78,7 @@ def load_ola_tip_rack(
     tip_container_id = container_data["name"]
     # Get fitting depths.
     fitting_depth = get_fitting_depth(tools_data, tip_container_id)
+    # Generate a Tip.
     compatible_tip = Tip(
       has_filter=False,
       total_tip_length=container_data["length"],
@@ -87,6 +88,7 @@ def load_ola_tip_rack(
       model=tip_container_id
     )
     compatible_tip.active_z = container_data["activeHeight"]
+    # Save the compatible tip's data.
     compatible_tips.append({
       "content": compatible_tip,
       # Save the "containerOffsetZ" here, to restore it later on export.
@@ -185,6 +187,7 @@ def load_ola_tip_rack(
       # # TODO: Names must be unique. This should be checked for tips and tubes.
       name=content["name"]
     )
+    new_tip.active_z = container_data["activeHeight"]
 
     # Get the tip's position indexes.
     # NOTE: "i" for "Y/rows", and "j" for "X/columns".
