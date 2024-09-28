@@ -290,14 +290,14 @@ class PiperBackend(LiquidHandlerBackend):
     for op, ch in zip(operations, use_channels):
 
       # Get the index of the TipSpot in the TipRack.
-      tip_spot_index = self.get_spot_index(op.resource)
+      content_index = self.get_spot_index(op.resource) + 1
 
       # Make the action.
       pick_up_tip_action = newt.protocol_actions.action_pick_tip(
         tool=self._channels[ch],
         item=op.resource.parent.name,
         # NOTE: Can't use names because PLR Tips don't have one.
-        value=tip_spot_index, select_by="index"
+        value=content_index, select_by="index"
       )
       pick_up_tip_actions.append(pick_up_tip_action)
 
@@ -313,19 +313,21 @@ class PiperBackend(LiquidHandlerBackend):
       # Get the correct item name.
       # NOTE: PLR may pass a "Trash" or "TipSpot" resource to a Drop operation.
       if isinstance(op.resource, TipSpot):
-        item_name = op.resource.parent.name
-        content_name = op.resource.name
+        # Rack name.
+        item_name, select_by = op.resource.parent.name, "index"
+        # Get the index of the TipSpot in the TipRack.
+        value = self.get_spot_index(op.resource)
       else:
         # NOTE: Probably "Trash".
-        item_name = op.resource.name
-        content_name = None
+        item_name, select_by = op.resource.name, "name"
+        value = None
 
       # TODO: Check if piper needs any more stuff from the "operation".
       discard_tip_action = newt.protocol_actions.action_discard_tip(
         tool=self._channels[ch],
         # NOTE: Piper will deduce the type of drop location on its own.
-        item=item_name,
-        value=content_name, select_by="name"
+        item=item_name, select_by=select_by,
+        value=value,
       )
       discard_tip_actions.append(discard_tip_action)
 
@@ -337,12 +339,18 @@ class PiperBackend(LiquidHandlerBackend):
     pipetting_actions = []
     for op, ch in zip(operations, use_channels):
 
-      # Get the correct item name.
+      # Get the correct tube spot.
       if isinstance(op.resource, PiperTube):
-        # NOTE: Tubes are nested in TubeSpots.
-        item_name = op.resource.parent.parent.name
+        # NOTE: Tubes are nested in TubeSpots in my custom TubeRack.
+        spot = op.resource.parent
       else:
-        item_name = op.resource.parent.name
+        # Regular PLR tubes and wells are not in spots.
+        spot = op.resource
+
+      # Get the item name.
+      item_name = spot.parent.name
+      # Get the index of the spot in the parent.
+      content_index = self.get_spot_index(spot) + 1
 
       # Choose the appropriate action function.
       if isinstance(op, Dispense):
@@ -359,7 +367,8 @@ class PiperBackend(LiquidHandlerBackend):
                 tool=self._channels[ch],
                 # NOTE: Piper will deduce the type of drop location on its own.
                 item=item_name,
-                value=op.resource.name, select_by="name"
+                # value=op.resource.name, select_by="name"
+                value=content_index, select_by="index"
               )
       # Save it to the list.
       pipetting_actions.append(pipetting_action)
