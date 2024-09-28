@@ -296,40 +296,32 @@ def test_translation_advanced():
     new_workspaces, new_items, new_platforms, new_containers = deck_to_workspaces(deck_data)
     new_workspace = deepcopy(new_workspaces[0])
     workspace = deepcopy(deck.workspace)
-
-    json_dump(new_workspaces, "/tmp/workspaces.json")
-
-    # Remove "stuff"
-    for item in new_workspace["items"]:
-      if "platformData" in item:
-        del item["platformData"]
-    scrub(new_workspace, "description")
-    scrub(workspace, "description")
-
-    # Platforms
     platforms = deck.platforms
-    scrub(platforms, "description")
-    scrub(new_platforms, "description")
-    scrub(platforms, "color")
-    scrub(new_platforms, "color")
-    platforms = sorted(platforms, key=lambda x: x["name"]),
-    new_platforms = sorted(new_platforms, key=lambda x: x["name"]),
+    containers = deck.containers
+
+    json_dump([deck.workspace], "/tmp/workspaces_orig.json")
+    json_dump(new_workspaces, "/tmp/workspaces_new.json")
+
+    json_dump(deck.platforms, "/tmp/platforms_orig.json")
+    json_dump(new_platforms, "/tmp/platforms_new.json")
+
+    # Remove "stuff".
+    scrub([workspace, new_workspace, containers, new_containers, platforms, new_platforms],
+           "description")
+    scrub([platforms, new_platforms], "color")
+
+    # Compare.
     diff_result = compare(
       platforms,
       new_platforms,
     )
-    assert not diff_result, "Differences found in translation of new_platforms:\n" + \
+    # Test.
+    assert not diff_result, f"Differences found in translation of platforms in '{workspace_name}':\n" + \
       pformat(diff_result)
 
     # Containers
-    containers = deck.containers
-    scrub(containers, "description")
-    scrub(new_containers, "description")
-
     new_containers_names = [c["name"] for c in new_containers]
     containers = [c for c in containers if c["name"] in new_containers_names]
-    containers = sorted(containers, key=lambda x: x["name"]),
-    new_containers = sorted(new_containers, key=lambda x: x["name"]),
 
     json_dump(containers, "/tmp/object_original.json")
     json_dump(new_containers, "/tmp/object_new.json")
@@ -343,16 +335,14 @@ def test_translation_advanced():
     for item in workspace["items"]:
       new_item = next(i for i in new_items if i["name"] == item["name"])
 
-      new_item["content"] = sorted(new_item["content"], key=lambda x: x["index"])
-      item["content"] = sorted(item["content"], key=lambda x: x["index"])
+      json_dump(item, "/tmp/object_original.json")
+      json_dump(new_item, "/tmp/object_new.json")
 
+      # These are not in the direct database export.
       if "platformData" in new_item:
         del new_item["platformData"]
       if "containerData" in new_item:
         del new_item["containerData"]
-
-      json_dump(item, "/tmp/object_original.json")
-      json_dump(new_item, "/tmp/object_new.json")
 
       # Compare
       diff_result = compare(t1 = item, t2 = new_item)

@@ -745,6 +745,10 @@ def load_ola_tube_rack(
     # item_size_y=platform_data["wellSeparationY"],
   )
 
+  # Set "active_z" in the default spots to "containerOffsetZ".
+  for spot in ordered_items.values():
+    spot.active_z = default_link["containerOffsetZ"]
+
   # Guess the shape of the platform.
   size_x, size_y, shape = guess_shape(platform_data)
 
@@ -807,16 +811,20 @@ def load_ola_tube_rack(
     i, j = content["position"]["row"]-1, content["position"]["col"]-1
     # Get the TubeSpot.
     tube_spot: TubeSpot = tube_rack_item.get_item((i, j))
+
+    # Get the offset for this specific tip model.
+    container_offset_z = next(link["containerOffsetZ"]
+                              for link in linked_containers
+                              if link["container"] == container_data["name"])
+    # Override the default "active_z" set before.
+    tube_spot.active_z = container_offset_z
+
     # Add the Tube to the tracker.
     tube_spot.tracker.add_tube(new_tube, commit=True)
+
     # Add the Tube to the TubeSpot as a child resource.
     # NOTE: This is required, otherwise it does not show up in the deck by name.
     tube_spot.assign_child_resource(new_tube, location=Coordinate(0,0,0))
-
-  # Save the platform's active height such that "container_offset_z" can
-  # be recovered later on (e.g. during an export) with the following formula:
-  #   "container_offset_z = tube_rack_item.active_z - tube_spot.location.z"
-  tube_rack_item.active_z = platform_data["activeHeight"]
 
   return tube_rack_item
 

@@ -20,14 +20,15 @@ def json_dump(data, path, indent=4, sort_keys=True):
   with open(path, "w", encoding="utf-8") as f:
     f.write(d)
 
-def compare(t1, t2):
+def compare(t1, t2, ignore_order=True):
   # Compare
   diff_result = DeepDiff(
       t1 = t1, # sortedDeep(t1),
       t2 = t2, # sortedDeep(t2),
       # math_epsilon=0.001
       number_to_string_func = format_number, significant_digits=4,
-      ignore_numeric_type_changes=True
+      ignore_numeric_type_changes=True,
+      ignore_order=ignore_order
   )
   return diff_result
 
