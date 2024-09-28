@@ -136,6 +136,12 @@ def load_ola_tip_rack(
     # There are however, "tube spots" in pipettin, which I don't know how to accommodate.
   )
 
+  # Set "active_z" in the default spots to "containerOffsetZ".
+  for spot in ordered_items.values():
+    # from pprint import pprint
+    # pprint(default_link)
+    spot.active_z = default_link["containerOffsetZ"]
+
   # Guess the shape of the platform.
   size_x, size_y, shape = guess_shape(platform_data)
 
@@ -198,18 +204,17 @@ def load_ola_tip_rack(
     tip_spot.tracker.add_tip(new_tip, commit=True)
 
     # Get the offset for this specific tip model.
-    container_offset_z = next(pc["containerOffsetZ"]
-                              for pc in linked_containers
-                              if pc["container"] == tip_container_id)
+    container_offset_z = next(link["containerOffsetZ"]
+                              for link in linked_containers
+                              if link["container"] == tip_container_id)
+
+    # Override the default "active_z" set before.
+    tip_spot.active_z = container_offset_z
+
     # Fix the Z coordinate applying the offset
     # of this particular tip.
     tip_spot.location.z = platform_data["activeHeight"]
     tip_spot.location.z -= container_offset_z
-
-  # Save the platform's active height such that "container_offset_z" can
-  # be recovered later on (e.g. during an export) with the following formula:
-  #   "container_offset_z = tip_rack_item.active_z - tip_spot.location.z"
-  tip_rack_item.active_z = platform_data["activeHeight"]
 
   return tip_rack_item
 
