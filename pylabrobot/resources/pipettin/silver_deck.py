@@ -90,7 +90,7 @@ class SilverDeck(Deck):
     self._workspace = workspace
     self._platforms = platforms
     self._containers = containers
-      self.tools = tools
+    self.tools = tools
 
     # Default origin to zero.
     if default_origin is None:
@@ -131,7 +131,7 @@ class SilverDeck(Deck):
         raise ValueError("workspace_name must be provided, and can't be None.")
       workspace = next(w for w in db["workspaces"] if w["name"] == workspace_name)
     if "thumbnail" in workspace:
-    del workspace["thumbnail"]
+      del workspace["thumbnail"]
 
     # Get all platforms and containers.
     if platforms is None:
@@ -293,3 +293,23 @@ class SilverDeck(Deck):
 
   def __str__(self):
     return self.summary()
+
+def make_silver(
+  db_location = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/databases.json',
+  workspace_name = "Basic Workspace",
+  empty=False,
+  ):
+  # Load objects.
+  db = load_objects(db_location)
+  workspace = next(w for w in db["pipettin"]["workspaces"] if w["name"] == workspace_name)
+  # Remove items.
+  if empty:
+    workspace["items"] = []
+  # Instantiate the deck object.
+  deck = SilverDeck(
+    db=db,
+    workspace=workspace,
+    subset_platforms=False
+  )
+
+  return deck
