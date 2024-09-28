@@ -17,6 +17,7 @@ Have fun!
 
 import textwrap
 from copy import deepcopy
+from pprint import pprint
 # from typing import Optional, Callable
 
 from pylabrobot.resources import Coordinate, Deck, Resource, ResourceNotFoundError
@@ -27,6 +28,7 @@ from .anchor import load_ola_anchor, Anchor
 
 from .utils import get_items_platform, create_trash, create_petri_dish, importer_not_implemented
 from newt.translators.utils import xy_to_plr
+from newt.translators.plr import deck_to_db
 from newt.utils import draw_ascii_workspace
 
 from piper.datatools.datautils import load_objects
@@ -53,41 +55,42 @@ class SilverDeck(Deck):
                platforms: dict = None,
                containers: dict = None,
                tools: dict = None,
+               # Alternatively, import them from a DB.
                db: dict = None,
-               workspace_name: str = None,
                db_name = "pipettin",
+               workspace_name: str = None,
+               # TODO: Update defaults.
                default_name: str= "silver_deck",
-               # TODO: Update default size.
                default_size_x: float = 250,
                default_size_y: float = 350,
                default_size_z: float = 200,
                # TODO: Update default origin.
                default_origin: Coordinate = None,
-               offset_origin: bool = False
+               offset_origin: bool = False,
+               # Subset platforms on load.
+               subset_platforms=True
                ):
 
     if db:
       workspace, platforms, containers, tools = self.load_objects(
-        db, db_name, workspace_name, workspace, platforms, containers, tools
+        db, db_name, workspace_name,
+        workspace, platforms, containers, tools,
+        subset_platforms
       )
 
     # Save the pipettin objects.
     if workspace is None:
       raise ValueError("workspace or database details not provided.")
-    else:
-      self._workspace = workspace
     if platforms is None:
       raise ValueError("platforms or database details not provided.")
-    else:
-      self._platforms = platforms
     if containers is None:
       raise ValueError("containers or database details not provided.")
-    else:
-      self._containers = containers
     if tools is None:
       raise ValueError("tools or database details not provided.")
-    else:
-      self.tools = tools
+    self._workspace = workspace
+    self._platforms = platforms
+    self._containers = containers
+    self.tools = tools
 
     # Default origin to zero.
     if default_origin is None:
@@ -95,12 +98,12 @@ class SilverDeck(Deck):
 
     # Get the padding.
     self.offset_origin = offset_origin
-    self.workspace_padding = workspace.get("padding", None)
-    if self.workspace_padding and self.offset_origin:
+    self.padding = workspace.get("padding", None)
+    if self.padding and self.offset_origin:
       # Offset origin by the workspace's padding.
       origin = Coordinate(
-        x=self.workspace_padding["left"],
-        y=self.workspace_padding["right"],
+        x=self.padding["left"],
+        y=self.padding["right"],
         z=default_origin.z
       )
     else:
@@ -122,32 +125,38 @@ class SilverDeck(Deck):
     # Load the database.
     db = load_objects(db_location)[db_name]
 
-    if workspace_name is None:
-      raise ValueError("workspace_name must be provided, and can't be None.")
-
     # Get the workspace and discard its thumbnail.
-    if not workspace:
+    if workspace is None:
+      if workspace_name is None:
+        raise ValueError("workspace_name must be provided, and can't be None.")
       workspace = next(w for w in db["workspaces"] if w["name"] == workspace_name)
-    del workspace["thumbnail"]
+    if "thumbnail" in workspace:
+      del workspace["thumbnail"]
 
     # Get all platforms and containers.
-    if not platforms:
+    if platforms is None:
       if subset_platforms:
-        workspace_items = workspace["items"]
+        workspace_items = workspace.get("items", [])
         platforms_in_workspace = [item["platform"] for item in workspace_items]
         platforms = [p for p in db["platforms"] if p["name"] in platforms_in_workspace]
       else:
         platforms = db["platforms"]
 
     # Get all containers.
-    if not containers:
+    if containers is None:
       containers = db["containers"]
 
     # Get all tools.
-    if not tools:
+    if tools is None:
       tools = db["tools"]
 
     return workspace, platforms, containers, tools
+
+  def serialize(self):
+    return {
+      **super().serialize(),
+      "padding": self.padding
+    }
 
   def assign_platforms(self, workspace, platforms, containers, tools, anchors_first=True):
     """ Convert platforms to resources and add them to the deck.
@@ -264,16 +273,43 @@ class SilverDeck(Deck):
 
     kwargs.setdefault("indent", 4)
 
+    d = self.serialize()
+    db = deck_to_db(d)
+    workspace = db["workspaces"][0]
+    platforms = db["platforms"]
+
+    ascii_workspace = draw_ascii_workspace(workspace, platforms, **kwargs)[kwargs["indent"]:]
+
     ascii_dck = textwrap.dedent(f"""
     {self.name}: {self.get_size_x()}mm x {self.get_size_y()}mm x {self.get_size_z()}mm (XYZ)
-    {draw_ascii_workspace(self.workspace, self.platforms, **kwargs)[kwargs["indent"]:]}
+    {ascii_workspace}
     Origin: {self.location}
     """)
 
-    if self.workspace_padding and self.offset_origin:
-      ascii_dck += f"\nPadding: {self.workspace_padding}"
+    if self.padding and self.offset_origin:
+      ascii_dck += f"\nPadding: {self.padding}"
 
-    return ascii_dck
+    print(ascii_dck)
 
   def __str__(self):
     return self.summary()
+
+def make_silver(
+  db_location = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/databases.json',
+  workspace_name = "Basic Workspace",
+  empty=False,
+  ):
+  # Load objects.
+  db = load_objects(db_location)
+  workspace = next(w for w in db["pipettin"]["workspaces"] if w["name"] == workspace_name)
+  # Remove items.
+  if empty:
+    workspace["items"] = []
+  # Instantiate the deck object.
+  deck = SilverDeck(
+    db=db,
+    workspace=workspace,
+    subset_platforms=False
+  )
+
+  return deck

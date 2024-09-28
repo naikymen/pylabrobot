@@ -40,7 +40,8 @@ class Well(Container):
     size_x: float, size_y: float, size_z: float,
     material_z_thickness: Optional[float] = None,
     bottom_type: Union[WellBottomType, str] = WellBottomType.UNKNOWN,
-    category: str = "well", model: Optional[str] = None,
+    category: str = "well",       # container type: "tip"
+    model: Optional[str] = None,  # container ID: "200 uL Tip Tarsons"
     max_volume: Optional[float] = None,
     compute_volume_from_height: Optional[Callable[[float], float]] = None,
     compute_height_from_volume: Optional[Callable[[float], float]] = None,
@@ -93,6 +94,8 @@ class Well(Container):
       **super().serialize(),
       "bottom_type": self.bottom_type.value,
       "cross_section_type": self.cross_section_type.value,
+      # TODO: Refactor the conversion to pipettin to use "serialize_state" instead.
+      "well_tracker": self.tracker.serialize()
     }
 
   def set_liquids(self, liquids: List[Tuple[Optional["Liquid"], float]]):

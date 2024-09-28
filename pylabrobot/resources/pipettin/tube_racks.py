@@ -10,7 +10,8 @@ from pylabrobot.resources.resource import Resource, Coordinate, Rotation
 from pylabrobot.resources.itemized_resource import ItemizedResource
 from pylabrobot.resources.utils import create_ordered_items_2d
 
-from newt.translators.utils import rack_to_plr_dxdydz, xy_to_plr, guess_shape
+from newt.translators.utils import rack_to_plr_dxdydz, xy_to_plr
+from newt.utils import guess_shape
 from .utils import get_contents_container
 
 # TODO: There is already a "Tube" class. Try integrating it to the one below.

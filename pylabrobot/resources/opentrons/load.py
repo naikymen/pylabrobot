@@ -250,5 +250,9 @@ def load_shared_opentrons_resource(
 
   """
 
+  if not USE_OT:
+    raise ImportError("opentrons_shared_data is not installed. "
+                      "run `pip install opentrons_shared_data`")
+
   data = opentrons_shared_data.labware.load_definition(definition, version)
   return ot_definition_to_resource(data, name)
