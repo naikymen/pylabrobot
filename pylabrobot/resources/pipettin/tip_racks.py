@@ -4,7 +4,8 @@ from pylabrobot.resources.tip_rack import TipRack, TipSpot
 from pylabrobot.resources.tip import Tip
 from pylabrobot.resources.resource import Rotation, Coordinate
 from .utils import get_contents_container, get_fitting_depth
-from newt.translators.utils import rack_to_plr_dxdydz, guess_shape
+from newt.translators.utils import rack_to_plr_dxdydz
+from newt.utils import guess_shape
 
 def load_ola_tip_rack(
   deck: "SilverDeck",
