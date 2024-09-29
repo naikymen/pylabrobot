@@ -33,6 +33,8 @@ from newt.utils import draw_ascii_workspace
 
 from piper.datatools.datautils import load_objects
 
+pipettin_db_url = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/databases.json'
+
 class SilverDeck(Deck):
   """ (Ag)nostic deck object.
 
