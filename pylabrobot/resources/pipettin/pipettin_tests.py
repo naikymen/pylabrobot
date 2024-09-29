@@ -18,7 +18,9 @@ from piper.datatools.datautils import load_objects
 from piper.utils import default_config
 
 from newt.translators.plr import deck_to_workspaces, convert_item, deck_to_db
-from newt.translators.utils import scrub
+from newt.translators.utils import (
+  scrub, calculate_plr_dz_tip, calculate_plr_dz_tube, calculate_plr_dz_slot
+)
 from newt.translators.utils import calculate_plr_grid_parameters, derive_grid_parameters_from_plr
 
 # Example using exported data.
@@ -349,3 +351,87 @@ def test_translation_advanced():
       # Assert that there are no differences
       assert not diff_result, f"Differences found in translation of item {item['name']}:\n" + \
           pformat(diff_result, width=200) # + "\n" + pformat(pocket_containers) + "\n" + pformat(converted_containers)
+
+def test_tip_z_calculation():
+
+  # We enable tip and volume tracking globally using the `set_volume_tracking` and `set_tip_tracking` methods.
+  set_volume_tracking(enabled=True)
+  set_tip_tracking(enabled=True)
+
+  # Get objects.
+  deck = SilverDeck(db=db_location, workspace_name="MK3 Baseplate")
+  rack = deck.get_resource("Blue tip rack")
+  spots = rack.get_all_items()
+
+  # tip_spot = rack.get_item("H1")
+  for spot in spots:
+    if spot.has_tip():
+      tip = spot.get_tip()
+
+      # Get the container ID of the tip.
+      container = next(c for c in deck.containers if c["name"] == tip.model)
+      rack_platform = next(p for p in deck.platforms if p["name"] == rack.name)
+      container_link = next(l for l in rack_platform["containers"]
+                            if l["container"] == container["name"])
+
+      spot_Z = calculate_plr_dz_tip(rack_platform, container_link)
+      # spot_Z = rack_platform["activeHeight"] - container_offset_z
+
+      assert isclose(spot.location.z, spot_Z), f"spot_Z check failed for {rack.name} in {deck.name}"
+
+
+def test_tube_z_calculation():
+
+  # We enable tip and volume tracking globally using the `set_volume_tracking` and `set_tip_tracking` methods.
+  set_volume_tracking(enabled=True)
+  set_tip_tracking(enabled=True)
+
+  # Get objects.
+  deck = SilverDeck(db=db_location, workspace_name="MK3 Baseplate")
+  rack = deck.get_resource("Tube Rack [5x16]")
+  spots = rack.get_all_items()
+
+  # tip_spot = rack.get_item("H1")
+  for spot in spots:
+    if spot.has_tube():
+      tube = spot.get_tube()
+
+      # Get the container ID of the tube.
+      container = next(c for c in deck.containers if c["name"] == tube.model)
+      rack_platform = next(p for p in deck.platforms if p["name"] == rack.name)
+      container_link = next(l for l in rack_platform["containers"]
+                            if l["container"] == container["name"])
+
+      spot_Z = calculate_plr_dz_tube(rack_platform, container_link, container)
+      # spot_Z = rack_platform["activeHeight"] - container_offset_z
+
+      assert isclose(spot.location.z, spot_Z), f"spot_Z check failed for {rack.name} in {deck.name}"
+
+def test_slot_z_calculation():
+
+  # We enable tip and volume tracking globally using the `set_volume_tracking` and `set_tip_tracking` methods.
+  set_volume_tracking(enabled=True)
+  set_tip_tracking(enabled=True)
+
+  # Get objects.
+  workspace_name = "Basic Workspace"
+  item_name = "Pocket PCR"
+  deck = SilverDeck(db=db_location, workspace_name=workspace_name)
+  custom = deck.get_resource(item_name)
+  spots = custom.get_all_items()
+
+  # tip_spot = rack.get_item("H1")
+  for spot in spots:
+    if spot.has_tube():
+      tube = spot.get_tube()
+
+      item = next(p for p in deck.workspace["items"] if p["name"] == custom.name)
+      platform = next(p for p in deck.platforms if p["name"] == item["platform"])
+      content = next(c for c in item["content"] if c["name"] == tube.name)
+      container = next(c for c in deck.containers if c["name"] == content["container"])
+      slot = platform["slots"][content["index"] - 1]
+      link = next(l for l in slot["containers"] if l["container"] == container["name"])
+
+      spot_z = calculate_plr_dz_slot(platform, slot, link, container)
+
+      assert isclose(tube.parent.location.z, spot_z), f"spot_Z check failed for {custom.name} in {deck.name}"
