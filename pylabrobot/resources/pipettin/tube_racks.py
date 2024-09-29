@@ -829,7 +829,11 @@ def load_ola_tube_rack(
   return tube_rack_item
 
 class CustomPlatform(Resource):
-  pass
+  def __getitem__(self, item):
+    """Override the indexer operator "[]" to get children with a simpler syntax."""
+    if isinstance(item, int):
+      return self.children[item]
+    return self.get_resource(item)
 
 def load_ola_custom(deck: "SilverDeck",
                     platform_item: dict,

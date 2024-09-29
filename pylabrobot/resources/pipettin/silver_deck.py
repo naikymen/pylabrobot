@@ -216,6 +216,12 @@ class SilverDeck(Deck):
     # Done!
     return platform_resource
 
+  def __getitem__(self, item):
+    """Override the indexer operator "[]" to get children with a simpler syntax."""
+    if isinstance(item, int):
+      return self.children[item]
+    return self.get_resource(item)
+
   def get_resource(self, name: str, resources_list=None, parent=None, recursing=False) -> Resource:
     """ Returns the resource with the given name, recursively scanning children.
 
