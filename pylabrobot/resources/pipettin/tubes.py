@@ -1,9 +1,10 @@
 import math
-from typing import Optional, Callable, cast
+from typing import Optional, Callable, cast, Dict, Any
 
 from pylabrobot.serializer import deserialize
 from pylabrobot.resources.container import Container
 from pylabrobot.resources.liquid import Liquid
+from pylabrobot.resources.resource import Resource
 
 # TODO: There is already a "Tube" class. Try integrating it to the one below.
 # from pylabrobot.resources.tube import Tube
@@ -354,3 +355,94 @@ class TubeTracker:
   def register_callback(self, callback: TrackerCallback) -> None:
     self._callback = callback
 
+
+# TODO: I really don't know what this does at all. It mimics "TipCreator".
+TubeCreator = Callable[[], Tube]
+# TODO: Consider writing a "TubeSpot" class.
+#       Issues: probably requires a "SpotTubeTracker" tracker class,
+#       which I don't know how to implement.
+class TubeSpot(Resource):
+  """ A tube spot, a location in a tube rack where there may or may not be a tube. """
+
+  def __init__(self, name: str, size_x: float, size_y: float, make_tube: TubeCreator,
+    size_z: float = 0, category: str = "tube_spot", **kwargs):
+    """ Initialize a tube spot.
+
+    Args:
+      name: the name of the tube spot.
+      size_x: the size of the tube spot in the x direction.
+      size_y: the size of the tube spot in the y direction.
+      size_z: the size of the tube spot in the z direction.
+      make_tube: a function that creates a tube for the tube spot.
+      category: the category of the tube spot.
+    """
+
+    super().__init__(name, size_x=size_y, size_y=size_x, size_z=size_z,
+      category=category, **kwargs)
+    # TODO: Write a "TubeTracker" similar to "TipTracker".
+    self.tracker = TubeTracker(thing="Tube spot")
+    self.parent: Optional["TubeRack"] = None
+
+    self.make_tube = make_tube
+
+    self.tracker.register_callback(self._state_updated)
+
+  def get_tube(self) -> Tube:
+    """ Get a tube from the tube spot. """
+
+    # TODO: Ask Rick about this and re-enable it.
+    # Tracker will raise an error if there is no tube.
+    # We spawn a new tube if tube tracking is disabled
+    # tracks = does_tip_tracking() and not self.tracker.is_disabled
+    # if not self.tracker.has_tip and not tracks:
+    #   self.tracker.add_tube(self.make_tube())
+
+    return self.tracker.get_tube()
+
+  def has_tube(self) -> bool:
+    """ Check if the tube spot has a tube. """
+    return self.tracker.has_tube
+
+  def empty(self) -> None:
+    """ Empty the tube spot. """
+    self.tracker.remove_tube()
+
+  def serialize(self) -> dict:
+    """ Serialize the tube spot. """
+    return {
+      **super().serialize(),
+      "prototype_tube": self.make_tube().serialize(),
+      # Add info about the tip. Is there one or not?
+      # TODO: This may be a hack. Review "tip_tracker.py" and "tip.py".
+      "tube_tracker": self.tracker.serialize()
+    }
+
+  @classmethod
+  def deserialize(cls, data: dict) -> "TubeSpot":
+    """ Deserialize a tube spot. """
+    tube_data = data["prototype_tube"]
+    def make_tube() -> Tube:
+      return cast(Tube, deserialize(tube_data))
+
+    tube_spot = cls(
+      name=data["name"],
+      size_x=data["size_x"],
+      size_y=data["size_y"],
+      size_z=data["size_z"],
+      make_tube=make_tube,
+      category=data.get("category", "tube_spot")
+    )
+
+    # Add the tube.
+    # TODO: This may be a hack. Review "tip_tracker.py" and "tip.py".
+    #       For example, it does not restore liquid history.
+    if data.get("tube_tracker", {}).get(["tube"], None):
+      tube_spot.tracker.add_tube(tube_spot.make_tip())
+
+    return tube_spot
+
+  def serialize_state(self) -> Dict[str, Any]:
+    return self.tracker.serialize()
+
+  def load_state(self, state: Dict[str, Any]):
+    self.tracker.load_state(state)
