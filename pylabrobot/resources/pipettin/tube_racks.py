@@ -10,7 +10,9 @@ from pylabrobot.resources.resource import Resource, Coordinate, Rotation
 from pylabrobot.resources.itemized_resource import ItemizedResource
 from pylabrobot.resources.utils import create_ordered_items_2d
 
-from newt.translators.utils import rack_to_plr_dxdydz, xy_to_plr
+from newt.translators.utils import (
+  rack_to_plr_dxdy, xy_to_plr, calculate_plr_dz_tube, calculate_plr_dz_slot
+)
 from newt.utils import guess_shape
 from .utils import get_contents_container
 
@@ -713,8 +715,12 @@ def load_ola_tube_rack(
   # First spot offsets.
   # TODO: Override "dz"/default_link the the appropriate offset for each tube.
   default_link = linked_containers[0]
+  default_container_data = get_contents_container(link, containers_data)
   # Prepare parameters for "create_ordered_items_2d".
-  dx, dy, dz = rack_to_plr_dxdydz(platform_data, default_link)
+  dx, dy = rack_to_plr_dxdy(platform_data, default_link)
+  # NOTE: According to Rick and the sources, the "Z of a TipSpot" is the "Z of the tip's tip" when
+  # the tip is in its spot, relative to the base of the tip rack (I guessed this last part).
+  default_dz = calculate_plr_dz_tube(platform_data, default_link, default_container_data)
 
   # Use the helper function to create a regular 2D-grid of tube spots.
   ordered_items=create_ordered_items_2d(
@@ -729,7 +735,7 @@ def load_ola_tube_rack(
     # dx: The X coordinate of the bottom left corner for items in the left column.
     # dy: The Y coordinate of the bottom left corner for items in the top row.
     # dz: The z coordinate for all items.
-    dx=dx, dy=dy, dz=dz,
+    dx=dx, dy=dy, dz=default_dz,
     # NOTE: Additional keyword arguments are passed to the "klass" constructor.
     # Set the dimensions of the tube spot to the diameter of the well.
     size_x=platform_data["wellDiameter"],
@@ -780,6 +786,7 @@ def load_ola_tube_rack(
   # Add tubes in the platform item, if any.
   platform_contents = platform_item.get("content", [])
   for content in platform_contents:
+    # Get the tube's container data.
     container_data = get_contents_container(content, containers_data)
 
     # Create the Tube.
@@ -793,10 +800,8 @@ def load_ola_tube_rack(
       max_volume=container_data["maxVolume"],
       model=container_data["name"],
       category=container_data["type"]  # "tube"
-      # TODO: Add "activeHeight" somewhere here.
-      #       It is needed to get the proper Z coordinate.
     )
-    # Add "activeHeight" somewhere here.
+    # Set "activeHeight" for the tube.
     # It is needed to get the proper Z coordinate.
     new_tube.active_z = container_data["activeHeight"]
     # Save tags.
@@ -813,15 +818,16 @@ def load_ola_tube_rack(
     tube_spot: TubeSpot = tube_rack_item.get_item((i, j))
 
     # Get the offset for this specific tip model.
-    container_offset_z = next(link["containerOffsetZ"]
-                              for link in linked_containers
-                              if link["container"] == container_data["name"])
+    container_link = next(l for l in linked_containers if l["container"] == container_data["name"])
+
     # Override the default "active_z" set before.
-    tube_spot.active_z = container_offset_z
+    tube_spot.active_z = container_link["containerOffsetZ"]
+
+    # Set the spot's location to the (lowest) pipetting height.
+    tube_spot.location.z = calculate_plr_dz_tube(platform_data, container_link, container_data)
 
     # Add the Tube to the tracker.
     tube_spot.tracker.add_tube(new_tube, commit=True)
-
     # Add the Tube to the TubeSpot as a child resource.
     # NOTE: This is required, otherwise it does not show up in the deck by name.
     tube_spot.assign_child_resource(new_tube, location=Coordinate(0,0,0))
@@ -1017,11 +1023,8 @@ def load_ola_custom(deck: "SilverDeck",
     x, y = xy_to_plr(slot["slotPosition"]["slotX"],
                      slot["slotPosition"]["slotY"],
                      platform_data["length"])
-    slot_location=Coordinate(x=x, y=y,
-      # NOTE: Must add the slots's active height here.
-      #       The slot's is an offset respect to it.
-      z=tube_spot.active_z
-    )
+    dz = calculate_plr_dz_slot(platform_data, slot, link, container)
+    slot_location=Coordinate(x=x, y=y, z=dz)
     # Add the tube spot as a direct child.
     custom.assign_child_resource(tube_spot, location=slot_location)
 
