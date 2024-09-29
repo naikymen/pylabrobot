@@ -717,7 +717,7 @@ def load_ola_tube_rack(
   default_link = linked_containers[0]
   default_container_data = get_contents_container(link, containers_data)
   # Prepare parameters for "create_ordered_items_2d".
-  dx, dy = rack_to_plr_dxdy(platform_data, default_link)
+  dx, dy = rack_to_plr_dxdy(platform_data)
   # NOTE: According to Rick and the sources, the "Z of a TipSpot" is the "Z of the tip's tip" when
   # the tip is in its spot, relative to the base of the tip rack (I guessed this last part).
   default_dz = calculate_plr_dz_tube(platform_data, default_link, default_container_data)
