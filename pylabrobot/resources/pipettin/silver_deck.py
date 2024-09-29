@@ -33,6 +33,8 @@ from newt.utils import draw_ascii_workspace
 
 from piper.datatools.datautils import load_objects
 
+pipettin_db_url = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/databases.json'
+
 class SilverDeck(Deck):
   """ (Ag)nostic deck object.
 
@@ -214,6 +216,12 @@ class SilverDeck(Deck):
     # Done!
     return platform_resource
 
+  def __getitem__(self, item):
+    """Override the indexer operator "[]" to get children with a simpler syntax."""
+    if isinstance(item, int):
+      return self.children[item]
+    return self.get_resource(item)
+
   def get_resource(self, name: str, resources_list=None, parent=None, recursing=False) -> Resource:
     """ Returns the resource with the given name, recursively scanning children.
 
@@ -290,9 +298,6 @@ class SilverDeck(Deck):
       ascii_dck += f"\nPadding: {self.padding}"
 
     print(ascii_dck)
-
-  def __str__(self):
-    return self.summary()
 
 def make_silver(
   db_location = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/databases.json',

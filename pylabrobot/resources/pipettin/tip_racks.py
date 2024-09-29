@@ -4,7 +4,7 @@ from pylabrobot.resources.tip_rack import TipRack, TipSpot
 from pylabrobot.resources.tip import Tip
 from pylabrobot.resources.resource import Rotation, Coordinate
 from .utils import get_contents_container, get_fitting_depth
-from newt.translators.utils import rack_to_plr_dxdydz
+from newt.translators.utils import rack_to_plr_dxdy, calculate_plr_dz_tip
 from newt.utils import guess_shape
 
 def load_ola_tip_rack(
@@ -103,7 +103,10 @@ def load_ola_tip_rack(
   # TODO: Override "dz"/default_link the the appropriate offset for each tip.
   default_link = linked_containers[0]
   # TODO: Consider setting "dz" to zero in this case, and apply "containerOffsetZ" later.
-  dx, dy, dz = rack_to_plr_dxdydz(platform_data, default_link)
+  dx, dy = rack_to_plr_dxdy(platform_data)
+  # NOTE: According to Rick and the sources, the "Z of a TipSpot" is the "Z of the tip's tip" when
+  # the tip is in its spot, relative to the base of the tip rack (I guessed this last part).
+  default_dz = calculate_plr_dz_tip(platform_data, default_link)
 
   # Use the "create_ordered_items_2d" helper function to create a regular 2D-grid of tip spots.
   ordered_items = create_ordered_items_2d(
@@ -114,7 +117,7 @@ def load_ola_tip_rack(
     # dx: The X coordinate of the bottom left corner for items in the left column.
     # dy: The Y coordinate of the bottom left corner for items in the top row.
     # dz: The z coordinate for all items.
-    dx=dx, dy=dy, dz=dz,
+    dx=dx, dy=dy, dz=default_dz,
     # item_dx: The separation of the items in the x direction
     item_dx=platform_data["wellSeparationX"],
     # item_dy: The separation of the items in the y direction
@@ -125,21 +128,10 @@ def load_ola_tip_rack(
     size_y=platform_data["wellDiameter"],
     # TODO: Update the function definition above to use tips from the platform definition.
     make_tip=make_pew_tip
-
-    # XY distance between adjacent items in the grid.
-    # item_size_x=platform_data["wellSeparationX"],
-    # item_size_y=platform_data["wellSeparationY"],
-    # The TipSpot class will receive this argument (through **kwargs) to create its tips,
-    # overriding the default "TipCreator" (see "tip_rack.py"). This is only used to create tips
-    # when "tip tracking" is disabled, and a tip is required from an empty tip-spot.
-    # Note that this is not needed for "wells", as there are no "well spots" in PLR.
-    # There are however, "tube spots" in pipettin, which I don't know how to accommodate.
   )
 
   # Set "active_z" in the default spots to "containerOffsetZ".
   for spot in ordered_items.values():
-    # from pprint import pprint
-    # pprint(default_link)
     spot.active_z = default_link["containerOffsetZ"]
 
   # Guess the shape of the platform.
@@ -197,24 +189,20 @@ def load_ola_tip_rack(
 
     # Get the tip's position indexes.
     # NOTE: "i" for "Y/rows", and "j" for "X/columns".
-    i, j = content_pos["row"]-1, content_pos["col"]-1
+    i, j = content_pos["row"] - 1, content_pos["col"] - 1
     # Get the TipSpot.
     tip_spot = tip_rack_item.get_item((i, j))
     # Add the Tip.
     tip_spot.tracker.add_tip(new_tip, commit=True)
 
     # Get the offset for this specific tip model.
-    container_offset_z = next(link["containerOffsetZ"]
-                              for link in linked_containers
-                              if link["container"] == tip_container_id)
+    container_link = next(l for l in linked_containers if l["container"] == tip_container_id)
 
     # Override the default "active_z" set before.
-    tip_spot.active_z = container_offset_z
+    tip_spot.active_z = container_link["containerOffsetZ"]
 
-    # Fix the Z coordinate applying the offset
-    # of this particular tip.
-    tip_spot.location.z = platform_data["activeHeight"]
-    tip_spot.location.z -= container_offset_z
+    # Fix the Z coordinate applying the offset of this particular tip and spot.
+    tip_spot.location.z = calculate_plr_dz_tip(platform_data, container_link)
 
   return tip_rack_item
 
