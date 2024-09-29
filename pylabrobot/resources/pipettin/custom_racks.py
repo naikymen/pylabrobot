@@ -1,3 +1,5 @@
+from functools import partial
+
 from pylabrobot.resources.liquid import Liquid
 #from pylabrobot.resources.plate import Plate
 from pylabrobot.resources.resource import Resource, Coordinate, Rotation
@@ -14,8 +16,25 @@ class CustomPlatform(Resource):
       return self.children[item]
     return self.get_resource(item)
 
-def load_ola_custom(deck: "SilverDeck",
-                    platform_item: dict,
+def make_tube_from_slot(container, slot):
+  """Generate a default tube for the slot / tube spot
+  Function used to generate tubes in TubeRacks when missing.
+  """
+  if container:
+    return Tube(
+      name=f"{container['name']} in {slot['slotName']}",
+      size_x=slot["slotSize"],  # Same as the slot.
+      size_y=slot["slotSize"],  # Same as the slot.
+      size_z=container["length"],
+      max_volume=container["maxVolume"],
+      model=container["name"],
+      category=container["type"]  # "tube"
+      # TODO: Add "activeHeight" somewhere here.
+      #       It is needed to get the proper Z coordinate.
+    )
+  else:
+    raise NotImplementedError(f"No container data available for slot {slot['slotName']}.")
+
                     platform_data: dict,
                     containers_data: dict,
                     tools_data: dict):
@@ -162,22 +181,9 @@ def load_ola_custom(deck: "SilverDeck",
     #  },
     # ],
 
-    def make_tube():
-      """Generate a default tube for the slot / tube spot"""
-      if container:
-        return Tube(
-          name=f"{container['name']} in {slot['slotName']}",
-          size_x=slot["slotSize"],  # Same as the slot.
-          size_y=slot["slotSize"],  # Same as the slot.
-          size_z=container["length"],
-          max_volume=container["maxVolume"],
-          model=container["name"],
-          category=container["type"]  # "tube"
-          # TODO: Add "activeHeight" somewhere here.
-          #       It is needed to get the proper Z coordinate.
-        )
-      else:
-        raise NotImplementedError(f"No container data available for slot {slot['slotName']}.")
+    # Tube generating function, with arguments fixed by "partial".
+    # https://pylint.readthedocs.io/en/latest/user_guide/messages/warning/cell-var-from-loop.html
+    make_tube = partial(make_tube_from_slot, container, slot)
 
     # Make a tube spot from the slot.
     tube_spot = TubeSpot(
