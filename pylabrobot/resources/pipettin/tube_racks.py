@@ -233,7 +233,6 @@ class TubeRack(ItemizedResource[TubeSpot], metaclass=ABCMeta):
       tube.tracker.enable()
 
 def load_ola_tube_rack(
-  deck: "SilverDeck",
   platform_item: dict,
   platform_data: dict,
   tools_data: dict,

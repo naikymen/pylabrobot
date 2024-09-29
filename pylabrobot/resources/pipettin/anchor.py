@@ -78,7 +78,7 @@ class Anchor(Resource):
     self.resource = None
     return super().unassign_child_resource(resource)
 
-def load_ola_anchor(deck: "SilverDeck", platform_item, platform_data, tools_data: dict, **kwargs):
+def load_ola_anchor(platform_item, platform_data, tools_data: dict, **kwargs):
   anchor = Anchor(
     name=platform_item["name"],
     size_x=platform_data["width"],

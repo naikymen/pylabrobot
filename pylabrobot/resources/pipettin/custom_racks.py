@@ -37,6 +37,7 @@ def make_tube_from_slot(container, slot):
   else:
     raise NotImplementedError(f"No container data available for slot {slot['slotName']}.")
 
+def load_ola_custom(platform_item: dict,
                     platform_data: dict,
                     containers_data: dict,
                     tools_data: dict):

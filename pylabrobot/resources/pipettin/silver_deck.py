@@ -183,7 +183,6 @@ class SilverDeck(Deck):
     importer = self.platform_importers.get(platform_type, importer_not_implemented)
     # Execute the translation.
     platform_resource = importer(
-      deck=self,
       platform_item=platform_item,
       platform_data=platform_data,
       containers_data=containers,

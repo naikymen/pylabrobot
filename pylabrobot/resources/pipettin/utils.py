@@ -35,7 +35,7 @@ def compare(t1, t2, ignore_order=True):
 def format_number(x, significant_digits=4, number_format_notation=None):
   """function for DeepDiff's "number_to_string_func" argument.
   Example:
-  format_number(3.123123), format_number(0), format_number(0.0)
+    format_number(3.123123), format_number(0), format_number(0.0)
   """
   fstring = "{0:." + str(significant_digits+1) + "g}"
   return fstring.format(x)
@@ -64,7 +64,7 @@ def get_contents_container(container_link, containers):
   container_data = next(x for x in containers if x["name"] == container_link.get("container"))
   return container_data
 
-def create_trash(deck: "SilverDeck", platform_item, platform_data, tools_data: dict, **kwargs):
+def create_trash(platform_item, platform_data, tools_data: dict, **kwargs):
   trash = Trash(
     name=platform_item["name"],
     size_x=platform_data["width"],
@@ -77,7 +77,7 @@ def create_trash(deck: "SilverDeck", platform_item, platform_data, tools_data: d
   trash.locked = platform_item["locked"]
   return trash
 
-def create_petri_dish(deck: "SilverDeck", platform_item, platform_data, tools_data: dict, **kwargs):
+def create_petri_dish(platform_item, platform_data, tools_data: dict, **kwargs):
   dish = PetriDish(
     name=platform_item["name"],
     diameter=platform_data["diameter"],
