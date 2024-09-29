@@ -478,3 +478,69 @@ class PiperBackend(LiquidHandlerBackend):
   async def move_resource(self, move: Move):
     """ Move the specified lid within the robot. """
     raise NotImplementedError("Moving resources is not implemented yet.")
+
+
+class EchoBackend(LiquidHandlerBackend):
+  """ Yet another Chatter box backend for 'How to Open Source' """
+
+  commands = []
+  """Just a list to store incoming data, for later inspection"""
+
+  def __init__(self, num_channels: int = 1, name="echo"):
+    """Init method for the EchoBackend."""
+    print(f"EchoBackend - Instantiating the EchoBackend with num_channels={num_channels}")
+    self.name=name
+    super().__init__()
+    self._num_channels = num_channels
+
+  async def setup(self):
+    await super().setup()
+    print("EchoBackend - Setting up the robot.")
+
+  async def stop(self):
+    await super().stop()
+    print("EchoBackend - Stopping the robot.")
+
+  @property
+  def num_channels(self) -> int:
+    return self._num_channels
+
+  async def assigned_resource_callback(self, resource: Resource):
+    print(f"EchoBackend - Resource {resource.name} was assigned to the robot: " + pformat(resource.serialize))
+
+  async def unassigned_resource_callback(self, name: str):
+    print(f"EchoBackend - Resource with name '{name}' was unassigned from the robot.")
+
+  # Atomic implemented in hardware.
+  async def pick_up_tips(self, ops: List[Pickup], use_channels: List[int], **backend_kwargs):
+    print(f"EchoBackend - {len(self.commands)} - Picking up tips {ops}.")
+    self.commands.append({"cmd": "pick_up_tips", "ops": ops, "use_channels": use_channels, **backend_kwargs})
+
+  async def drop_tips(self, ops: List[Drop], use_channels: List[int], **backend_kwargs):
+    print(f"EchoBackend - {len(self.commands)} - Dropping tips {ops}.")
+    self.commands.append({"cmd": "drop_tips", "ops": ops, "use_channels": use_channels, **backend_kwargs})
+
+  async def aspirate(self, ops: List[Aspiration], use_channels: List[int], **backend_kwargs):
+    print(f"EchoBackend - {len(self.commands)} - Aspirating {ops}.")
+    self.commands.append({"cmd": "aspirate", "ops": ops, "use_channels": use_channels, **backend_kwargs})
+
+  async def dispense(self, ops: List[Dispense], use_channels: List[int], **backend_kwargs):
+    print(f"EchoBackend - {len(self.commands)} - Dispensing {ops}.")
+    self.commands.append({"cmd": "dispense", "ops": ops, "use_channels": use_channels, **backend_kwargs})
+
+  # Atomic actions not implemented in hardware.
+  async def pick_up_tips96(self, pickup: PickupTipRack, **backend_kwargs):
+    raise NotImplementedError("EchoBackend - The backend does not support the CoRe 96.")
+
+  async def drop_tips96(self, drop: DropTipRack, **backend_kwargs):
+    raise NotImplementedError("EchoBackend - The backend does not support the CoRe 96.")
+
+  async def aspirate96(self, aspiration: AspirationPlate):
+    raise NotImplementedError("EchoBackend - The backend does not support the CoRe 96.")
+
+  async def dispense96(self, dispense: DispensePlate):
+    raise NotImplementedError("EchoBackend - The backend does not support the CoRe 96.")
+
+  async def move_resource(self, move: Move, **backend_kwargs):
+    """ Move the specified lid within the robot. """
+    raise NotImplementedError("EchoBackend - Moving resources is not implemented yet.")
