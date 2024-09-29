@@ -313,10 +313,7 @@ def test_translation_advanced():
     scrub([platforms, new_platforms], "color")
 
     # Compare.
-    diff_result = compare(
-      platforms,
-      new_platforms,
-    )
+    diff_result = compare(platforms, new_platforms)
     # Test.
     assert not diff_result, f"Differences found in translation of platforms in '{workspace_name}':\n" + \
       pformat(diff_result)
@@ -418,7 +415,7 @@ def test_slot_z_calculation():
   item_name = "Pocket PCR"
   deck = SilverDeck(db=db_location, workspace_name=workspace_name)
   custom = deck.get_resource(item_name)
-  spots = custom.get_all_items()
+  spots = custom.children
 
   # tip_spot = rack.get_item("H1")
   for spot in spots:
