@@ -9,6 +9,8 @@ from newt.utils import guess_shape
 from .utils import get_contents_container
 from .tubes import Tube, TubeSpot
 
+# pylint: disable=locally-disabled, inconsistent-quotes
+
 class CustomPlatform(Resource):
   def __getitem__(self, item):
     """Override the indexer operator "[]" to get children with a simpler syntax."""

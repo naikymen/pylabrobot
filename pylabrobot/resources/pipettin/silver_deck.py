@@ -299,7 +299,7 @@ class SilverDeck(Deck):
     print(ascii_dck)
 
 def make_silver(
-  db_location = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/databases.json',
+  db_location = pipettin_db_url,
   workspace_name = "Basic Workspace",
   empty=False,
   ):

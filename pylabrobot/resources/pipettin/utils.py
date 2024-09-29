@@ -33,7 +33,7 @@ def compare(t1, t2, ignore_order=True):
   return diff_result
 
 def format_number(x, significant_digits=4, number_format_notation=None):
-  """function for DeepDiff's number_to_string_func argument.
+  """function for DeepDiff's "number_to_string_func" argument.
   Example:
   format_number(3.123123), format_number(0), format_number(0.0)
   """
