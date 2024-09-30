@@ -98,5 +98,5 @@ def load_ola_anchor(platform_item, platform_data, tools_data: dict, **kwargs):
   anchor.active_z = platform_data["activeHeight"]
   # Apply rotations using the method from Resource.
   # TODO: Check that it works as expected.
-  anchor.rotate(platform_data.get("rotation", 0))
+  anchor.rotate(z=platform_data.get("rotation", 0))
   return anchor
