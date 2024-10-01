@@ -8,7 +8,6 @@ from newt.translators.utils import rack_to_plr_dxdy, calculate_plr_dz_tip
 from newt.utils import guess_shape
 
 def load_ola_tip_rack(
-  deck: "SilverDeck",
   platform_item: dict,
   platform_data: dict,
   tools_data: dict,

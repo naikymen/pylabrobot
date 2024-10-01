@@ -17,23 +17,22 @@ Have fun!
 
 import textwrap
 from copy import deepcopy
-from pprint import pprint
-# from typing import Optional, Callable
-
+# PLR-native imports.
 from pylabrobot.resources import Coordinate, Deck, Resource, ResourceNotFoundError
-
+# Pipettin-PLR imports.
 from .tip_racks import load_ola_tip_rack
-from .tube_racks import load_ola_tube_rack, load_ola_custom
+from .tube_racks import load_ola_tube_rack
+from .custom_racks import load_ola_custom
 from .anchor import load_ola_anchor, Anchor
-
 from .utils import get_items_platform, create_trash, create_petri_dish, importer_not_implemented
+# Pipettin imports.
 from newt.translators.utils import xy_to_plr
 from newt.translators.plr import deck_to_db
 from newt.utils import draw_ascii_workspace
-
 from piper.datatools.datautils import load_objects
 
-pipettin_db_url = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/databases.json'
+pipettin_db_url = \
+  "https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/databases.json"
 
 class SilverDeck(Deck):
   """ (Ag)nostic deck object.
@@ -184,7 +183,6 @@ class SilverDeck(Deck):
     importer = self.platform_importers.get(platform_type, importer_not_implemented)
     # Execute the translation.
     platform_resource = importer(
-      deck=self,
       platform_item=platform_item,
       platform_data=platform_data,
       containers_data=containers,
@@ -300,7 +298,7 @@ class SilverDeck(Deck):
     print(ascii_dck)
 
 def make_silver(
-  db_location = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/databases.json',
+  db_location = pipettin_db_url,
   workspace_name = "Basic Workspace",
   empty=False,
   ):

@@ -120,6 +120,8 @@ class Resource:
       "compatibles": [
         {"content": c["content"].serialize(), "link": c["link"]} for c in self.compatibles
       ],
+      # I'm putting the state here because having it elsewhere is silly.
+      "state": self.serialize_state(),
     }
 
   @property

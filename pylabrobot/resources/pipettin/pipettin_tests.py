@@ -222,10 +222,10 @@ def test_conversions():
 
   # Platform
   pocket_platform = deepcopy(next(p for p in deck.platforms if p["name"] == item_resource.model))
-  if "color" in pocket_platform:
-    del pocket_platform["color"]
-  if "description" in pocket_platform:
-    del pocket_platform["description"]
+
+  # Clean up non essentials.
+  scrub([pocket_platform, converted_platform], "description")
+  scrub([pocket_platform, converted_platform], "color")
 
   # Containers
   pocket_container_names = [cntnt["container"] for cntnt in pocket_item["content"] ]
