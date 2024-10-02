@@ -53,7 +53,7 @@ from piper.controller import Controller
 from piper.datatools.nodb import NoObjects
 # from piper.log import setup_logging
 from piper.utils import get_config_path
-from piper.datatools.datautils import load_objects
+# from piper.datatools.datautils import load_objects
 from piper.config.config_helper import TrackedDict
 # Load newt module.
 import newt
@@ -64,40 +64,16 @@ class PiperError(Exception):
 class PiperBackend(LiquidHandlerBackend):
   """ Backend for Piper, OLA's liquid-handler controller module."""
 
-  controller: Controller
-
-  def __init__(self,
-               tool_defs:Union[str, dict],
-               config:dict = None):
+  def __init__(self, config:dict = None):
     """Init method for the PiperBackend."""
+    self.controller: Controller = None
+    self._num_channels: int = None
+    self._channels: dict = None
 
-    super().__init__()
+    # Set the default configuration.
+    self.set_config(config)
 
-    # Parse configuration.
-    base_config_file = get_config_path()
-    base_config = TrackedDict(base_config_file, allow_edits=True)
-    base_config.update(config if config else {})
-    self.config = base_config
-
-    # Save tool data.
-    self.tools = load_objects(tool_defs)
-
-    # Configure channels.
-    self._num_channels = 0
-    self._channels = {}
-    self.configure_channels(self.tools)
-
-  def check_tool(self, tool_id):
-
-    # TODO: Rewrite this method and use it to check num_channels in incoming actions.
-    #       For example: is the multi-tip pickup geometry supported by a tool or the selected tool?
-    #       See discussion at: https://labautomation.io/t/writing-a-new-backend-agnosticity/844/53
-
-    if tool_id not in self.tool_ids:
-      msg = f"Tool with ID '{tool_id}' was not found in the backend's tools list ({self.tool_ids})."
-      raise ValueError(msg)
-
-  def configure_channels(self, tool_defs: dict):
+  def init_channels(self, tool_defs: dict):
     """ Compute and save number of channels.
 
     This requires tool definitions with the following properties:
@@ -107,6 +83,8 @@ class PiperBackend(LiquidHandlerBackend):
       "P300x8": {"parameters": {"channels": 8} }
     }
     """
+    self._num_channels = 0
+    self._channels = {}
     for tool in tool_defs:
       if tool.get("type", None) == "Micropipette":
         ch_count: int = tool["parameters"]["channels"]
@@ -120,22 +98,28 @@ class PiperBackend(LiquidHandlerBackend):
     print(f"Configured the PiperBackend with num_channels={self._num_channels}")
     print("Final channel-tool mapping:\n" + "\n".join(f"  {ch}: {tl}" for ch, tl in self._channels.items()))
 
-  # Setup/Stop methods ####
+  def set_config(self, config: dict = None):
+    # Parse configuration.
+    base_config_file = get_config_path()
+    base_config = TrackedDict(base_config_file, allow_edits=True)
+    base_config.update(config if config else {})
+    self.config = base_config
 
-  async def setup(self, home=False):
-
-    await super().setup()
-
-    # TODO: Set up logging. Will it interfere with PLRs?
-    # setup_logging(directory=opts.get('logdir', None),
-    #               level=opts.get('loglevel', logging.INFO))
-
+  def init_controller(self, config: dict = None):
+    """Instantiate a controller object and save it to this backend instance.
+    Requires an associated SilverDeck.
+    """
+    # Check.
+    if self.controller:
+      raise PiperError("Controller object already configured.")
     # Populate the controller's database with data from the Deck.
     database_tools = NoObjects()
+    # TODO: Make this deck-agnostic.
     database_tools.workspaces = [self.deck.workspace]
     database_tools.platforms = self.deck.platforms
     database_tools.containers = self.deck.containers
-    database_tools.tools = self.tools
+    # Populate the controller's database with Tool data.
+    database_tools.tools = self.deck.tools
     # database_tools.settings
 
     # Create the controller object.
@@ -145,8 +129,27 @@ class PiperBackend(LiquidHandlerBackend):
     self.controller.builder.initialize_objects(
       workspace=self.deck.workspace, platformsInWorkspace=self.deck.platforms)
 
-    # Populate the controller's database with Tool data.
+    # Save tool names.
     self.tool_ids = list(self.controller.builder.tools)
+
+  # Setup/Stop methods ####
+
+  async def setup(self, home=False, controller: Controller = None):
+    """Backend setup method, called by LiquidHandler.
+
+    Args:
+        home (bool, optional): Home the machine on setup. Defaults to False.
+        controller (Controller, optional): Provide a controller object. Defaults to None.
+    """
+    # Parent class setup. Must happen first.
+    await super().setup()
+
+    # Define a controller object.
+    if controller is None:
+      self.init_controller()
+
+    # Configure channels.
+    self.init_channels(self.deck.tools)
 
     # Start the controller.
     await self._start_controller(timeout=5)
