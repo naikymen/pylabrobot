@@ -25,11 +25,10 @@ await lh.setup()
 Have fun!
 """
 
-# pylint: disable=unused-argument
-
 from pprint import pformat
 from typing import List, Union
 import asyncio
+import logging
 
 from pylabrobot.resources import TipSpot
 from pylabrobot.resources.pipettin.tube_racks import Tube as PiperTube
@@ -47,7 +46,7 @@ from pylabrobot.liquid_handling.standard import (
   Move
 )
 # TODO: Raise "NoChannelError" in the backend when appropriate.
-from pylabrobot.liquid_handling.errors import NoChannelError
+# from pylabrobot.liquid_handling.errors import NoChannelError
 
 # Load piper modules.
 from piper.controller import Controller
@@ -150,7 +149,7 @@ class PiperBackend(LiquidHandlerBackend):
     self.tool_ids = list(self.controller.builder.tools)
 
     # Start the controller.
-    await self._start_controller(timeout=5, reset_firmware_on_error=True)
+    await self._start_controller(timeout=5)
 
     # Home the robot's motion system.
     if home:
@@ -159,15 +158,18 @@ class PiperBackend(LiquidHandlerBackend):
     # Mark finished.
     self.setup_finished = True
 
-  async def _start_controller(self, timeout, reset_firmware_on_error):
-
-    # if self.controller.machine.dry:
-    #   print("Dry mode enabled, skipping setup.")
-    #   return
+  async def _start_controller(self, timeout=5):
 
     # Start the controller.
     print("Setting up connections...")
-    status = await self.controller.start_and_wait()
+    try:
+      status = await asyncio.wait_for(
+        self.controller.start_and_wait(),
+        timeout=timeout
+      )
+    except (asyncio.exceptions.TimeoutError, asyncio.CancelledError):
+      logging.error("Timed-out while setting up connections.")
+      status = None
 
     # Check for readiness.
     if not status:
@@ -506,7 +508,7 @@ class EchoBackend(LiquidHandlerBackend):
     return self._num_channels
 
   async def assigned_resource_callback(self, resource: Resource):
-    print(f"EchoBackend - Resource {resource.name} was assigned to the robot: " + pformat(resource.serialize))
+    print(f"EchoBackend - Resource {resource.name} was assigned to the robot:\n" + pformat(resource.serialize))
 
   async def unassigned_resource_callback(self, name: str):
     print(f"EchoBackend - Resource with name '{name}' was unassigned from the robot.")
@@ -514,19 +516,27 @@ class EchoBackend(LiquidHandlerBackend):
   # Atomic implemented in hardware.
   async def pick_up_tips(self, ops: List[Pickup], use_channels: List[int], **backend_kwargs):
     print(f"EchoBackend - {len(self.commands)} - Picking up tips {ops}.")
-    self.commands.append({"cmd": "pick_up_tips", "ops": ops, "use_channels": use_channels, **backend_kwargs})
+    self.commands.append(
+      {"cmd": "pick_up_tips", "ops": ops, "use_channels": use_channels, **backend_kwargs}
+    )
 
   async def drop_tips(self, ops: List[Drop], use_channels: List[int], **backend_kwargs):
     print(f"EchoBackend - {len(self.commands)} - Dropping tips {ops}.")
-    self.commands.append({"cmd": "drop_tips", "ops": ops, "use_channels": use_channels, **backend_kwargs})
+    self.commands.append(
+      {"cmd": "drop_tips", "ops": ops, "use_channels": use_channels, **backend_kwargs}
+    )
 
   async def aspirate(self, ops: List[Aspiration], use_channels: List[int], **backend_kwargs):
     print(f"EchoBackend - {len(self.commands)} - Aspirating {ops}.")
-    self.commands.append({"cmd": "aspirate", "ops": ops, "use_channels": use_channels, **backend_kwargs})
+    self.commands.append(
+      {"cmd": "aspirate", "ops": ops, "use_channels": use_channels, **backend_kwargs}
+    )
 
   async def dispense(self, ops: List[Dispense], use_channels: List[int], **backend_kwargs):
     print(f"EchoBackend - {len(self.commands)} - Dispensing {ops}.")
-    self.commands.append({"cmd": "dispense", "ops": ops, "use_channels": use_channels, **backend_kwargs})
+    self.commands.append(
+      {"cmd": "dispense", "ops": ops, "use_channels": use_channels, **backend_kwargs}
+    )
 
   # Atomic actions not implemented in hardware.
   async def pick_up_tips96(self, pickup: PickupTipRack, **backend_kwargs):
