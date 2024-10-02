@@ -164,7 +164,7 @@ class PiperBackend(LiquidHandlerBackend):
     print("Setting up connections...")
     try:
       status = await asyncio.wait_for(
-        await self.controller.start_and_wait(),
+        self.controller.start_and_wait(),
         timeout=timeout
       )
     except (asyncio.exceptions.TimeoutError, asyncio.CancelledError):
