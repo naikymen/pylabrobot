@@ -99,8 +99,9 @@ class PiperBackend(LiquidHandlerBackend):
             raise ValueError(f"Channel {ch} is already provided by {self._channels[ch]}.")
           self._num_channels += 1
           self._channels[ch] = tool_name
+          if self.config.get("verbose", False):
           print(f"Assigning channel number {ch} to tool '{tool_name}'.")
-    print(f"Configured the PiperBackend with num_channels={self._num_channels}")
+    print(f"Configured the PiperBackend with {self._num_channels} channels.")
     print("Final channel-tool mapping:\n" + "\n".join(f"  {ch}: {tl}" for ch, tl in self._channels.items()))
 
   def set_config(self, config: dict = None):
@@ -248,10 +249,12 @@ class PiperBackend(LiquidHandlerBackend):
   # Resource callback methods ####
 
   async def assigned_resource_callback(self, resource: Resource):
+    if self.config.get("verbose", False):
     print(f"piper_backend: Resource '{resource.name}' assigned to the robot.")
     # TODO: should this update the workspace?
 
   async def unassigned_resource_callback(self, name: str):
+    if self.config.get("verbose", False):
     print(f"piper_backend: Resource '{name}' unassigned from the robot.")
     # TODO: should this update the workspace?
 
