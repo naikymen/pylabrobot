@@ -51,10 +51,6 @@ from pylabrobot.liquid_handling.standard import (
 # Load piper modules.
 from piper.controller import Controller
 from piper.datatools.nodb import NoObjects
-# from piper.log import setup_logging
-from piper.utils import get_config_path
-# from piper.datatools.datautils import load_objects
-from piper.config.config_helper import TrackedDict
 # Load newt module.
 import newt
 
@@ -76,7 +72,7 @@ class PiperBackend(LiquidHandlerBackend):
     self._channels: dict = None
 
     # Set the default configuration.
-    self.set_config(config)
+    self.config = config
 
   def init_channels(self, tool_defs: dict):
     """ Compute and save number of channels.
@@ -100,16 +96,9 @@ class PiperBackend(LiquidHandlerBackend):
           self._num_channels += 1
           self._channels[ch] = tool_name
           if self.config.get("verbose", False):
-          print(f"Assigning channel number {ch} to tool '{tool_name}'.")
+            print(f"Assigning channel number {ch} to tool '{tool_name}'.")
     print(f"Configured the PiperBackend with {self._num_channels} channels.")
     print("Final channel-tool mapping:\n" + "\n".join(f"  {ch}: {tl}" for ch, tl in self._channels.items()))
-
-  def set_config(self, config: dict = None):
-    # Parse configuration.
-    base_config_file = get_config_path()
-    base_config = TrackedDict(base_config_file, allow_edits=True)
-    base_config.update(config if config else {})
-    self.config = base_config
 
   def init_controller(self, config: dict = None):
     """Instantiate a controller object and save it to this backend instance.
@@ -250,12 +239,12 @@ class PiperBackend(LiquidHandlerBackend):
 
   async def assigned_resource_callback(self, resource: Resource):
     if self.config.get("verbose", False):
-    print(f"piper_backend: Resource '{resource.name}' assigned to the robot.")
+      print(f"piper_backend: Resource '{resource.name}' assigned to the robot.")
     # TODO: should this update the workspace?
 
   async def unassigned_resource_callback(self, name: str):
     if self.config.get("verbose", False):
-    print(f"piper_backend: Resource '{name}' unassigned from the robot.")
+      print(f"piper_backend: Resource '{name}' unassigned from the robot.")
     # TODO: should this update the workspace?
 
   # Helper methods ####
