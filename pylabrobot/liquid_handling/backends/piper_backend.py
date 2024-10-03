@@ -66,6 +66,11 @@ class PiperBackend(LiquidHandlerBackend):
 
   def __init__(self, config:dict = None):
     """Init method for the PiperBackend."""
+
+    # Init LiquidHandlerBackend.
+    super().__init__()
+
+    # Declare attributes.
     self.controller: Controller = None
     self._num_channels: int = None
     self._channels: dict = None
