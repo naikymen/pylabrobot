@@ -151,7 +151,7 @@ class PiperBackend(LiquidHandlerBackend):
 
     # Home the robot's motion system.
     if home:
-      await self._home_machine(timeout=43)
+      await self._home_machine()
 
     # Mark finished.
     self.setup_finished = True
@@ -175,45 +175,33 @@ class PiperBackend(LiquidHandlerBackend):
     else:
       print("Connections successfully setup.")
 
-  async def _home_machine(self, timeout):
+  async def _home_machine(self):
     # TODO: customize parameters.
-    home_actions = self.make_home_actions()
-    gcode: dict = self.parse_actions(home_actions)
 
     if self.controller.machine.dry:
       print("Dry mode enabled, skipping Homing routine.")
       return
 
-    # Send commands.
-    print("Homing the machine's axes...")
-    cmd_id = await self.controller.machine.send_gcode_script(
-      gcode, wait=False, check=False,
-      cmd_id="PLR setup",
-      timeout=0.0)
+    try:
+      # Generate the homing actions.
+      home_actions = self.make_home_actions()
 
-    # Wait for idle printer.
-    print("Waiting for homing completion (idle machine)...")
-    result = await self.controller.machine.wait_for_idle_printer(timeout=timeout)
-    if not result:
-      msg = "The homing process timed out. Try increasing the value of 'timeout' "
-      msg += f"(currently at {timeout}), or check the logs for errors."
-      print(msg)
+      # Generate the actions' gcode.
+      self.parse_actions(home_actions)
 
-    # Check for homing success
-    print("Checking for homing success...")
-    result = await self.controller.machine.check_command_result_ok(
-      cmd_id=cmd_id, timeout=timeout/2, loop_delay=0.2)
-    if not result:
-      await super().stop()
-      response = self.controller.machine.get_response_by_id(cmd_id)
-      raise PiperError("Failed to HOME. Response:\n" + pformat(response) + "\n")
+      # Run the actions.
+      await self.controller.run_actions_protocol(
+        actions=home_actions
+      )
+    except Exception as e:
+      raise PiperError("Failed to home.") from e
 
     print("Homing done!")
 
   async def stop(self, timeout=2.0, home=True):
     if home:
       # Home the robot.
-      await self._home_machine(timeout)
+      await self._home_machine()
 
     if self.controller.machine.dry:
       print("Dry mode enabled, skipping machine cleanup.")
@@ -380,6 +368,7 @@ class PiperBackend(LiquidHandlerBackend):
   # Atomic implemented in hardware ####
 
   def parse_actions(self, actions: list) -> List:
+    """Parse actions into GCODE"""
     gcode_list = []
     for a in actions:
       action = self.controller.builder.parseAction(a)
