@@ -186,14 +186,14 @@ class PiperBackend(LiquidHandlerBackend):
 
     # Send commands.
     print("Homing the machine's axes...")
-    cmd_id = await self.controller.send_gcode_script(
+    cmd_id = await self.controller.machine.send_gcode_script(
       gcode, wait=False, check=False,
       cmd_id="PLR setup",
       timeout=0.0)
 
     # Wait for idle printer.
     print("Waiting for homing completion (idle machine)...")
-    result = await self.controller.wait_for_idle_printer(timeout=timeout)
+    result = await self.controller.machine.wait_for_idle_printer(timeout=timeout)
     if not result:
       msg = "The homing process timed out. Try increasing the value of 'timeout' "
       msg += f"(currently at {timeout}), or check the logs for errors."
@@ -201,11 +201,11 @@ class PiperBackend(LiquidHandlerBackend):
 
     # Check for homing success
     print("Checking for homing success...")
-    result = await self.controller.check_command_result_ok(
+    result = await self.controller.machine.check_command_result_ok(
       cmd_id=cmd_id, timeout=timeout/2, loop_delay=0.2)
     if not result:
       await super().stop()
-      response = self.controller.get_response_by_id(cmd_id)
+      response = self.controller.machine.get_response_by_id(cmd_id)
       raise PiperError("Failed to HOME. Response:\n" + pformat(response) + "\n")
 
     print("Homing done!")
@@ -221,13 +221,13 @@ class PiperBackend(LiquidHandlerBackend):
       print("Stopping the robot.")
 
       # Try sending a "motors-off" command.
-      cmd_id = await self.controller.send_gcode_cmd("M84", wait=True, check=True, timeout=timeout)
+      cmd_id = await self.controller.machine.send_gcode_cmd("M84", wait=True, check=True, timeout=timeout)
 
       # Send an "emergency stop" command if M84 failed.
-      result = await self.controller.check_command_result_ok(
+      result = await self.controller.machine.check_command_result_ok(
         cmd_id=cmd_id, timeout=timeout, loop_delay=0.2)
       if not result:
-        self.controller.firmware_restart()
+        self.controller.machine.firmware_restart()
 
     # TODO: comment on what this does.
     await super().stop()
@@ -265,10 +265,10 @@ class PiperBackend(LiquidHandlerBackend):
     # Send gcode commands.
     if not self.controller.machine.dry:
       # Send commands.
-      await self.controller.send_gcode_script(gcode, wait=True, check=True, timeout=timeout)
+      await self.controller.machine.send_gcode_script(gcode, wait=True, check=True, timeout=timeout)
 
       # Wait for idle printer.
-      return await self.controller.wait_for_idle_printer(timeout=1.0)
+      return await self.controller.machine.wait_for_idle_printer(timeout=1.0)
     # else:
     #   print(f"Backend in dry mode, commands ignored:\n{pformat(gcode)}")
 
