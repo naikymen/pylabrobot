@@ -75,7 +75,7 @@ async def test_piper_backend():
   })
   # Piper backend.
   print("Backend setup")
-  back = PiperBackend(config=config, tool_defs=tool_defs)
+  back = PiperBackend(config=config)
   print("Backend setup done")
 
   # Instantiate the deck.
