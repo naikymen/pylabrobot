@@ -51,6 +51,7 @@ from pylabrobot.liquid_handling.standard import (
 # Load piper modules.
 from piper.controller import Controller
 from piper.datatools.nodb import NoObjects
+from piper.datatools.mongo import MongoObjects
 # Load newt module.
 import newt
 
@@ -73,6 +74,9 @@ class PiperBackend(LiquidHandlerBackend):
 
     # Set the default configuration.
     self.config = config
+
+    # Setup the database object.
+    self.database_tools: MongoObjects = self.init_dbtools()
 
   def init_channels(self, tool_defs: dict):
     """ Compute and save number of channels.
@@ -100,29 +104,44 @@ class PiperBackend(LiquidHandlerBackend):
     print(f"Configured the PiperBackend with {self._num_channels} channels.")
     print("Final channel-tool mapping:\n" + "\n".join(f"  {ch}: {tl}" for ch, tl in self._channels.items()))
 
-  def init_controller(self, config: dict = None):
+  def init_dbtools(self) -> MongoObjects:
+    """Populate the controller's database with data from the Deck."""
+    # TODO: Make this deck-agnostic.
+    db_type = self.config.get("datatools", "nodb")
+    if db_type == "nodb":
+      database_tools = NoObjects()
+      database_tools.workspaces = [self.deck.workspace]
+      database_tools.platforms = self.deck.platforms
+      database_tools.containers = self.deck.containers
+      # Populate the controller's database with Tool data.
+      database_tools.tools = self.deck.tools
+      # database_tools.settings
+    elif db_type == "mongo":
+      database_tools = MongoObjects(**self.config["database"])
+    else:
+      raise PiperError(f"Unsupported database backend: {db_type}")
+
+    return database_tools
+
+  def init_controller(self):
     """Instantiate a controller object and save it to this backend instance.
     Requires an associated SilverDeck.
     """
     # Check.
     if self.controller:
       raise PiperError("Controller object already configured.")
+
     # Populate the controller's database with data from the Deck.
-    database_tools = NoObjects()
-    # TODO: Make this deck-agnostic.
-    database_tools.workspaces = [self.deck.workspace]
-    database_tools.platforms = self.deck.platforms
-    database_tools.containers = self.deck.containers
-    # Populate the controller's database with Tool data.
-    database_tools.tools = self.deck.tools
-    # database_tools.settings
+    # database_tools = self.init_dbtools()
 
     # Create the controller object.
-    self.controller = Controller(config=self.config, database_tools=database_tools)
+    self.controller = Controller(config=self.config, database_tools=self.database_tools)
 
     # Set current data objects in the gcode builder.
     self.controller.builder.initialize_objects(
-      workspace=self.deck.workspace, platformsInWorkspace=self.deck.platforms)
+      workspace=self.deck.workspace,
+      platformsInWorkspace=self.deck.platforms
+    )
 
     # Save tool names.
     self.tool_ids = list(self.controller.builder.tools)
@@ -187,7 +206,7 @@ class PiperBackend(LiquidHandlerBackend):
       home_actions = self.make_home_actions()
 
       # Generate the actions' gcode.
-      self.run_actions(home_actions)
+      await self.run_actions(home_actions)
 
     except Exception as e:
       raise PiperError("Failed to home.") from e
