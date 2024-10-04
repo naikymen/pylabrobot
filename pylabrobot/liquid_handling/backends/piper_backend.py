@@ -187,12 +187,8 @@ class PiperBackend(LiquidHandlerBackend):
       home_actions = self.make_home_actions()
 
       # Generate the actions' gcode.
-      self.parse_actions(home_actions)
+      self.run_actions(home_actions)
 
-      # Run the actions.
-      await self.controller.run_actions_protocol(
-        actions=home_actions
-      )
     except Exception as e:
       raise PiperError("Failed to home.") from e
 
@@ -247,18 +243,6 @@ class PiperBackend(LiquidHandlerBackend):
     coordinate = operation.get_absolute_location()
     coordinate_dict = coordinate.serialize()
     return coordinate_dict
-
-  async def _send_command_wait_and_check(self, gcode, timeout):
-    # TODO: customize timeout.
-    # Send gcode commands.
-    if not self.controller.machine.dry:
-      # Send commands.
-      await self.controller.machine.send_gcode_script(gcode, wait=True, check=True, timeout=timeout)
-
-      # Wait for idle printer.
-      return await self.controller.machine.wait_for_idle_printer(timeout=1.0)
-    # else:
-    #   print(f"Backend in dry mode, commands ignored:\n{pformat(gcode)}")
 
   # Action generators ####
   @staticmethod
@@ -365,28 +349,42 @@ class PiperBackend(LiquidHandlerBackend):
 
     return pipetting_actions
 
-  # Atomic implemented in hardware ####
+  # GCODE generation and execution ####
 
-  def parse_actions(self, actions: list) -> List:
+  def parse_actions(self, actions: list):
     """Parse actions into GCODE"""
     gcode_list = []
+    actions_list = []
     for a in actions:
       action = self.controller.builder.parseAction(a)
       gcode_list += action["GCODE"]
-    return gcode_list
+      actions_list += [action]
+    return gcode_list, actions_list
+
+  async def _send_command_wait_and_check(self, gcode: list, timeout):
+    # Send commands.
+    # TODO: customize timeout.
+    await self.controller.machine.send_gcode_script(gcode, wait=True, check=True, timeout=timeout)
+    # Wait for idle printer.
+    return await self.controller.machine.wait_for_idle_printer(timeout=1.0)
 
   async def run_gcode(self, gcode_list:list, timeout:float):
-    print(f"Backend in dry mode: {len(gcode_list)} commands will be ignored.")
+    # TODO: Consider removing this method and "_send_command_wait_and_check". No longer used.
+    if self.controller.machine.dry:
+      print(f"Backend in dry mode: {len(gcode_list)} commands will be ignored.")
     for gcode in gcode_list:
       await self._send_command_wait_and_check(gcode, timeout=timeout)
 
-  async def run_actions(self, actions:list):
+  async def run_actions(self, actions: list):
     # Make GCODE
-    gcode_list = self.parse_actions(actions)
+    gcode_list, parsed_actions = self.parse_actions(actions)
 
     # Send and check for success
-    # TODO: have the timeout based on an estimation.
-    await self.run_gcode(gcode_list, timeout=10.0)
+
+    # Run the actions.
+    await self.controller.run_actions_protocol(actions=parsed_actions)
+
+  # Atomic implemented in hardware ####
 
   async def pick_up_tips(self, ops: List[Pickup], use_channels: List[int], **backend_kwargs):
     """Pick up tips.
