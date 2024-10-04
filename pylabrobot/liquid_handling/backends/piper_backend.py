@@ -33,7 +33,7 @@ import logging
 from pylabrobot.resources import TipSpot
 from pylabrobot.resources.pipettin.tube_racks import Tube as PiperTube
 from pylabrobot.liquid_handling.backends import LiquidHandlerBackend
-from pylabrobot.resources import Resource
+from pylabrobot.resources import Resource, ItemizedResource
 from pylabrobot.liquid_handling.standard import (
   Pickup,
   PickupTipRack,
@@ -54,6 +54,7 @@ from piper.datatools.nodb import NoObjects
 from piper.datatools.mongo import MongoObjects
 # Load newt module.
 import newt
+from newt.translators.utils import index_to_row_first_index
 
 class PiperError(Exception):
   """ Raised when the Piper backend fails."""
@@ -267,9 +268,15 @@ class PiperBackend(LiquidHandlerBackend):
   @staticmethod
   def get_spot_index(spot):
     """Find the index of a resource (e.g. a TipSpot) in an itemized resource (e.g. a Tip Rack)."""
-    itemized_resource = spot.parent
-    index = next(i for i, s in enumerate(itemized_resource.get_all_items()) if s is spot)
-    return index
+    # Get the rack.
+    itemized_resource: ItemizedResource = spot.parent
+    # Get the spot's index.
+    col_first_index = next(i for i, s in enumerate(itemized_resource.get_all_items()) if s is spot)
+    # Convert PLR's index to piper's index.
+    columns, rows = itemized_resource.num_items_x, itemized_resource.num_items_y
+    row_first_index = index_to_row_first_index(col_first_index, rows, columns)
+    # Return piper's index.
+    return row_first_index
 
   def make_home_actions(self, axes=None) -> List:
     """make_home_actions"""
@@ -444,7 +451,6 @@ class PiperBackend(LiquidHandlerBackend):
 
     # Run the actions.
     await self.run_actions(actions)
-
 
   async def aspirate(self, ops: List[Aspiration], use_channels: List[int], **backend_kwargs):
     """aspirate"""
