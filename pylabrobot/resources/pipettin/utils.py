@@ -5,6 +5,55 @@ from pylabrobot.resources.liquid import Liquid
 
 from deepdiff import DeepDiff
 
+import re
+
+class DynamicAttributes:
+  """Generates an object with attributes set by kwargs.
+
+  Attribute names are "sanitized" before assignment.
+
+  Raises:
+      AttributeError: On missing attribute, and on setting attributes.
+  """
+  init: bool = False
+
+  def __init__(self, what:str="Channels", **kwargs):
+    # Initialize attributes from the kwargs dictionary
+    self.init = False
+    self._dict = kwargs
+    self._what = what
+    for key, value in kwargs.items():
+      sanitized_key = self._sanitize_name(key)
+      if hasattr(self, sanitized_key):
+        # Append the new value.
+        new_attr = getattr(self, sanitized_key) + [value]
+      else:
+        # Initialize list for new key.
+        new_attr = [value]
+      # Set the new value.
+      setattr(self, sanitized_key, new_attr)
+    self.init = True
+
+  def __getattr__(self, name):
+    # Called if the attribute does not exist
+    raise AttributeError(f"'{self.__class__.__name__}' object has no '{name}'.")
+
+  def __setattr__(self, name, value):
+    # Set the attribute as a regular instance attribute
+    if self.init:
+      raise AttributeError(f"{self._what} definitions can't be overridden directly.")
+    else:
+      self.__dict__[name] = value
+
+  def __repr__(self):
+    return f"{self._what} mapping:\n" + \
+      "\n".join(f"  {self._sanitize_name(ch)}: {tl}" for ch, tl in self._dict.items())
+
+  def _sanitize_name(self, name):
+    # Replace non-alphanumeric characters with underscores
+    sanitized = re.sub(r"\W|^(?=\d)", "_", name)
+    return sanitized
+
 # def sortedDeep(d):
 #   if isinstance(d,list):
 #     if len(d) > 0:
