@@ -14,7 +14,7 @@ from pylabrobot.resources import pipettin_test_plate
 
 from pylabrobot.resources.pipettin.utils import format_number, compare, json_dump
 
-from piper.datatools.datautils import load_objects
+from piper.datatools.datautils import load_objects, db_location
 from piper.utils import default_config
 
 from newt.translators.plr import deck_to_workspaces, convert_item, deck_to_db
@@ -22,9 +22,6 @@ from newt.translators.utils import (
   scrub, calculate_plr_dz_tip, calculate_plr_dz_tube, calculate_plr_dz_slot
 )
 from newt.translators.utils import calculate_plr_grid_parameters, derive_grid_parameters_from_plr
-
-# Example using exported data.
-db_location = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/databases.json'
 
 def make_silver_deck(workspace_name = "MK3 Baseplate", db: dict = None):
   print("Deck setup")
