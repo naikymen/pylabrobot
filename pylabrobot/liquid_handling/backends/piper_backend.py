@@ -279,12 +279,12 @@ class PiperBackend(LiquidHandlerBackend):
     return row_first_index
 
   def make_home_actions(self, axes=None) -> List:
-    """make_home_actions"""
+    """Make a homing action"""
     home_action = newt.protocol_actions.action_home(axis=axes)
     return [home_action]
 
   def make_tip_pickup_action(self, operations: List[Pickup], use_channels: List[int]) -> List:
-    """make_tip_pickup_action"""
+    """Make a tip pickup action"""
 
     pick_up_tip_actions = []
     for op, ch in zip(operations, use_channels):
@@ -304,7 +304,7 @@ class PiperBackend(LiquidHandlerBackend):
     return pick_up_tip_actions
 
   def make_discard_tip_action(self, operations: List[Drop], use_channels: List[int]) -> List:
-    """make_discard_tip_action"""
+    """Make a discard tip action"""
 
     # Use newt.
     discard_tip_actions = []
@@ -334,7 +334,7 @@ class PiperBackend(LiquidHandlerBackend):
     return discard_tip_actions
 
   def make_pipetting_action(self, operations: List[Aspiration], use_channels: List[int]) -> List:
-    """make_pipetting_action"""
+    """Make a dispense/aspirate action"""
 
     pipetting_actions = []
     for op, ch in zip(operations, use_channels):
