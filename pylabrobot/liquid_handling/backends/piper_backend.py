@@ -33,7 +33,7 @@ import logging
 from pylabrobot.resources import TipSpot
 from pylabrobot.resources.pipettin.tube_racks import Tube as PiperTube
 from pylabrobot.liquid_handling.backends import LiquidHandlerBackend
-from pylabrobot.resources import Resource
+from pylabrobot.resources import Resource, ItemizedResource
 from pylabrobot.liquid_handling.standard import (
   Pickup,
   PickupTipRack,
@@ -51,12 +51,10 @@ from pylabrobot.liquid_handling.standard import (
 # Load piper modules.
 from piper.controller import Controller
 from piper.datatools.nodb import NoObjects
-# from piper.log import setup_logging
-from piper.utils import get_config_path
-from piper.datatools.datautils import load_objects
-from piper.config.config_helper import TrackedDict
+from piper.datatools.mongo import MongoObjects
 # Load newt module.
 import newt
+from newt.translators.utils import index_to_row_first_index
 
 class PiperError(Exception):
   """ Raised when the Piper backend fails."""
@@ -64,40 +62,24 @@ class PiperError(Exception):
 class PiperBackend(LiquidHandlerBackend):
   """ Backend for Piper, OLA's liquid-handler controller module."""
 
-  controller: Controller
-
-  def __init__(self,
-               tool_defs:Union[str, dict],
-               config:dict = None):
+  def __init__(self, config:dict = None):
     """Init method for the PiperBackend."""
 
+    # Init LiquidHandlerBackend.
     super().__init__()
 
-    # Parse configuration.
-    base_config_file = get_config_path()
-    base_config = TrackedDict(base_config_file, allow_edits=True)
-    base_config.update(config if config else {})
-    self.config = base_config
+    # Declare attributes.
+    self.controller: Controller = None
+    self._num_channels: int = None
+    self._channels: dict = None
 
-    # Save tool data.
-    self.tools = load_objects(tool_defs)
+    # Set the default configuration.
+    self.config = config
 
-    # Configure channels.
-    self._num_channels = 0
-    self._channels = {}
-    self.configure_channels(self.tools)
+    # Setup the database object.
+    self.database_tools: MongoObjects = self.init_dbtools()
 
-  def check_tool(self, tool_id):
-
-    # TODO: Rewrite this method and use it to check num_channels in incoming actions.
-    #       For example: is the multi-tip pickup geometry supported by a tool or the selected tool?
-    #       See discussion at: https://labautomation.io/t/writing-a-new-backend-agnosticity/844/53
-
-    if tool_id not in self.tool_ids:
-      msg = f"Tool with ID '{tool_id}' was not found in the backend's tools list ({self.tool_ids})."
-      raise ValueError(msg)
-
-  def configure_channels(self, tool_defs: dict):
+  def init_channels(self, tool_defs: dict):
     """ Compute and save number of channels.
 
     This requires tool definitions with the following properties:
@@ -107,6 +89,8 @@ class PiperBackend(LiquidHandlerBackend):
       "P300x8": {"parameters": {"channels": 8} }
     }
     """
+    self._num_channels = 0
+    self._channels = {}
     for tool in tool_defs:
       if tool.get("type", None) == "Micropipette":
         ch_count: int = tool["parameters"]["channels"]
@@ -116,44 +100,78 @@ class PiperBackend(LiquidHandlerBackend):
             raise ValueError(f"Channel {ch} is already provided by {self._channels[ch]}.")
           self._num_channels += 1
           self._channels[ch] = tool_name
-          print(f"Assigning channel number {ch} to tool '{tool_name}'.")
-    print(f"Configured the PiperBackend with num_channels={self._num_channels}")
+          if self.config.get("verbose", False):
+            print(f"Assigning channel number {ch} to tool '{tool_name}'.")
+    print(f"Configured the PiperBackend with {self._num_channels} channels.")
     print("Final channel-tool mapping:\n" + "\n".join(f"  {ch}: {tl}" for ch, tl in self._channels.items()))
 
-  # Setup/Stop methods ####
+  def init_dbtools(self) -> MongoObjects:
+    """Populate the controller's database with data from the Deck."""
+    # TODO: Make this deck-agnostic.
+    db_type = self.config.get("datatools", "nodb")
+    if db_type == "nodb":
+      database_tools = NoObjects()
+      database_tools.workspaces = [self.deck.workspace]
+      database_tools.platforms = self.deck.platforms
+      database_tools.containers = self.deck.containers
+      # Populate the controller's database with Tool data.
+      database_tools.tools = self.deck.tools
+      # database_tools.settings
+    elif db_type == "mongo":
+      database_tools = MongoObjects(**self.config["database"])
+    else:
+      raise PiperError(f"Unsupported database backend: {db_type}")
 
-  async def setup(self, home=False):
+    return database_tools
 
-    await super().setup()
-
-    # TODO: Set up logging. Will it interfere with PLRs?
-    # setup_logging(directory=opts.get('logdir', None),
-    #               level=opts.get('loglevel', logging.INFO))
+  def init_controller(self):
+    """Instantiate a controller object and save it to this backend instance.
+    Requires an associated SilverDeck.
+    """
+    # Check.
+    if self.controller:
+      raise PiperError("Controller object already configured.")
 
     # Populate the controller's database with data from the Deck.
-    database_tools = NoObjects()
-    database_tools.workspaces = [self.deck.workspace]
-    database_tools.platforms = self.deck.platforms
-    database_tools.containers = self.deck.containers
-    database_tools.tools = self.tools
-    # database_tools.settings
+    # database_tools = self.init_dbtools()
 
     # Create the controller object.
-    self.controller = Controller(config=self.config, database_tools=database_tools)
+    self.controller = Controller(config=self.config, database_tools=self.database_tools)
 
     # Set current data objects in the gcode builder.
     self.controller.builder.initialize_objects(
-      workspace=self.deck.workspace, platformsInWorkspace=self.deck.platforms)
+      workspace=self.deck.workspace,
+      platformsInWorkspace=self.deck.platforms
+    )
 
-    # Populate the controller's database with Tool data.
+    # Save tool names.
     self.tool_ids = list(self.controller.builder.tools)
+
+  # Setup/Stop methods ####
+
+  async def setup(self, home=False, controller: Controller = None):
+    """Backend setup method, called by LiquidHandler.
+
+    Args:
+        home (bool, optional): Home the machine on setup. Defaults to False.
+        controller (Controller, optional): Provide a controller object. Defaults to None.
+    """
+    # Parent class setup. Must happen first.
+    await super().setup()
+
+    # Define a controller object.
+    if controller is None:
+      self.init_controller()
+
+    # Configure channels.
+    self.init_channels(self.deck.tools)
 
     # Start the controller.
     await self._start_controller(timeout=5)
 
     # Home the robot's motion system.
     if home:
-      await self._home_machine(timeout=43)
+      await self._home_machine()
 
     # Mark finished.
     self.setup_finished = True
@@ -177,45 +195,29 @@ class PiperBackend(LiquidHandlerBackend):
     else:
       print("Connections successfully setup.")
 
-  async def _home_machine(self, timeout):
+  async def _home_machine(self):
     # TODO: customize parameters.
-    home_actions = self.make_home_actions()
-    gcode: dict = self.parse_actions(home_actions)
 
     if self.controller.machine.dry:
       print("Dry mode enabled, skipping Homing routine.")
       return
 
-    # Send commands.
-    print("Homing the machine's axes...")
-    cmd_id = await self.controller.send_gcode_script(
-      gcode, wait=False, check=False,
-      cmd_id="PLR setup",
-      timeout=0.0)
+    try:
+      # Generate the homing actions.
+      home_actions = self.make_home_actions()
 
-    # Wait for idle printer.
-    print("Waiting for homing completion (idle machine)...")
-    result = await self.controller.wait_for_idle_printer(timeout=timeout)
-    if not result:
-      msg = "The homing process timed out. Try increasing the value of 'timeout' "
-      msg += f"(currently at {timeout}), or check the logs for errors."
-      print(msg)
+      # Generate the actions' gcode.
+      await self.run_actions(home_actions)
 
-    # Check for homing success
-    print("Checking for homing success...")
-    result = await self.controller.check_command_result_ok(
-      cmd_id=cmd_id, timeout=timeout/2, loop_delay=0.2)
-    if not result:
-      await super().stop()
-      response = self.controller.get_response_by_id(cmd_id)
-      raise PiperError("Failed to HOME. Response:\n" + pformat(response) + "\n")
+    except Exception as e:
+      raise PiperError("Failed to home.") from e
 
     print("Homing done!")
 
   async def stop(self, timeout=2.0, home=True):
     if home:
       # Home the robot.
-      await self._home_machine(timeout)
+      await self._home_machine()
 
     if self.controller.machine.dry:
       print("Dry mode enabled, skipping machine cleanup.")
@@ -223,13 +225,13 @@ class PiperBackend(LiquidHandlerBackend):
       print("Stopping the robot.")
 
       # Try sending a "motors-off" command.
-      cmd_id = await self.controller.send_gcode_cmd("M84", wait=True, check=True, timeout=timeout)
+      cmd_id = await self.controller.machine.send_gcode_cmd("M84", wait=True, check=True, timeout=timeout)
 
       # Send an "emergency stop" command if M84 failed.
-      result = await self.controller.check_command_result_ok(
+      result = await self.controller.machine.check_command_result_ok(
         cmd_id=cmd_id, timeout=timeout, loop_delay=0.2)
       if not result:
-        self.controller.firmware_restart()
+        self.controller.machine.firmware_restart()
 
     # TODO: comment on what this does.
     await super().stop()
@@ -240,11 +242,13 @@ class PiperBackend(LiquidHandlerBackend):
   # Resource callback methods ####
 
   async def assigned_resource_callback(self, resource: Resource):
-    print(f"piper_backend: Resource '{resource.name}' assigned to the robot.")
+    if self.config.get("verbose", False):
+      print(f"piper_backend: Resource '{resource.name}' assigned to the robot.")
     # TODO: should this update the workspace?
 
   async def unassigned_resource_callback(self, name: str):
-    print(f"piper_backend: Resource '{name}' unassigned from the robot.")
+    if self.config.get("verbose", False):
+      print(f"piper_backend: Resource '{name}' unassigned from the robot.")
     # TODO: should this update the workspace?
 
   # Helper methods ####
@@ -260,33 +264,27 @@ class PiperBackend(LiquidHandlerBackend):
     coordinate_dict = coordinate.serialize()
     return coordinate_dict
 
-  async def _send_command_wait_and_check(self, gcode, timeout):
-    # TODO: customize timeout.
-    # Send gcode commands.
-    if not self.controller.machine.dry:
-      # Send commands.
-      await self.controller.send_gcode_script(gcode, wait=True, check=True, timeout=timeout)
-
-      # Wait for idle printer.
-      return await self.controller.wait_for_idle_printer(timeout=1.0)
-    # else:
-    #   print(f"Backend in dry mode, commands ignored:\n{pformat(gcode)}")
-
   # Action generators ####
   @staticmethod
   def get_spot_index(spot):
     """Find the index of a resource (e.g. a TipSpot) in an itemized resource (e.g. a Tip Rack)."""
-    itemized_resource = spot.parent
-    index = next(i for i, s in enumerate(itemized_resource.get_all_items()) if s is spot)
-    return index
+    # Get the rack.
+    itemized_resource: ItemizedResource = spot.parent
+    # Get the spot's index.
+    col_first_index = next(i for i, s in enumerate(itemized_resource.get_all_items()) if s is spot)
+    # Convert PLR's index to piper's index.
+    columns, rows = itemized_resource.num_items_x, itemized_resource.num_items_y
+    row_first_index = index_to_row_first_index(col_first_index, rows, columns)
+    # Return piper's index.
+    return row_first_index
 
   def make_home_actions(self, axes=None) -> List:
-    """make_home_actions"""
+    """Make a homing action"""
     home_action = newt.protocol_actions.action_home(axis=axes)
     return [home_action]
 
   def make_tip_pickup_action(self, operations: List[Pickup], use_channels: List[int]) -> List:
-    """make_tip_pickup_action"""
+    """Make a tip pickup action"""
 
     pick_up_tip_actions = []
     for op, ch in zip(operations, use_channels):
@@ -306,7 +304,7 @@ class PiperBackend(LiquidHandlerBackend):
     return pick_up_tip_actions
 
   def make_discard_tip_action(self, operations: List[Drop], use_channels: List[int]) -> List:
-    """make_discard_tip_action"""
+    """Make a discard tip action"""
 
     # Use newt.
     discard_tip_actions = []
@@ -336,7 +334,7 @@ class PiperBackend(LiquidHandlerBackend):
     return discard_tip_actions
 
   def make_pipetting_action(self, operations: List[Aspiration], use_channels: List[int]) -> List:
-    """make_pipetting_action"""
+    """Make a dispense/aspirate action"""
 
     pipetting_actions = []
     for op, ch in zip(operations, use_channels):
@@ -377,27 +375,42 @@ class PiperBackend(LiquidHandlerBackend):
 
     return pipetting_actions
 
-  # Atomic implemented in hardware ####
+  # GCODE generation and execution ####
 
-  def parse_actions(self, actions: list) -> List:
+  def parse_actions(self, actions: list):
+    """Parse actions into GCODE"""
     gcode_list = []
+    actions_list = []
     for a in actions:
       action = self.controller.builder.parseAction(a)
       gcode_list += action["GCODE"]
-    return gcode_list
+      actions_list += [action]
+    return gcode_list, actions_list
+
+  async def _send_command_wait_and_check(self, gcode: list, timeout):
+    # Send commands.
+    # TODO: customize timeout.
+    await self.controller.machine.send_gcode_script(gcode, wait=True, check=True, timeout=timeout)
+    # Wait for idle printer.
+    return await self.controller.machine.wait_for_idle_printer(timeout=1.0)
 
   async def run_gcode(self, gcode_list:list, timeout:float):
-    print(f"Backend in dry mode: {len(gcode_list)} commands will be ignored.")
+    # TODO: Consider removing this method and "_send_command_wait_and_check". No longer used.
+    if self.controller.machine.dry:
+      print(f"Backend in dry mode: {len(gcode_list)} commands will be ignored.")
     for gcode in gcode_list:
       await self._send_command_wait_and_check(gcode, timeout=timeout)
 
-  async def run_actions(self, actions:list):
+  async def run_actions(self, actions: list):
     # Make GCODE
-    gcode_list = self.parse_actions(actions)
+    gcode_list, parsed_actions = self.parse_actions(actions)
 
     # Send and check for success
-    # TODO: have the timeout based on an estimation.
-    await self.run_gcode(gcode_list, timeout=10.0)
+
+    # Run the actions.
+    await self.controller.run_actions_protocol(actions=parsed_actions)
+
+  # Atomic implemented in hardware ####
 
   async def pick_up_tips(self, ops: List[Pickup], use_channels: List[int], **backend_kwargs):
     """Pick up tips.
@@ -438,7 +451,6 @@ class PiperBackend(LiquidHandlerBackend):
 
     # Run the actions.
     await self.run_actions(actions)
-
 
   async def aspirate(self, ops: List[Aspiration], use_channels: List[int], **backend_kwargs):
     """aspirate"""
