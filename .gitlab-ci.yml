@@ -8,24 +8,25 @@ stages:
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
 
-before_script:
-  - apt update && apt install -y python3.9 python3.9-distutils curl git
-  - curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python3.9 get-pip.py
-  - pip3.9 install deepdiff
-  - pip3.9 install piper[dev]@git+https://gitlab.com/pipettin-bot/pipettin-piper.git
-  - pip3.9 install .
+default:
+  before_script:
+    - apt update && apt install -y python3.9 python3.9-distutils curl git
+    - curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python3.9 get-pip.py
+    - pip3.9 install deepdiff
+    - pip3.9 install piper[dev]@git+https://gitlab.com/pipettin-bot/pipettin-piper.git
+    - pip3.9 install .
 
 cache:
   paths:
     - .cache/pip
 
-test:
+test_jsondb:
   stage: test
   script:
     - pytest pylabrobot/resources/pipettin/pipettin_tests.py -k 'not test_with_config_mongo'
     - cat /tmp/piper*.log || echo "No logs found."
 
-test_with_mongo:
+test_mongodb:
   stage: test
   before_script:
     - cp /etc/mongod.conf.orig /etc/mongod.conf
