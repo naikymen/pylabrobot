@@ -14,3 +14,5 @@ build/lib
 pylabrobot-venv
 .vscode/*
 notebooks/*.json
+
+myenv
