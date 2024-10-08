@@ -3,7 +3,8 @@
 image: mongo:5.0.29-focal
 
 stages:
-  - test
+  - stage1
+  - stage2
 
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
@@ -21,13 +22,13 @@ cache:
     - .cache/pip
 
 test_jsondb:
-  stage: test
+  stage: stage1
   script:
     - pytest pylabrobot/resources/pipettin/pipettin_tests.py -k 'not test_with_config_mongo'
     - cat /tmp/piper*.log || echo "No logs found."
 
 test_mongodb:
-  stage: test
+  stage: stage2
   before_script:
     - cp /etc/mongod.conf.orig /etc/mongod.conf
     - mkdir -p /var/lib/mongodb
