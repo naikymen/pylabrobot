@@ -49,7 +49,7 @@ async def test_piper_backend():
     "sio_address": "",
     # Database connection parameters.
     "datatools": "jsondb",
-    "database": {"json_url": db_location, "database_name": 'pipettin'}
+    "database": {"database_url": db_location, "database_name": 'pipettin'}
   })
 
   # Piper backend.
