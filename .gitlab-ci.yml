@@ -25,23 +25,23 @@ test:
     - pytest pylabrobot/resources/pipettin/pipettin_tests.py -k 'not test_with_config_mongo'
     - cat /tmp/piper*.log || echo "No logs found."
 
-# test_with_mongo:
-#   stage: test
-#   before_script:
-#     - cp /etc/mongod.conf.orig /etc/mongod.conf
-#     - mkdir -p /var/lib/mongodb
-#     - mongod --fork --config /etc/mongod.conf
-#     - git clone --depth=1 https://gitlab.com/pipettin-bot/pipettin-gui
-#     - cd pipettin-gui/api/src/db/defaults/
-#     - mongoimport --db pipettin --collection platforms --file platforms.json --jsonArray
-#     - mongoimport --db pipettin --collection protocols --file protocols.json --jsonArray
-#     - mongoimport --db pipettin --collection workspaces --file workspaces.json --jsonArray
-#     - mongoimport --db pipettin --collection containers --file containers.json --jsonArray
-#     - mongoimport --db pipettin --collection settings --file settings.json --jsonArray
-#     - mongoimport --db pipettin --collection hLprotocols --file hLprotocols.json --jsonArray
-#     - mongoimport --db pipettin --collection tools --file tools.json --jsonArray
-#   script:
-#     - pytest pylabrobot/resources/pipettin/pipettin_tests.py::test_with_config_mongo
-#     - cat /tmp/piper*.log || echo "No logs found."
-#   after_script:
-#     - pkill mongod
+test_with_mongo:
+  stage: test
+  before_script:
+    - cp /etc/mongod.conf.orig /etc/mongod.conf
+    - mkdir -p /var/lib/mongodb
+    - mongod --fork --config /etc/mongod.conf
+    - git clone --depth=1 https://gitlab.com/pipettin-bot/pipettin-gui
+    - cd pipettin-gui/api/src/db/defaults/
+    - mongoimport --db pipettin --collection platforms --file platforms.json --jsonArray
+    - mongoimport --db pipettin --collection protocols --file protocols.json --jsonArray
+    - mongoimport --db pipettin --collection workspaces --file workspaces.json --jsonArray
+    - mongoimport --db pipettin --collection containers --file containers.json --jsonArray
+    - mongoimport --db pipettin --collection settings --file settings.json --jsonArray
+    - mongoimport --db pipettin --collection hLprotocols --file hLprotocols.json --jsonArray
+    - mongoimport --db pipettin --collection tools --file tools.json --jsonArray
+  script:
+    - pytest pylabrobot/resources/pipettin/pipettin_tests.py::test_with_config_mongo
+    - cat /tmp/piper*.log || echo "No logs found."
+  after_script:
+    - pkill mongod
