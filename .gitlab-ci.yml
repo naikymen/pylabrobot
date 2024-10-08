@@ -11,12 +11,12 @@ variables:
 before_script:
   - apt update
   - apt install -y python3.9
-  - python3 --version
+  - python3.9 --version
   - curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
   - python3.9 get-pip.py
-  - pip3 install deepdiff
-  - pip3 install piper[dev]@git+https://gitlab.com/pipettin-bot/pipettin-piper.git
-  - pip3 install .
+  - pip3.9 install deepdiff
+  - pip3.9 install piper[dev]@git+https://gitlab.com/pipettin-bot/pipettin-piper.git
+  - pip3.9 install .
 
 cache:
   paths:
