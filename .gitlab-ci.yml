@@ -26,6 +26,7 @@ default:
     - mongoimport --db pipettin --collection settings --file pipettin-gui/api/src/db/defaults/settings.json --jsonArray
     - mongoimport --db pipettin --collection hLprotocols --file pipettin-gui/api/src/db/defaults/hLprotocols.json --jsonArray
     - mongoimport --db pipettin --collection tools --file pipettin-gui/api/src/db/defaults/tools.json --jsonArray
+    - mongoimport --db pipettin --collection protocol_templates --file pipettin-gui/api/src/db/defaults/protocolTemplates.json --jsonArray
   after_script:
     - pkill mongod
 
