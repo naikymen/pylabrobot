@@ -10,13 +10,11 @@ variables:
 
 before_script:
   - apt update
-  - apt install -y python3
-  - python3 --version
   - apt install -y python3.9
-  - python3.9 --version
-  - pip3.9 install deepdiff
-  - pip3.9 install piper[dev]@git+https://gitlab.com/pipettin-bot/pipettin-piper.git
-  - pip3.9 install .
+  - python3 --version
+  - pip3 install deepdiff
+  - pip3 install piper[dev]@git+https://gitlab.com/pipettin-bot/pipettin-piper.git
+  - pip3 install .
 
 cache:
   paths:
