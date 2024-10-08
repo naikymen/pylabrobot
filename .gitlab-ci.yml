@@ -9,6 +9,8 @@ variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
 
 before_script:
+  - python3 --version
+  - apt update
   - apt install python3.9
   - python3.9 --version
   - pip3.9 install deepdiff
