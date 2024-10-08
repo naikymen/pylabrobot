@@ -14,7 +14,7 @@ from pylabrobot.resources import pipettin_test_plate
 
 from pylabrobot.resources.pipettin.utils import format_number, compare, json_dump
 
-from piper.datatools.datautils import load_objects
+from piper.datatools.datautils import load_objects, db_location
 from piper.utils import default_config
 
 from newt.translators.plr import deck_to_workspaces, convert_item, deck_to_db

@@ -48,6 +48,8 @@ from pylabrobot.liquid_handling.standard import (
 # TODO: Raise "NoChannelError" in the backend when appropriate.
 # from pylabrobot.liquid_handling.errors import NoChannelError
 
+# Custom stuff.
+from pylabrobot.resources.pipettin.utils import DynamicAttributes
 # Load piper modules.
 from piper.controller import Controller
 from piper.datatools.nodb import NoObjects
@@ -99,8 +101,13 @@ class PiperBackend(LiquidHandlerBackend):
           self._channels[ch] = tool_name
           if self.config.get("verbose", False):
             print(f"Assigning channel number {ch} to tool '{tool_name}'.")
-    print(f"Configured the PiperBackend with {self._num_channels} channels.")
-    print("Final channel-tool mapping:\n" + "\n".join(f"  {ch}: {tl}" for ch, tl in self._channels.items()))
+    print(f"Configured the PiperBackend with {self._num_channels} channels: {self._channels.values()}")
+    # The channels property is a dynamic attribute.
+    print(self.channels)
+
+  @property
+  def channels(self):
+    return DynamicAttributes(**{v: k for k, v in self._channels.items()})
 
   def init_controller(self):
     """Instantiate a controller object and save it to this backend instance.
