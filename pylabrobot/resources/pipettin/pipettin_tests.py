@@ -2,17 +2,17 @@ import pytest
 from math import isclose
 from copy import deepcopy
 from pprint import pformat
-import json
 
 from deepdiff import DeepDiff
 
 from pylabrobot.liquid_handling.backends.piper_backend import PiperBackend
-from pylabrobot.resources import Deck, SilverDeck, Axy_24_DW_10ML, FourmlTF_L, Coordinate
+from pylabrobot.resources import Deck, Axy_24_DW_10ML, FourmlTF_L, Coordinate
 from pylabrobot.liquid_handling import LiquidHandler
 from pylabrobot.resources import set_tip_tracking, set_volume_tracking
 from pylabrobot.resources import pipettin_test_plate
 
 from pylabrobot.resources.pipettin.utils import format_number, compare, json_dump
+from pylabrobot.resources.pipettin.silver_deck import SilverDeck, make_silver
 
 from piper.datatools.datautils import load_objects, db_location
 from piper.utils import default_config
@@ -23,28 +23,9 @@ from newt.translators.utils import (
 )
 from newt.translators.utils import calculate_plr_grid_parameters, derive_grid_parameters_from_plr
 
-def make_silver_deck(workspace_name = "MK3 Baseplate", db: dict = None):
-  print("Deck setup")
-  if db is None:
-    db = load_objects(db_location)["pipettin"]
-
-  # Choose one workspace.
-  workspace = next(w for w in db["workspaces"] if w["name"] == workspace_name)
-
-  # Get all platforms and containers.
-  platforms = db["platforms"]
-  containers = db["containers"]
-  tools = db["tools"]
-
-  # Instantiate the deck object.
-  deck = SilverDeck(workspace, platforms, containers, tools)
-
-  print("Deck setup done")
-  return deck
-
 def test_silver_deck():
   # Instantiate the deck.
-  deck = make_silver_deck()
+  deck = make_silver(workspace_name="MK3 Baseplate")
 
   # Try assigning and retrieving some resources.
   well_plate = Axy_24_DW_10ML("Axygen well-plate")
@@ -74,11 +55,8 @@ async def test_piper_backend():
   # Piper backend.
   back = PiperBackend(config=config)
 
-  # Get object definitions.
-  db = load_objects(db_location)["pipettin"]
-
   # Instantiate the deck.
-  deck = make_silver_deck(db=db)
+  deck = make_silver(db_objects=db_location, db_name="pipettin", workspace_name="MK3 Baseplate")
 
   # TODO: Ask for a better error message when a non-instantiated backend is passed.
   lh = LiquidHandler(backend=back, deck=deck)
@@ -152,7 +130,7 @@ def test_reverse_engineering():
 def test_translation_basic():
   """Check that translations work (or at least can run)"""
   # Instantiate the deck.
-  deck = make_silver_deck()
+  deck = make_silver(workspace_name="MK3 Baseplate")
   # Serialize deck.
   deck_data = deck.serialize()
   # Convert to workspace.
@@ -282,7 +260,7 @@ def test_translation_advanced():
   for workspace_name in workspace_names:
 
     # Instantiate the deck object.
-    deck = SilverDeck(db=db_location, workspace_name=workspace_name)
+    deck = SilverDeck(db=db_location, workspace_name=workspace_name, db_name="pipettin")
 
     # Serialize deck.
     deck_data = deck.serialize()

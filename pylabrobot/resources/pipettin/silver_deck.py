@@ -29,10 +29,7 @@ from .utils import get_items_platform, create_trash, create_petri_dish, importer
 from newt.translators.utils import xy_to_plr
 from newt.translators.plr import deck_to_db
 from newt.utils import draw_ascii_workspace
-from piper.datatools.datautils import load_objects
-
-pipettin_db_url = \
-  "https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/databases.json"
+from piper.datatools.datautils import load_objects, get_db_from_config, db_location, get_objects_from_db
 
 class SilverDeck(Deck):
   """ (Ag)nostic deck object.
@@ -57,9 +54,11 @@ class SilverDeck(Deck):
                containers: dict = None,
                tools: dict = None,
                # Alternatively, import them from a DB.
-               db: dict = None,
+               db = None,
                db_name = "pipettin",
                workspace_name: str = None,
+               # Alternatively, generate them from config.
+               config: dict = None,
                # TODO: Update defaults.
                default_name: str= "silver_deck",
                default_size_x: float = 250,
@@ -72,26 +71,35 @@ class SilverDeck(Deck):
                subset_platforms=True
                ):
 
-    if db:
-      workspace, platforms, containers, tools = self.load_objects(
-        db, db_name, workspace_name,
-        workspace, platforms, containers, tools,
-        subset_platforms
+    # Load DB into a dictionary if provided.
+    if db is not None:
+      db = load_objects(db)
+
+    # Load DB from config if provided.
+    if config is not None:
+      # Load a db object from the configuration.
+      db_from_config = get_db_from_config(config)
+      if db is None:
+        # Use the db loaded from config.
+        db = db_from_config
+      else:
+        # Merge the config db with the directly provided db.
+        # Let the "db" have priority.
+        db = db_from_config | db
+
+    # Update the unset init arguments with DB objects if provided.
+    if db is not None:
+      workspace, platforms, containers, tools = get_objects_from_db(
+        db_objects=db, db_name=db_name, workspace_name=workspace_name,
+        workspace=workspace, platforms=platforms, containers=containers,
+        tools=tools, subset_platforms=subset_platforms
       )
 
-    # Save the pipettin objects.
-    if workspace is None:
-      raise ValueError("workspace or database details not provided.")
-    if platforms is None:
-      raise ValueError("platforms or database details not provided.")
-    if containers is None:
-      raise ValueError("containers or database details not provided.")
-    if tools is None:
-      raise ValueError("tools or database details not provided.")
+    # Save the pipettin objects as attributes.
     self._workspace = workspace
     self._platforms = platforms
     self._containers = containers
-    self.tools = tools
+    self._tools = tools
 
     # Default origin to zero.
     if default_origin is None:
@@ -120,38 +128,6 @@ class SilverDeck(Deck):
 
     # Load platform items.
     self.assign_platforms(workspace, platforms, containers, tools)
-
-  def load_objects(self, db_location, db_name, workspace_name: str,
-                   workspace, platforms, containers, tools, subset_platforms = True):
-    # Load the database.
-    db = load_objects(db_location)[db_name]
-
-    # Get the workspace and discard its thumbnail.
-    if workspace is None:
-      if workspace_name is None:
-        raise ValueError("workspace_name must be provided, and can't be None.")
-      workspace = next(w for w in db["workspaces"] if w["name"] == workspace_name)
-    if "thumbnail" in workspace:
-      del workspace["thumbnail"]
-
-    # Get all platforms and containers.
-    if platforms is None:
-      if subset_platforms:
-        workspace_items = workspace.get("items", [])
-        platforms_in_workspace = [item["platform"] for item in workspace_items]
-        platforms = [p for p in db["platforms"] if p["name"] in platforms_in_workspace]
-      else:
-        platforms = db["platforms"]
-
-    # Get all containers.
-    if containers is None:
-      containers = db["containers"]
-
-    # Get all tools.
-    if tools is None:
-      tools = db["tools"]
-
-    return workspace, platforms, containers, tools
 
   def serialize(self):
     return {
@@ -269,6 +245,9 @@ class SilverDeck(Deck):
   @property
   def workspace_items(self):
     return deepcopy(self._workspace["items"])
+  @property
+  def tools(self):
+    return deepcopy(self._tools)
 
   def summary(self, **kwargs) -> str:
     """ Generate an ASCII summary of the deck.
@@ -298,19 +277,41 @@ class SilverDeck(Deck):
     print(ascii_dck)
 
 def make_silver(
-  db_location = pipettin_db_url,
-  workspace_name = "Basic Workspace",
-  empty=False,
-  ):
+  db_objects = db_location,
+  workspace_name: str = "Basic Workspace",
+  db_name: str = "pipettin",
+  empty: bool = False,
+  ) -> SilverDeck:
+  """
+  Create and configure a SilverDeck object from a specified workspace.
+
+  This function loads a workspace from the provided database object, and optionally
+  clears its items. It then initializes and returns a `SilverDeck` object, which is
+  populated with data from the workspace.
+
+  Args:
+      db_objects: The database source, which can be a URL, file path, or dictionary,
+                  containing the necessary data. Defaults to the global `db_location`.
+      workspace_name (str, optional): Name of the workspace to load. Defaults to "Basic Workspace".
+      empty (bool, optional): If True, clears all items from the workspace before creating
+                              the `SilverDeck`. Defaults to False.
+
+  Returns:
+      SilverDeck: An instance of `SilverDeck` configured with the workspace.
+
+  Raises:
+      StopIteration: If the specified workspace name is not found in the database.
+
+  """
   # Load objects.
-  db = load_objects(db_location)
-  workspace = next(w for w in db["pipettin"]["workspaces"] if w["name"] == workspace_name)
+  db = load_objects(db_objects)
+  workspace = next(w for w in db[db_name]["workspaces"] if w["name"] == workspace_name)
   # Remove items.
   if empty:
     workspace["items"] = []
   # Instantiate the deck object.
   deck = SilverDeck(
-    db=db,
+    db=db, db_name=db_name,
     workspace=workspace,
     subset_platforms=False
   )
