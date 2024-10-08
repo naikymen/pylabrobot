@@ -99,6 +99,49 @@ async def test_piper_backend():
   # Cleanup.
   await lh.stop()
 
+@pytest.mark.asyncio
+async def test_with_config_mongo():
+
+  # We enable tip and volume tracking globally using the `set_volume_tracking` and `set_tip_tracking` methods.
+  set_volume_tracking(enabled=True)
+  set_tip_tracking(enabled=True)
+
+  config = {
+    "dry": True,
+    "ws_address": "", "sio_address": "",
+    "datatools": "mongo",
+    "database": {
+      "database_url": "localhost:27017",
+      "database_name": "pipettin-2024-09-26"
+    }
+  }
+
+  back = PiperBackend(config=config, home_on_setup_and_close=True)
+  # Will home the robot on setup and close.
+
+  # Instantiate the SilverDeck from a config.
+  deck = SilverDeck(config=config, workspace_name="Experiment")
+  deck.summary()
+
+  lh = LiquidHandler(backend=back, deck=deck)
+
+  await lh.setup()
+
+  tip_rack = deck.get_resource("Blue tip rack")
+
+  pickups = await lh.pick_up_tips(tip_rack["A1"], use_channels=back.channels.PMULTI)
+
+  tube_rack = deck["Tube Rack [5x16]"]
+
+  aspirations = await lh.aspirate(tube_rack["A1"], vols=[100], use_channels=back.channels.PMULTI)
+
+  well_plate = deck["Standard 384-well plate"]
+
+  for well in well_plate["B2:B7"]:
+    dispenses = await lh.dispense([well], vols=[15], use_channels=back.channels.PMULTI)
+
+  await lh.stop()
+
 def test_reverse_engineering():
   # Create an instance
   well_plate = pipettin_test_plate(name="plate_01")
