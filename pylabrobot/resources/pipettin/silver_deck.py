@@ -55,7 +55,7 @@ class SilverDeck(Deck):
                tools: dict = None,
                # Alternatively, import them from a DB.
                db = None,
-               db_name = "pipettin",
+               db_name = None,
                workspace_name: str = None,
                # Alternatively, generate them from config.
                config: dict = None,
@@ -78,7 +78,11 @@ class SilverDeck(Deck):
     # Load DB from config if provided.
     if config is not None:
       # Load a db object from the configuration.
-      db_from_config = get_db_from_config(config)
+      db_from_config, db_name_from_config = get_db_from_config(config)
+      # Update the DB name if not provided.
+      if db_name is None:
+        db_name = db_name_from_config
+      # Update the DB.
       if db is None:
         # Use the db loaded from config.
         db = db_from_config
@@ -86,6 +90,10 @@ class SilverDeck(Deck):
         # Merge the config db with the directly provided db.
         # Let the "db" have priority.
         db = db_from_config | db
+
+    # Default to a database name, if not set by now.
+    if db_name is None:
+      db_name = "pipettin"
 
     # Update the unset init arguments with DB objects if provided.
     if db is not None:
