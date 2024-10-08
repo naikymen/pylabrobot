@@ -9,7 +9,7 @@ variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
 
 before_script:
-  - sudo apt install python3.9
+  - apt install python3.9
   - python3.9 --version
   - pip3.9 install deepdiff
   - pip3.9 install piper[dev]@git+https://gitlab.com/pipettin-bot/pipettin-piper.git
