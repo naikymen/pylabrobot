@@ -3,8 +3,7 @@
 image: mongo:5.0.29-focal
 
 stages:
-  - stage1
-  - stage2
+  - test
 
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
@@ -16,20 +15,6 @@ default:
     - pip3.9 install deepdiff
     - pip3.9 install piper[dev]@git+https://gitlab.com/pipettin-bot/pipettin-piper.git
     - pip3.9 install .
-
-cache:
-  paths:
-    - .cache/pip
-
-test_jsondb:
-  stage: stage1
-  script:
-    - pytest pylabrobot/resources/pipettin/pipettin_tests.py -k 'not test_with_config_mongo'
-    - cat /tmp/piper*.log || echo "No logs found."
-
-test_mongodb:
-  stage: stage2
-  before_script:
     - cp /etc/mongod.conf.orig /etc/mongod.conf
     - mkdir -p /var/lib/mongodb
     - mongod --fork --config /etc/mongod.conf
@@ -42,8 +27,15 @@ test_mongodb:
     - mongoimport --db pipettin --collection settings --file settings.json --jsonArray
     - mongoimport --db pipettin --collection hLprotocols --file hLprotocols.json --jsonArray
     - mongoimport --db pipettin --collection tools --file tools.json --jsonArray
-  script:
-    - pytest pylabrobot/resources/pipettin/pipettin_tests.py::test_with_config_mongo
-    - cat /tmp/piper*.log || echo "No logs found."
   after_script:
     - pkill mongod
+
+cache:
+  paths:
+    - .cache/pip
+
+test_jsondb:
+  stage: test
+  script:
+    - pytest pylabrobot/resources/pipettin/pipettin_tests.py
+    - cat /tmp/piper*.log || echo "No logs found."
