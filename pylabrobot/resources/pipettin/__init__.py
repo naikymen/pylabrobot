@@ -1,4 +1,4 @@
-from .silver_deck import SilverDeck, make_silver, pipettin_db_url
+from .silver_deck import SilverDeck, make_silver, db_location
 from .tip_racks import load_ola_tip_rack
 from .tube_racks import load_ola_tube_rack
 from .plates import pipettin_test_plate

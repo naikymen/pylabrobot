@@ -2,19 +2,19 @@ import pytest
 from math import isclose
 from copy import deepcopy
 from pprint import pformat
-import json
 
 from deepdiff import DeepDiff
 
 from pylabrobot.liquid_handling.backends.piper_backend import PiperBackend
-from pylabrobot.resources import Deck, SilverDeck, Axy_24_DW_10ML, FourmlTF_L, Coordinate
+from pylabrobot.resources import Deck, Axy_24_DW_10ML, FourmlTF_L, Coordinate
 from pylabrobot.liquid_handling import LiquidHandler
 from pylabrobot.resources import set_tip_tracking, set_volume_tracking
 from pylabrobot.resources import pipettin_test_plate
 
 from pylabrobot.resources.pipettin.utils import format_number, compare, json_dump
+from pylabrobot.resources.pipettin.silver_deck import SilverDeck, make_silver
 
-from piper.datatools.datautils import load_objects, db_location
+from piper.datatools.datautils import load_default_objects, db_location
 from piper.utils import default_config
 
 from newt.translators.plr import deck_to_workspaces, convert_item, deck_to_db
@@ -23,31 +23,9 @@ from newt.translators.utils import (
 )
 from newt.translators.utils import calculate_plr_grid_parameters, derive_grid_parameters_from_plr
 
-# Example using exported data.
-db_location = 'https://gitlab.com/pipettin-bot/pipettin-gui/-/raw/develop/api/src/db/defaults/databases.json'
-
-def make_silver_deck(workspace_name = "MK3 Baseplate", db: dict = None):
-  print("Deck setup")
-  if db is None:
-    db = load_objects(db_location)["pipettin"]
-
-  # Choose one workspace.
-  workspace = next(w for w in db["workspaces"] if w["name"] == workspace_name)
-
-  # Get all platforms and containers.
-  platforms = db["platforms"]
-  containers = db["containers"]
-  tools = db["tools"]
-
-  # Instantiate the deck object.
-  deck = SilverDeck(workspace, platforms, containers, tools)
-
-  print("Deck setup done")
-  return deck
-
 def test_silver_deck():
   # Instantiate the deck.
-  deck = make_silver_deck()
+  deck = make_silver(workspace_name="MK3 Baseplate")
 
   # Try assigning and retrieving some resources.
   well_plate = Axy_24_DW_10ML("Axygen well-plate")
@@ -71,17 +49,14 @@ async def test_piper_backend():
     "sio_address": "",
     # Database connection parameters.
     "datatools": "jsondb",
-    "database": {"json_url": db_location, "database_name": 'pipettin'}
+    "database": {"database_url": db_location, "database_name": 'pipettin'}
   })
 
   # Piper backend.
   back = PiperBackend(config=config)
 
-  # Get object definitions.
-  db = load_objects(db_location)["pipettin"]
-
   # Instantiate the deck.
-  deck = make_silver_deck(db=db)
+  deck = make_silver(db_objects=db_location, db_name="pipettin", workspace_name="MK3 Baseplate")
 
   # TODO: Ask for a better error message when a non-instantiated backend is passed.
   lh = LiquidHandler(backend=back, deck=deck)
@@ -124,6 +99,49 @@ async def test_piper_backend():
   # Cleanup.
   await lh.stop()
 
+@pytest.mark.asyncio
+async def test_with_config_mongo():
+
+  # We enable tip and volume tracking globally using the `set_volume_tracking` and `set_tip_tracking` methods.
+  set_volume_tracking(enabled=True)
+  set_tip_tracking(enabled=True)
+
+  config = {
+    "dry": True,
+    "ws_address": "", "sio_address": "",
+    "datatools": "mongo",
+    "database": {
+      "database_url": "localhost:27017",
+      "database_name": "pipettin-2024-09-26"
+    }
+  }
+
+  back = PiperBackend(config=config, home_on_setup_and_close=True)
+  # Will home the robot on setup and close.
+
+  # Instantiate the SilverDeck from a config.
+  deck = SilverDeck(config=config, workspace_name="Experiment")
+  deck.summary()
+
+  lh = LiquidHandler(backend=back, deck=deck)
+
+  await lh.setup()
+
+  tip_rack = deck.get_resource("Blue tip rack")
+
+  pickups = await lh.pick_up_tips(tip_rack["A1"], use_channels=back.channels.PMULTI)
+
+  tube_rack = deck["Tube Rack [5x16]"]
+
+  aspirations = await lh.aspirate(tube_rack["A1"], vols=[100], use_channels=back.channels.PMULTI)
+
+  well_plate = deck["Standard 384-well plate"]
+
+  for well in well_plate["B2:B7"]:
+    dispenses = await lh.dispense([well], vols=[15], use_channels=back.channels.PMULTI)
+
+  await lh.stop()
+
 def test_reverse_engineering():
   # Create an instance
   well_plate = pipettin_test_plate(name="plate_01")
@@ -155,7 +173,7 @@ def test_reverse_engineering():
 def test_translation_basic():
   """Check that translations work (or at least can run)"""
   # Instantiate the deck.
-  deck = make_silver_deck()
+  deck = make_silver(workspace_name="MK3 Baseplate")
   # Serialize deck.
   deck_data = deck.serialize()
   # Convert to workspace.
@@ -276,7 +294,7 @@ def test_conversions():
 
 def test_translation_advanced():
 
-  db = load_objects(db_location)["pipettin"]
+  db = load_default_objects()["pipettin"]
 
   # Test all workspaces.
   workspace_names = [w["name"] for w in db["workspaces"]]
@@ -285,7 +303,7 @@ def test_translation_advanced():
   for workspace_name in workspace_names:
 
     # Instantiate the deck object.
-    deck = SilverDeck(db=db_location, workspace_name=workspace_name)
+    deck = SilverDeck(db=db_location, workspace_name=workspace_name, db_name="pipettin")
 
     # Serialize deck.
     deck_data = deck.serialize()
