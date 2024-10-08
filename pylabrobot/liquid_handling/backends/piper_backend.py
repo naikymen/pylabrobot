@@ -64,7 +64,7 @@ class PiperError(Exception):
 class PiperBackend(LiquidHandlerBackend):
   """ Backend for Piper, OLA's liquid-handler controller module."""
 
-  def __init__(self, config:dict = None):
+  def __init__(self, config:dict = None, home_on_setup_and_close=False):
     """Init method for the PiperBackend."""
 
     # Init LiquidHandlerBackend.
@@ -74,6 +74,7 @@ class PiperBackend(LiquidHandlerBackend):
     self.controller: Controller = None
     self._num_channels: int = None
     self._channels: dict = None
+    self.home_on_setup_and_close = home_on_setup_and_close
 
     # Set the default configuration.
     self.config = config
@@ -154,7 +155,7 @@ class PiperBackend(LiquidHandlerBackend):
     await self._start_controller(timeout=5)
 
     # Home the robot's motion system.
-    if home:
+    if home or self.home_on_setup_and_close:
       await self._home_machine()
 
     # Mark finished.
@@ -198,10 +199,11 @@ class PiperBackend(LiquidHandlerBackend):
 
     print("Homing done!")
 
-  async def stop(self, timeout=2.0, home=True):
+  async def stop(self, timeout=2.0, home=False):
     if home:
       # Home the robot.
-      await self._home_machine()
+      if home or self.home_on_setup_and_close:
+        await self._home_machine()
 
     if self.controller.machine.dry:
       print("Dry mode enabled, skipping machine cleanup.")
