@@ -112,7 +112,7 @@ async def test_with_config_mongo():
     "datatools": "mongo",
     "database": {
       "database_url": "localhost:27017",
-      "database_name": "pipettin-2024-09-26"
+      "database_name": "pipettin"
     }
   }
 
