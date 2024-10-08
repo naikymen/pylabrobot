@@ -34,7 +34,7 @@ cache:
   paths:
     - .cache/pip
 
-test_jsondb:
+test:
   stage: test
   script:
     - pytest pylabrobot/resources/pipettin/pipettin_tests.py
