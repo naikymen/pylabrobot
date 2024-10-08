@@ -19,14 +19,13 @@ default:
     - mkdir -p /var/lib/mongodb
     - mongod --fork --config /etc/mongod.conf
     - git clone --depth=1 https://gitlab.com/pipettin-bot/pipettin-gui
-    - cd pipettin-gui/api/src/db/defaults/
-    - mongoimport --db pipettin --collection platforms --file platforms.json --jsonArray
-    - mongoimport --db pipettin --collection protocols --file protocols.json --jsonArray
-    - mongoimport --db pipettin --collection workspaces --file workspaces.json --jsonArray
-    - mongoimport --db pipettin --collection containers --file containers.json --jsonArray
-    - mongoimport --db pipettin --collection settings --file settings.json --jsonArray
-    - mongoimport --db pipettin --collection hLprotocols --file hLprotocols.json --jsonArray
-    - mongoimport --db pipettin --collection tools --file tools.json --jsonArray
+    - mongoimport --db pipettin --collection platforms --file pipettin-gui/api/src/db/defaults/platforms.json --jsonArray
+    - mongoimport --db pipettin --collection protocols --file pipettin-gui/api/src/db/defaults/protocols.json --jsonArray
+    - mongoimport --db pipettin --collection workspaces --file pipettin-gui/api/src/db/defaults/workspaces.json --jsonArray
+    - mongoimport --db pipettin --collection containers --file pipettin-gui/api/src/db/defaults/containers.json --jsonArray
+    - mongoimport --db pipettin --collection settings --file pipettin-gui/api/src/db/defaults/settings.json --jsonArray
+    - mongoimport --db pipettin --collection hLprotocols --file pipettin-gui/api/src/db/defaults/hLprotocols.json --jsonArray
+    - mongoimport --db pipettin --collection tools --file pipettin-gui/api/src/db/defaults/tools.json --jsonArray
   after_script:
     - pkill mongod
 
