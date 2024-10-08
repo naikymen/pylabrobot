@@ -14,7 +14,7 @@ from pylabrobot.resources import pipettin_test_plate
 from pylabrobot.resources.pipettin.utils import format_number, compare, json_dump
 from pylabrobot.resources.pipettin.silver_deck import SilverDeck, make_silver
 
-from piper.datatools.datautils import load_objects, db_location
+from piper.datatools.datautils import load_default_objects, db_location
 from piper.utils import default_config
 
 from newt.translators.plr import deck_to_workspaces, convert_item, deck_to_db
@@ -251,7 +251,7 @@ def test_conversions():
 
 def test_translation_advanced():
 
-  db = load_objects(db_location)["pipettin"]
+  db = load_default_objects()["pipettin"]
 
   # Test all workspaces.
   workspace_names = [w["name"] for w in db["workspaces"]]
