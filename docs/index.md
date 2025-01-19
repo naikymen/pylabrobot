@@ -4,7 +4,7 @@ PyLabRobot is a hardware agnostic, pure Python SDK for liquid handling robots an
 
 - GitHub repository: [https://github.com/PyLabRobot/pylabrobot](https://github.com/PyLabRobot/pylabrobot)
 - Community: [https://discuss.pylabrobot.org](https://discuss.pylabrobot.org)
-- Paper: [https://www.cell.com/device/fulltext/S2666-9986(23)00170-9](https://www.cell.com/device/fulltext/S2666-9986(23)00170-9)
+- Paper: [https://www.cell.com/device/fulltext/S2666-9986(23)00170-9](<https://www.cell.com/device/fulltext/S2666-9986(23)00170-9>)
 
 ![Graphical abstract of PyLabRobot](/img/plr.jpg)
 
@@ -17,16 +17,24 @@ PyLabRobot is different from [PyHamilton](https://github.com/dgretton/pyhamilton
 ```{image} /img/used_by/mit.jpg
 :alt: MIT
 :class: company
+:target: https://www.mit.edu/
 ```
 
 ```{image} /img/used_by/retrobio.webp
 :alt: Retro
 :class: company
+:target: https://www.retro.bio/
 ```
 
 ```{image} /img/used_by/tt.png
 :alt: T-Therapeutics
 :class: company tt
+:target: https://www.t-therapeutics.com/
+```
+
+```{image} /img/used_by/duke.png
+:alt: Duke
+:class: company
 ```
 
 ```{raw} html
@@ -118,3 +126,4 @@ Wierenga, R., Golas, S., Ho, W., Coley, C., & Esvelt, K. (2023). PyLabRobot: An 
 - Jiang, Shuo, et al. "ProtoCode: Leveraging large language models (LLMs) for automated generation of machine-readable PCR protocols from scientific publications." SLAS technology 29.3 (2024): 100134.
 - Thieme, Anton, et al. "Deep integration of low-cost liquid handling robots in an industrial pharmaceutical development environment." SLAS technology (2024): 100180.
 - Daniel, Čech. Adaptace algoritmů pro navigaci robota na základě apriorních informací. BS thesis. České vysoké učení technické v Praze. Vypočetní a informační centrum., 2024.
+- Tenna Alexiadis Møller, Thom Booth, Simon Shaw, Vilhelm Krarup Møller, Rasmus J.N. Frandsen, Tilmann Weber. ActinoMation: a literate programming approach for medium-throughput robotic conjugation of Streptomyces spp. bioRxiv 2024.12.05.622625; doi: https://doi.org/10.1101/2024.12.05.622625

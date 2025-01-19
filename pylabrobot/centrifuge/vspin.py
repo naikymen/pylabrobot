@@ -3,10 +3,12 @@ import logging
 import time
 from typing import Optional, Union
 
-from .backend import CentrifugeBackend
+from .backend import CentrifugeBackend, LoaderBackend
+from .standard import LoaderNoPlateError
 
 try:
   from pylibftdi import Device
+
   USE_FTDI = True
 except ImportError:
   USE_FTDI = False
@@ -15,9 +17,124 @@ except ImportError:
 logger = logging.getLogger("pylabrobot.centrifuge.vspin")
 
 
+class Access2Backend(LoaderBackend):
+  def __init__(
+    self,
+    device_id: str,
+    timeout: int = 60,
+  ):
+    """
+    Args:
+      device_id: The libftdi id for the loader. Find using
+        `python3 -m pylibftdi.examples.list_devices`
+    """
+    self.dev = Device(lazy_open=True, device_id=device_id)
+    self.timeout = timeout
+
+  async def _read(self) -> bytes:
+    x = b""
+    r = None
+    start = time.time()
+    while r != b"" or x == b"":
+      r = self.dev.read(1)
+      x += r
+      if r == b"":
+        await asyncio.sleep(0.1)
+      if x == b"" and (time.time() - start) > self.timeout:
+        raise TimeoutError("No data received within the specified timeout period")
+    return x
+
+  async def send_command(self, command: bytes) -> bytes:
+    logger.debug("[loader] Sending %s", command.hex())
+    self.dev.write(command)
+    return await self._read()
+
+  async def setup(self):
+    logger.debug("[loader] setup")
+
+    self.dev.open()
+    self.dev.baudrate = 115384
+
+    status = await self.get_status()
+    print("status", status)
+    if not status.startswith(bytes.fromhex("1105")):
+      raise RuntimeError("Failed to get status")
+
+    await self.send_command(bytes.fromhex("110500030014000072b1"))
+    await self.send_command(bytes.fromhex("1105000300100000ae71"))
+    await self.send_command(bytes.fromhex("110500070024040000008000be89"))
+    await self.send_command(bytes.fromhex("11050007002404008000800063b1"))
+    await self.send_command(bytes.fromhex("11050007002404000001800089b9"))
+    await self.send_command(bytes.fromhex("1105000700240400800180005481"))
+    await self.send_command(bytes.fromhex("110500070024040000024000c6bd"))
+    await self.send_command(bytes.fromhex("1105000300400000f0bf"))
+    await self.send_command(bytes.fromhex("1105000a004607000100000000020235bf"))
+    await self.send_command(bytes.fromhex("11050003002000006bd4"))
+    await self.send_command(bytes.fromhex("1105000e00440b00000000000000007041020203c7"))
+    await self.send_command(bytes.fromhex("11050003002000006bd4"))
+
+  async def stop(self):
+    logger.debug("[loader] stop")
+    self.dev.close()
+
+  def serialize(self):
+    return {"device_id": self.dev.device_id, "timeout": self.timeout}
+
+  async def get_status(self) -> bytes:
+    logger.debug("[loader] get_status")
+    return await self.send_command(bytes.fromhex("11050003002000006bd4"))
+
+  async def park(self):
+    logger.debug("[loader] park")
+    await self.send_command(bytes.fromhex("1105000e00440b0000000000410000704103007539"))
+
+  async def close(self):
+    logger.debug("[loader] close")
+    await self.send_command(bytes.fromhex("1105000a00420700010000803f02008c64"))
+
+  async def open(self):
+    logger.debug("[loader] open")
+    await self.send_command(bytes.fromhex("1105000a0042070001000080bf0200b73e"))
+
+  async def load(self):
+    """only tested for 1cm plate, 3mm pickup height"""
+    logger.debug("[loader] load")
+
+    await self.send_command(bytes.fromhex("1105000a004607000100000000020235bf"))
+    await self.send_command(bytes.fromhex("1105000e00440b000100004040000020410200a5cb"))
+
+    # laser check
+    r = await self.send_command(bytes.fromhex("1105000300500000b3dc"))
+    if r == b"\x11\x05\x00\x08\x00Q\x05\x00\x00\x03\x00\x00\x00y\xf1":
+      raise LoaderNoPlateError("no plate found on stage")
+
+    await self.send_command(bytes.fromhex("1105000a00460700018fc2b540020023dc"))
+    await self.send_command(bytes.fromhex("1105000e00440b000200004040000020410300ee00"))
+    await self.send_command(bytes.fromhex("1105000a004607000100000000020015fd"))
+    await self.send_command(bytes.fromhex("1105000e00440b0000000040400000204102007d82"))
+
+  async def unload(self):
+    """only tested for 1cm plate, 3mm pickup height"""
+    logger.debug("[loader] unload")
+
+    await self.send_command(bytes.fromhex("1105000a004607000100000000020235bf"))
+    await self.send_command(bytes.fromhex("1105000e00440b000200004040000020410200dd31"))
+
+    # laser check
+    r = await self.send_command(bytes.fromhex("1105000300500000b3dc"))
+    if r == b"\x11\x05\x00\x08\x00Q\x05\x00\x00\x03\x00\x00\x00y\xf1":
+      raise LoaderNoPlateError("no plate found in centrifuge")
+
+    await self.send_command(bytes.fromhex("1105000a00460700017b14b6400200d57a"))
+    await self.send_command(bytes.fromhex("1105000e00440b00010000404000002041030096fa"))
+    await self.send_command(bytes.fromhex("1105000a004607000100000000020015fd"))
+    await self.send_command(bytes.fromhex("1105000e00440b00000000000000002041020056be"))
+    await self.send_command(bytes.fromhex("11050003002000006bd4"))
+
+
 class VSpin(CentrifugeBackend):
-  """ Backend for the Agilent Centrifuge.
-  Note that this is not a complete implementation. """
+  """Backend for the Agilent Centrifuge.
+  Note that this is not a complete implementation."""
 
   def __init__(self, bucket_1_position: int, device_id: Optional[str] = None):
     """
@@ -33,9 +150,9 @@ class VSpin(CentrifugeBackend):
     self.dev = Device(lazy_open=True, device_id=device_id)
     self.bucket_1_position = bucket_1_position
     self.homing_position = 0
+    self.device_id = device_id
 
   async def setup(self):
-    self.dev = Device()
     self.dev.open()
     logger.debug("open")
     # TODO: add functionality where if robot has been intialized before nothing needs to happen
@@ -147,25 +264,23 @@ class VSpin(CentrifugeBackend):
   async def stop(self):
     await self.send(b"\xaa\x02\x0e\x10")
     await self.configure_and_initialize()
-    if self.dev:
-      self.dev.close()
+    self.dev.close()
 
   async def get_status(self):
     """Returns 14 bytes
 
     Example:
-     11 22 25 00 00 4f 00 00 18 e0 05 00 00 a4
+      11 22 25 00 00 4f 00 00 18 e0 05 00 00 a4
 
-     First byte (index 0):
-      - 11 = idle
-      - 13 = unknown
-      - 08 = spinning
-      - 09 = also spinning but different
-      - 19 = unknown
-     2nd to 5th byte (index 1-4) = Position
-     10th to 13th byte (index 9-12) = Homing Position
-     Last byte (index 13) = checksum
-
+      - First byte (index 0):
+        - 11 = idle
+        - 13 = unknown
+        - 08 = spinning
+        - 09 = also spinning but different
+        - 19 = unknown
+      - 2nd to 5th byte (index 1-4) = Position
+      - 10th to 13th byte (index 9-12) = Homing Position
+      - Last byte (index 13) = checksum
     """
     resp = await self.send(b"\xaa\x01\x0e\x0f")
     if len(resp) == 0:
@@ -176,7 +291,7 @@ class VSpin(CentrifugeBackend):
     resp = await self.get_status()
     return int.from_bytes(resp[1:5], byteorder="little")
 
-# Centrifuge communication: read_resp, send, send_payloads
+  # Centrifuge communication: read_resp, send, send_payloads
 
   async def read_resp(self, timeout=20) -> bytes:
     """Read a response from the centrifuge. If the timeout is reached, return the data that has
@@ -192,7 +307,7 @@ class VSpin(CentrifugeBackend):
       chunk = self.dev.read(25)
       if chunk:
         data += chunk
-        end_byte_found = data[-1] == 0x0d
+        end_byte_found = data[-1] == 0x0D
         if len(chunk) < 25 and end_byte_found:
           break
       else:
@@ -237,11 +352,11 @@ class VSpin(CentrifugeBackend):
     if self.dev:
       self.dev.write(b"\x00" * 20)
       for i in range(33):
-        packet = b"\xaa" + bytes([i & 0xFF, 0x0e, 0x0e + (i & 0xFF)]) + b"\x00" * 8
+        packet = b"\xaa" + bytes([i & 0xFF, 0x0E, 0x0E + (i & 0xFF)]) + b"\x00" * 8
         self.dev.write(packet)
       await self.send(b"\xaa\xff\x0f\x0e")
 
-# Centrifuge operations
+  # Centrifuge operations
 
   async def open_door(self):
     await self.send(b"\xaa\x02\x26\x00\x07\x2f")
@@ -288,7 +403,7 @@ class VSpin(CentrifugeBackend):
 
     position_bytes = position.to_bytes(4, byteorder="little")
     byte_string = b"\xaa\x01\xd4\x97" + position_bytes + b"\xc3\xf5\x28\x00\xd7\x1a\x00\x00"
-    sum_byte = (sum(byte_string)-0xaa)&0xff
+    sum_byte = (sum(byte_string) - 0xAA) & 0xFF
     byte_string += sum_byte.to_bytes(1, byteorder="little")
     move_bucket = [
       "aa 02 26 00 00 28",
@@ -300,7 +415,7 @@ class VSpin(CentrifugeBackend):
       "aa 01 17 01 19",
       "aa 01 0b 0c",
       "aa 01 e6 c8 00 b0 04 96 00 0f 00 4b 00 a0 0f 05 00 07",
-      byte_string
+      byte_string,
     ]
     await self.send_payloads(move_bucket)
 
@@ -338,15 +453,18 @@ class VSpin(CentrifugeBackend):
     await self.close_door()
     await self.lock_door()
 
-    rpm = int((g/(1.118*(10**(-4))))**0.5)
-    base = int(107007 - 328*rpm + 1.13*(rpm**2))
-    rpm_b = (int(4481*rpm + 10852)).to_bytes(4, byteorder="little")
-    acc = (int(915*acceleration/100)).to_bytes(2, byteorder="little")
-    maxp = min((await self.get_position() + base + 4000*rpm//30*duration), 4294967294)
+    rpm = int((g / (1.118 * (10 ** (-4)))) ** 0.5)
+    base = int(107007 - 328 * rpm + 1.13 * (rpm**2))
+    rpm_b = (int(4481 * rpm + 10852)).to_bytes(4, byteorder="little")
+    acc = (int(915 * acceleration / 100)).to_bytes(2, byteorder="little")
+    maxp = min(
+      (await self.get_position() + base + 4000 * rpm // 30 * duration),
+      4294967294,
+    )
     position = maxp.to_bytes(4, byteorder="little")
 
-    byte_string = b"\xaa\x01\xd4\x97" + position + rpm_b + acc+b"\x00\x00"
-    last_byte = (sum(byte_string)-0xaa)&0xff
+    byte_string = b"\xaa\x01\xd4\x97" + position + rpm_b + acc + b"\x00\x00"
+    last_byte = (sum(byte_string) - 0xAA) & 0xFF
     byte_string += last_byte.to_bytes(1, byteorder="little")
 
     payloads = [
@@ -383,7 +501,7 @@ class VSpin(CentrifugeBackend):
       "aa 01 00 01",
       "aa 01 e6 05 00 64 00 00 00 00 00 32 00 e8 03 01 00 6e",
       "aa 01 94 b6 12 83 00 00 12 01 00 00 f3",
-      "aa 01 19 28 42"
+      "aa 01 19 28 42",
     ]
 
     await self.send_payloads(payloads)

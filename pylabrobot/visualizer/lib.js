@@ -14,8 +14,6 @@ const robotWidthMM = 100 + 30 * 22.5; // mm, just the deck
 const robotHeightMM = 653.5; // mm
 var scaleX, scaleY;
 
-const numRails = 30;
-
 var resources = {}; // name -> Resource object
 
 let trash;
@@ -59,7 +57,7 @@ function getSnappingResourceAndLocationAndSnappingBox(resourceToSnap, x, y) {
     };
   }
 
-  // Check if the resource is in a CarrierSite.
+  // Check if the resource is in a ResourceHolder.
   let deck = resources["deck"];
   for (let resource_name in deck.children) {
     const resource = deck.children[resource_name];
@@ -436,7 +434,7 @@ class HamiltonSTARDeck extends Deck {
     );
 
     // Draw vertical rails as lines
-    for (let i = 0; i < numRails; i++) {
+    for (let i = 0; i < this.num_rails; i++) {
       const rail = new Konva.Line({
         points: [
           100 + i * 22.5, // 22.5 mm per rail
@@ -471,7 +469,8 @@ class HamiltonSTARDeck extends Deck {
       ...super.serialize(),
       ...{
         num_rails: this.num_rails,
-        no_trash: true,
+        with_trash: false,
+        with_trash96: false,
       },
     };
   }
@@ -549,7 +548,7 @@ class OTDeck extends Deck {
     return {
       ...super.serialize(),
       ...{
-        no_trash: true,
+        with_trash: false,
       },
     };
   }
@@ -876,7 +875,7 @@ class Carrier extends Resource {}
 class PlateCarrier extends Carrier {}
 class TipCarrier extends Carrier {}
 
-class CarrierSite extends Resource {
+class ResourceHolder extends Resource {
   constructor(resourceData, parent) {
     super(resourceData, parent);
     const { spot } = resourceData;
@@ -981,8 +980,8 @@ function classForResourceType(type) {
       return TipRack;
     case "TipSpot":
       return TipSpot;
-    case "CarrierSite":
-      return CarrierSite;
+    case "ResourceHolder":
+      return ResourceHolder;
     case "Carrier":
       return Carrier;
     case "PlateCarrier":
