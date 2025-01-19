@@ -6,7 +6,7 @@ from pprint import pformat
 from deepdiff import DeepDiff
 
 from pylabrobot.liquid_handling.backends.piper_backend import PiperBackend
-from pylabrobot.resources import Deck, Axy_24_DW_10ML, FourmlTF_L, Coordinate
+from pylabrobot.resources import Deck, Axy_24_DW_10ML, FourmlTF, Coordinate
 from pylabrobot.liquid_handling import LiquidHandler
 from pylabrobot.resources import set_tip_tracking, set_volume_tracking
 from pylabrobot.resources import pipettin_test_plate
@@ -29,7 +29,7 @@ def test_silver_deck():
 
   # Try assigning and retrieving some resources.
   well_plate = Axy_24_DW_10ML("Axygen well-plate")
-  tip_rack = FourmlTF_L("24x 4ml Tips with Filters")
+  tip_rack = FourmlTF("24x 4ml Tips with Filters")
   deck.assign_child_resource(well_plate, location=Coordinate(0,0,0))
   deck.assign_child_resource(tip_rack, location=Coordinate(0,150,0))
   deck.get_resource("Axygen well-plate")
