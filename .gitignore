@@ -11,3 +11,8 @@ pyhamilton/LAY-BACKUP
 build/lib
 
 myenv
+
+# Pipetting
+*.directory
+.venv/*
+.vscode/*
