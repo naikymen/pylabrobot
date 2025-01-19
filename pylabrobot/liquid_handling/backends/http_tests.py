@@ -1,25 +1,26 @@
 import unittest
 
-import responses
-from responses import matchers
+import responses  # type: ignore
+from responses import matchers  # type: ignore
 
 from pylabrobot.liquid_handling import LiquidHandler
 from pylabrobot.liquid_handling.backends import HTTPBackend
-from pylabrobot.resources.hamilton import STARLetDeck
 from pylabrobot.resources import (
+  HTF,
   PLT_CAR_L5AC_A00,
   TIP_CAR_480_A00,
-  HTF_L,
   Cor_96_wellplate_360ul_Fb,
   no_tip_tracking,
-  no_volume_tracking
+  no_volume_tracking,
 )
+from pylabrobot.resources.hamilton import STARLetDeck
 
 header_match = matchers.header_matcher({"User-Agent": "pylabrobot/0.1.0"})
 
 
 class TestHTTPBackendCom(unittest.IsolatedAsyncioTestCase):
-  """ Tests for setup and stop """
+  """Tests for setup and stop"""
+
   def setUp(self) -> None:
     self.deck = STARLetDeck()
     self.backend = HTTPBackend("localhost", 8080, num_channels=8)
@@ -53,10 +54,10 @@ class TestHTTPBackendCom(unittest.IsolatedAsyncioTestCase):
 
 
 class TestHTTPBackendOps(unittest.IsolatedAsyncioTestCase):
-  """ Tests for liquid handling ops. """
+  """Tests for liquid handling ops."""
 
   @responses.activate
-  async def asyncSetUp(self) -> None: # type: ignore
+  async def asyncSetUp(self) -> None:  # type: ignore
     responses.add(
       responses.POST,
       "http://localhost:8080/events/setup",
@@ -73,7 +74,7 @@ class TestHTTPBackendOps(unittest.IsolatedAsyncioTestCase):
 
     self.deck = STARLetDeck()
     self.tip_carrier = TIP_CAR_480_A00(name="tip_carrier")
-    self.tip_carrier[0] = self.tip_rack = HTF_L(name="tiprack")
+    self.tip_carrier[0] = self.tip_rack = HTF(name="tiprack")
     self.plate_carrier = PLT_CAR_L5AC_A00(name="plate_carrier")
     self.plate_carrier[0] = self.plate = Cor_96_wellplate_360ul_Fb(name="plate")
     self.deck.assign_child_resource(self.tip_carrier, rails=3)
@@ -85,7 +86,7 @@ class TestHTTPBackendOps(unittest.IsolatedAsyncioTestCase):
     await self.lh.setup()
 
   @responses.activate
-  async def asyncTearDown(self) -> None: # type: ignore
+  async def asyncTearDown(self) -> None:  # type: ignore
     await super().asyncTearDown()
     responses.add(
       responses.POST,

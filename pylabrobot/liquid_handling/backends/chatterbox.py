@@ -1,26 +1,28 @@
-# pylint: disable=unused-argument, inconsistent-quotes
-
 from typing import List, Union
 
-from pylabrobot.liquid_handling.backends.backend import LiquidHandlerBackend
-from pylabrobot.resources import Resource
+from pylabrobot.liquid_handling.backends.backend import (
+  LiquidHandlerBackend,
+)
 from pylabrobot.liquid_handling.standard import (
-  Pickup,
-  PickupTipRack,
+  Aspiration,
+  AspirationContainer,
+  AspirationPlate,
+  Dispense,
+  DispenseContainer,
+  DispensePlate,
   Drop,
   DropTipRack,
-  Aspiration,
-  AspirationPlate,
-  AspirationContainer,
-  Dispense,
-  DispensePlate,
-  DispenseContainer,
-  Move
+  Pickup,
+  PickupTipRack,
+  ResourceDrop,
+  ResourceMove,
+  ResourcePickup,
 )
+from pylabrobot.resources import Resource
 
 
 class LiquidHandlerChatterboxBackend(LiquidHandlerBackend):
-  """ Chatter box backend for device-free testing. Prints out all operations. """
+  """Chatter box backend for device-free testing. Prints out all operations."""
 
   _pip_length = 5
   _vol_length = 8
@@ -38,7 +40,7 @@ class LiquidHandlerChatterboxBackend(LiquidHandlerBackend):
   _filter_length = 10
 
   def __init__(self, num_channels: int = 8):
-    """ Initialize a chatter box backend. """
+    """Initialize a chatter box backend."""
     super().__init__()
     self._num_channels = num_channels
 
@@ -122,7 +124,12 @@ class LiquidHandlerChatterboxBackend(LiquidHandlerBackend):
       )
       print(row)
 
-  async def aspirate(self, ops: List[Aspiration], use_channels: List[int], **backend_kwargs):
+  async def aspirate(
+    self,
+    ops: List[Aspiration],
+    use_channels: List[int],
+    **backend_kwargs,
+  ):
     print("Aspirating:")
     header = (
       f"{'pip#':<{LiquidHandlerChatterboxBackend._pip_length}} "
@@ -158,7 +165,12 @@ class LiquidHandlerChatterboxBackend(LiquidHandlerBackend):
         row += f" {value:<15}"
       print(row)
 
-  async def dispense(self, ops: List[Dispense], use_channels: List[int], **backend_kwargs):
+  async def dispense(
+    self,
+    ops: List[Dispense],
+    use_channels: List[int],
+    **backend_kwargs,
+  ):
     print("Dispensing:")
     header = (
       f"{'pip#':<{LiquidHandlerChatterboxBackend._pip_length}} "
@@ -188,7 +200,7 @@ class LiquidHandlerChatterboxBackend(LiquidHandlerBackend):
       )
       for key, value in backend_kwargs.items():
         if isinstance(value, list) and all(isinstance(v, bool) for v in value):
-          value = ''.join('T' if v else 'F' for v in value)
+          value = "".join("T" if v else "F" for v in value)
         if isinstance(value, list):
           value = "".join(map(str, value))
         row += f" {value:<{LiquidHandlerChatterboxBackend._kwargs_length}}"
@@ -214,5 +226,11 @@ class LiquidHandlerChatterboxBackend(LiquidHandlerBackend):
       resource = dispense.container
     print(f"Dispensing {dispense.volume} to {resource}.")
 
-  async def move_resource(self, move: Move, **backend_kwargs):
-    print(f"Moving {move}.")
+  async def pick_up_resource(self, pickup: ResourcePickup):
+    print(f"Picking up resource: {pickup}")
+
+  async def move_picked_up_resource(self, move: ResourceMove):
+    print(f"Moving picked up resource: {move}")
+
+  async def drop_resource(self, drop: ResourceDrop):
+    print(f"Dropping resource: {drop}")

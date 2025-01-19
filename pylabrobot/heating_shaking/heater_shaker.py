@@ -1,13 +1,13 @@
 from typing import Optional
 
-from pylabrobot.temperature_controlling import TemperatureController
 from pylabrobot.shaking import Shaker
+from pylabrobot.temperature_controlling import TemperatureController
 
 from .backend import HeaterShakerBackend
 
 
 class HeaterShaker(TemperatureController, Shaker):
-  """ A heating and shaking machine """
+  """A heating and shaking machine"""
 
   def __init__(
     self,
@@ -17,7 +17,7 @@ class HeaterShaker(TemperatureController, Shaker):
     size_z: float,
     backend: HeaterShakerBackend,
     category: str = "heating_shaking",
-    model: Optional[str] = None
+    model: Optional[str] = None,
   ):
     super().__init__(
       name=name,
@@ -26,6 +26,6 @@ class HeaterShaker(TemperatureController, Shaker):
       size_z=size_z,
       backend=backend,
       category=category,
-      model=model
+      model=model,
     )
     self.backend: HeaterShakerBackend = backend  # fix type

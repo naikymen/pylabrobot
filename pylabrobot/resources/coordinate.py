@@ -1,10 +1,11 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 
 
 @dataclass
 class Coordinate:
-  """ Represents coordinates. This is often used to represent the location of a :class:`~Resource`,
+  """Represents coordinates. This is often used to represent the location of a :class:`~Resource`,
   relative to its parent resource.
   """
 
@@ -26,14 +27,14 @@ class Coordinate:
     return Coordinate(
       x=(self.x or 0) + (other.x or 0),
       y=(self.y or 0) + (other.y or 0),
-      z=(self.z or 0) + (other.z or 0)
+      z=(self.z or 0) + (other.z or 0),
     )
 
   def __sub__(self, other) -> Coordinate:
     return Coordinate(
       x=(self.x or 0) - (other.x or 0),
       y=(self.y or 0) - (other.y or 0),
-      z=(self.z or 0) - (other.z or 0)
+      z=(self.z or 0) - (other.z or 0),
     )
 
   def __str__(self) -> str:
@@ -46,3 +47,6 @@ class Coordinate:
 
   def vector(self) -> list[float]:
     return [self.x, self.y, self.z]
+
+  def __iter__(self):
+    return iter((self.x, self.y, self.z))

@@ -1,9 +1,10 @@
-from pylabrobot.serializer import serialize, deserialize
+from pylabrobot.serializer import deserialize, serialize
 
 
 def test_serialize_deserialize_closure():
   def outer(x):
     y = 10
+
     def inner():
       return x + y
 

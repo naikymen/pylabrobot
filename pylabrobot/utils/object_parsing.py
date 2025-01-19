@@ -1,8 +1,10 @@
-from typing import Type, TypeVar, Optional
+from typing import Optional, Type, TypeVar
 
 T = TypeVar("T")
+
+
 def find_subclass(class_name: str, cls: Type[T]) -> Optional[Type[T]]:
-  """ Recursively find a subclass with the correct name.
+  """Recursively find a subclass with the correct name.
 
   Args:
     class_name: The name of the class to find.

@@ -23,6 +23,7 @@ Resources represent on-deck liquid handling equipment, including tip racks, plat
     PlateCarrier
     Resource
     ResourceStack
+    Rotation
     tip.Tip
     TipCarrier
     TipRack
@@ -42,6 +43,17 @@ Azenta
   :recursive:
 
     corning_axygen.plates
+
+
+Biorad
+------
+
+.. autosummary::
+  :toctree: _autosummary
+  :nosignatures:
+  :recursive:
+
+    biorad.plates
 
 
 Boekel
@@ -88,18 +100,6 @@ Falcon
     falcon.tubes
 
 
-Greiner
--------
-
-.. autosummary::
-  :toctree: _autosummary
-  :nosignatures:
-  :recursive:
-
-    greiner
-    greiner.plates
-
-
 Hamilton
 --------
 
@@ -114,18 +114,6 @@ Hamilton
     hamilton.STARLetDeck
 
 
-Limbro
-------
-
-.. autosummary::
-  :toctree: _autosummary
-  :nosignatures:
-  :recursive:
-
-    limbro
-    limbro.plates
-
-
 ML Star resources
 -----------------
 
@@ -134,11 +122,11 @@ ML Star resources
   :nosignatures:
   :recursive:
 
-    ml_star
-    ml_star.tip_creators
-    ml_star.tip_racks
-    ml_star.tip_carriers
-    ml_star.plate_carriers
+    hamilton
+    hamilton.tip_creators
+    hamilton.tip_racks
+    hamilton.tip_carriers
+    hamilton.plate_carriers
 
 
 Opentrons
@@ -249,3 +237,13 @@ See :doc:`Using trackers </user_guide/using-trackers>` for a tutorial.
   no_volume_tracking
   set_volume_tracking
   volume_tracker.VolumeTracker
+
+Utils
+-----
+
+.. autosummary::
+  :toctree: _autosummary
+  :nosignatures:
+  :recursive:
+
+  utils

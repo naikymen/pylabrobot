@@ -43,7 +43,9 @@ from pylabrobot.liquid_handling.standard import (
   AspirationPlate,
   Dispense,
   DispensePlate,
-  Move
+  ResourceDrop,
+  ResourceMove,
+  ResourcePickup,
 )
 # TODO: Raise "NoChannelError" in the backend when appropriate.
 # from pylabrobot.liquid_handling.errors import NoChannelError
@@ -475,9 +477,17 @@ class PiperBackend(LiquidHandlerBackend):
   async def dispense96(self, dispense: DispensePlate):
     raise NotImplementedError("The backend does not support the CoRe 96.")
 
-  async def move_resource(self, move: Move):
-    """ Move the specified lid within the robot. """
-    raise NotImplementedError("Moving resources is not implemented yet.")
+  async def pick_up_resource(self, pickup: ResourcePickup):
+    """Pick up a resource like a plate or a lid using the integrated robotic arm."""
+    raise NotImplementedError("The backend does not support moving resources.")
+
+  async def move_picked_up_resource(self, move: ResourceMove):
+    """Move a picked up resource like a plate or a lid using the integrated robotic arm."""
+    raise NotImplementedError("The backend does not support moving resources.")
+
+  async def drop_resource(self, drop: ResourceDrop):
+    """Drop a resource like a plate or a lid using the integrated robotic arm."""
+    raise NotImplementedError("The backend does not support moving resources.")
 
 
 class EchoBackend(LiquidHandlerBackend):
@@ -549,6 +559,14 @@ class EchoBackend(LiquidHandlerBackend):
   async def dispense96(self, dispense: DispensePlate):
     raise NotImplementedError("EchoBackend - The backend does not support the CoRe 96.")
 
-  async def move_resource(self, move: Move, **backend_kwargs):
-    """ Move the specified lid within the robot. """
-    raise NotImplementedError("EchoBackend - Moving resources is not implemented yet.")
+  async def pick_up_resource(self, pickup: ResourcePickup):
+    """Pick up a resource like a plate or a lid using the integrated robotic arm."""
+    raise NotImplementedError("The backend does not support moving resources.")
+
+  async def move_picked_up_resource(self, move: ResourceMove):
+    """Move a picked up resource like a plate or a lid using the integrated robotic arm."""
+    raise NotImplementedError("The backend does not support moving resources.")
+
+  async def drop_resource(self, drop: ResourceDrop):
+    """Drop a resource like a plate or a lid using the integrated robotic arm."""
+    raise NotImplementedError("The backend does not support moving resources.")

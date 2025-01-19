@@ -39,6 +39,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Changed `pedestal_size_z=-5` to `pedestal_size_z=-4.74` for `PLT_CAR_L5AC_A00` (https://github.com/PyLabRobot/pylabrobot/pull/255)
 - rename `homogenization_` parameters in `STAR` to `mix_` (https://github.com/PyLabRobot/pylabrobot/pull/261)
 - Lids no longer get special treatment when assigned to a ResourceStack. Assign them to a plate directly (https://github.com/PyLabRobot/pylabrobot/pull/267)
+- `Machine` no longer inherits from `Resource` (https://github.com/PyLabRobot/pylabrobot/pull/281)
+- `ResourceHolderMixin` is renamed to `ResourceHolder` and now inherits from `Resource` (https://github.com/PyLabRobot/pylabrobot/pull/281)
+- You can now place resources on 'rail' 0 on Hamilton decks (left support doesn't touch rail)
+- rename `STAR.move_iswap_{x,y,z}_direction` to `STAR.move_iswap_{x,y,z}_relative`. Change units to mm. Infer direction. (https://github.com/PyLabRobot/pylabrobot/pull/295)
+- `STAR.request_iswap_position` returns loc in mm (https://github.com/PyLabRobot/pylabrobot/pull/296)
+- `STAR.{position_max_free_y_for_n,request_y_pos_channel_n,request_z_pos_channel_n}` are 0-indexed and return in mm (https://github.com/PyLabRobot/pylabrobot/pull/260)
+- Rename `STAR.probe_z_height_using_channel` to `STAR.clld_probe_z_height_using_channel` and use 0-based indexing for channels (https://github.com/PyLabRobot/pylabrobot/pull/260)
+- `ResourceCarrierSite` -> `ResourceHolder`, `PlateCarrierSite` -> `PlateHolder` (https://github.com/PyLabRobot/pylabrobot/pull/280)
+- `Carrier.sites` is now a dictionary (https://github.com/PyLabRobot/pylabrobot/pull/280)
+- `create_carrier_sites`->`create_resources` (`site_size_{x,y}`->`resource_size_{x,y}`) (https://github.com/PyLabRobot/pylabrobot/pull/280)
+- `MFXCarrier` takes modules as direct children, instead of having `CarrierSite`s as intermediaries (https://github.com/PyLabRobot/pylabrobot/pull/280)
+- `Config.log_dir` is now optional and defaults to None (https://github.com/PyLabRobot/pylabrobot/pull/302)
+- Definition of `Cor_6_wellplate_16800ul_Fb` to match the manufacturer spec (https://github.com/PyLabRobot/pylabrobot/pull/311)
+- `Trash` now inherits from `Container` (https://github.com/PyLabRobot/pylabrobot/pull/318)
+- Renamed parameters of `LiquidHandler.move_{resource,plate,lid}` (https://github.com/PyLabRobot/pylabrobot/pull/328)
+  - resource_offset -> pickup_offset
+  - get_direction -> pickup_direction
+  - put_direction -> drop_direction
+- `location` parameter of `assign_child_resource` is not optional (https://github.com/PyLabRobot/pylabrobot/pull/336)
+- `Resource.get_absolute_location` raises `NoLocationError` instead of `AssertionError` when absolute location is not defined (https://github.com/PyLabRobot/pylabrobot/pull/338)
+- `no_trash` and `no_teaching_rack` were renamed to `with_trash` and `with_teaching_rack` to avoid double negatives (https://github.com/PyLabRobot/pylabrobot/pull/347)
 
 ### Added
 
@@ -56,16 +77,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `Thermo_TS_96_wellplate_1200ul_Rb` (https://github.com/PyLabRobot/pylabrobot/pull/215)
 - `Thermo_AB_96_wellplate_300ul_Vb_EnduraPlate` (https://github.com/PyLabRobot/pylabrobot/pull/215)
 - `adapter_hole_size_z` and `plate_z_offset` parameters to `PlateAdapter` (https://github.com/PyLabRobot/pylabrobot/pull/215)
-- `wide_high_volume_tip_with_filter` and `HTF_L_WIDE` (https://github.com/PyLabRobot/pylabrobot/pull/222)
+- `wide_high_volume_tip_with_filter` and `HTF_WIDE` (https://github.com/PyLabRobot/pylabrobot/pull/222)
 - Serialize code cells and closures (https://github.com/PyLabRobot/pylabrobot/pull/220)
 - `Container.get_anchor()` now supports `"cavity_bottom"` as an argument for `z` (https://github.com/PyLabRobot/pylabrobot/pull/205/)
 - `pylabrobot.resources.utils.query` for basic querying (https://github.com/PyLabRobot/pylabrobot/commit/4a07f6a32a9a33d0370eb9c29015567c98aea002)
 - `HamiltonLiquidHandler.allow_firmware_planning` to allow STAR/Vantage to plan complex liquid handling operations automatically (may break hardware agnosticity unexpectedly) (https://github.com/PyLabRobot/pylabrobot/pull/224)
 - `size_z` and `nesting_z_height` for `Cor_96_wellplate_360ul_Fb_Lid` (https://github.com/PyLabRobot/pylabrobot/pull/226)
 - `NestedTipRack` (https://github.com/PyLabRobot/pylabrobot/pull/228)
-- `HTF_L_ULTRAWIDE`, `ultrawide_high_volume_tip_with_filter` (https://github.com/PyLabRobot/pylabrobot/pull/229/)
+- `HTF_ULTRAWIDE`, `ultrawide_high_volume_tip_with_filter` (https://github.com/PyLabRobot/pylabrobot/pull/229/)
 - `get_absolute_size_x`, `get_absolute_size_y`, `get_absolute_size_z` for `Resource` (https://github.com/PyLabRobot/pylabrobot/pull/235)
 - `Cytation5Backend` for plate reading on BioTek Cytation 5 (https://github.com/PyLabRobot/pylabrobot/pull/238)
+  - imaging (https://github.com/PyLabRobot/pylabrobot/pull/277)
+    - autofocus (https://github.com/PyLabRobot/pylabrobot/pull/289)
 - More chatterboxes (https://github.com/PyLabRobot/pylabrobot/pull/242)
   - `FanChatterboxBackend`
   - `PlateReaderChatterboxBackend`
@@ -79,6 +102,51 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Add `F.linear_tip_spot_generator` and `F.randomized_tip_spot_generator` for looping over tip spots, with caching (https://github.com/PyLabRobot/pylabrobot/pull/256)
 - Add `skip_autoload`, `skip_iswap`, and `skip_core96_head` flags to `STAR.setup` (https://github.com/PyLabRobot/pylabrobot/pull/263)
 - Add `skip_autoload`, `skip_iswap`, and `skip_core96_head` flags to `Vantage.setup` (https://github.com/PyLabRobot/pylabrobot/pull/263)
+- `Resource.get_highest_known_point` (https://github.com/PyLabRobot/pylabrobot/pull/284)
+- `BioRad_384_DWP_50uL_Vb` (https://github.com/PyLabRobot/pylabrobot/commit/251c3c274040cdac73cd3baf3a1e9c94c2f368c3)
+- Support for portrait mode iSWAP (https://github.com/PyLabRobot/pylabrobot/pull/291)
+- `STAR.{rotate_iswap_wrist,rotate_iswap_rotation_drive}` (https://github.com/PyLabRobot/pylabrobot/pull/298)
+- `STAR.request_pip_channel_version`
+- `STAR.ztouch_probe_z_height_using_channel` for getting z-height by probing without cLLD (https://github.com/PyLabRobot/pylabrobot/pull/260)
+- `nest_8_troughplate_22000uL_Vb` and `nest_12_troughplate_15000uL_Vb` (https://github.com/PyLabRobot/pylabrobot/pull/312)
+- `Cor_12_wellplate_6900ul_Fb`, `Cor_24_wellplate_3470ul_Fb` and `Cor_48_wellplate_1620ul_Fb` (https://github.com/PyLabRobot/pylabrobot/pull/311)
+- `ignore_collision` parameter to `HamiltonDeck.assign_child_resource` (https://github.com/PyLabRobot/pylabrobot/pull/317)
+- `AGenBio_1_troughplate_100000uL_Fl` (https://github.com/PyLabRobot/pylabrobot/pull/319)
+- `MFX_DWP_module_flat` (https://github.com/PyLabRobot/pylabrobot/pull/320)
+- `STAR.position_channels_in_y_direction` (https://github.com/PyLabRobot/pylabrobot/pull/324)
+- `{Well,TipSpot}.get_identifier` (https://github.com/PyLabRobot/pylabrobot/pull/327)
+- `LiquidHandler{Backend}.{pick_up_resource,move_picked_up_resource,drop_resource}` (https://github.com/PyLabRobot/pylabrobot/pull/328)
+  - Resource management (https://github.com/PyLabRobot/pylabrobot/pull/343)
+- `Access2` loader for vspin (https://github.com/PyLabRobot/pylabrobot/pull/308)
+- `CentrifugeChatterboxBackend` and `LoaderChatterboxBackend` (https://github.com/PyLabRobot/pylabrobot/pull/335)
+- Add support for TF cytomat `C6000`, `C2C_50`, `C2C_425`, `C2C_450_SHAKE`, `C5C` (https://github.com/PyLabRobot/pylabrobot/pull/332)
+- Add `resource_size_z` parameter to `create_homogeneous_resources and `create_resources` (https://github.com/PyLabRobot/pylabrobot/pull/341)
+- More backend kwargs for iswap movements on STAR: (https://github.com/PyLabRobot/pylabrobot/pull/343)
+  - STAR.pick_up_resource:
+    - `iswap_grip_strength: int = 4`
+    - `minimum_traverse_height_at_beginning_of_a_command: Optional[float] = None`
+    - `z_position_at_the_command_end: Optional[float] = None`
+    - `plate_width_tolerance: float = 2.0`
+    - `hotel_open_gripper_position: Optional[float] = None`
+    - `hotel_depth=160.0`
+    - `hotel_clearance_height=7.5`
+    - `high_speed=False`
+    - `plate_width: Optional[float] = None`
+    - `use_unsafe_hotel: bool = False`
+    - `iswap_collision_control_level: int = 0`
+    - `iswap_fold_up_sequence_at_the_end_of_process: bool = True`
+  - STAR.drop_resource
+    - `minimum_traverse_height_at_beginning_of_a_command: Optional[float] = None`
+    - `z_position_at_the_command_end: Optional[float] = None`
+    - `hotel_open_gripper_position: Optional[float] = None`
+    - `hotel_depth=160.0`
+    - `hotel_clearance_height=7.5`
+    - `hotel_high_speed=False`
+    - `use_unsafe_hotel: bool = False`
+    - `iswap_collision_control_level: int = 0`
+- `with_trash96` on `HamiltonSTARDeck` so there is more fine grained control (https://github.com/PyLabRobot/pylabrobot/pull/347)
+- add `STAR.{get_channels_z_positions, position_channels_in_z_direction}` (https://github.com/PyLabRobot/pylabrobot/pull/356)
+- `STAR.step_off_foil` (https://github.com/PyLabRobot/pylabrobot/pull/357)
 
 ### Deprecated
 
@@ -88,6 +156,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `ThermoScientific_96_DWP_1200ul_Rd` in favor of `Thermo_TS_96_wellplate_1200ul_Rb` (https://github.com/PyLabRobot/pylabrobot/pull/215)
 - `Azenta4titudeFrameStar_96_wellplate_skirted` in favor of `Azenta4titudeFrameStar_96_wellplate_200ul_Vb` (https://github.com/PyLabRobot/pylabrobot/pull/205/)
 - `Cos_96_DWP_2mL_Vb` in favor of `Cos_96_wellplate_2mL_Vb (https://github.com/PyLabRobot/pylabrobot/pull/205/)`
+- Resource definitions with `_L` and `_P`, it is easy enough to use the stem and `.rotated(z=90)` for `_P` (https://github.com/PyLabRobot/pylabrobot/pull/288)
+- `Cor_6_wellplate_Fl` (https://github.com/PyLabRobot/pylabrobot/pull/311)
+- `AGenBio_1_wellplate_Fl` -> `AGenBio_1_troughplate_190000uL_Fl`, `AGenBio_4_wellplate_Vb` -> `AGenBio_4_troughplate_75000_Vb` (https://github.com/PyLabRobot/pylabrobot/pull/319)
 
 ### Fixed
 
@@ -107,6 +178,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - don't raise a blow out air volume error when requesting 0, or when volume tracking is disabled (https://github.com/PyLabRobot/pylabrobot/pull/262)
 - fix get_child_location for resources rotated by 180 degrees (https://github.com/PyLabRobot/pylabrobot/pull/269)
 - volume tracking on channel 1-n (https://github.com/PyLabRobot/pylabrobot/pull/273)
+- correct trash location on Vantage (https://github.com/PyLabRobot/pylabrobot/pull/285)
+- `Resource.get_absolute_location` includes anchor even if parent is None
+- unassign from parent if resource is re-assigned (https://github.com/PyLabRobot/pylabrobot/pull/333)
 
 ### Removed
 

@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 from pylabrobot.__version__ import __version__
 
@@ -6,31 +6,19 @@ with open("README.md", "r", encoding="utf-8") as f:
   long_description = f.read()
 
 
-extras_fw = [
-  "pyserial",
-  "pyusb",
-  "libusb_package<=1.0.26.2"
-]
+extras_fw = ["pyserial", "pyusb", "libusb_package<=1.0.26.2"]
 
-extras_http = [
-  "requests",
-  "types-requests"
-]
+extras_http = ["requests", "types-requests"]
 
 extras_plate_reading = [
   "pylibftdi",
 ]
 
-extras_websockets = [
-  "websockets"
-]
+extras_websockets = ["websockets==12.0"]
 
 extras_visualizer = extras_websockets
 
-extras_opentrons = [
-  "opentrons-http-api-client",
-  "opentrons-shared-data"
-]
+extras_opentrons = ["opentrons-http-api-client", "opentrons-shared-data"]
 
 extras_server = [
   "flask[async]",
@@ -43,26 +31,35 @@ extras_piper = [
   "pytest-asyncio"
 ]
 
-extras_inheco = [
-  "hid"
-]
+extras_inheco = ["hid"]
 
-extras_agrow = [
-  "pymodbus==3.6.8"
-]
+extras_agrow = ["pymodbus==3.6.8"]
 
-extras_dev = extras_fw + extras_http + extras_plate_reading + extras_websockets + extras_piper + \
-    extras_visualizer + extras_opentrons + extras_server + extras_inheco + extras_agrow + [
+extras_dev = (
+  extras_fw
+  + extras_http
+  + extras_plate_reading
+  + extras_websockets
+  + extras_visualizer
+  + extras_opentrons
+  + extras_server
+  + extras_inheco
+  + extras_agrow
+  + extras_piper
+  + [
     "pydata-sphinx-theme",
     "myst_nb",
     "sphinx_copybutton",
     "pytest",
     "pytest-timeout",
-    "pylint",
     "mypy",
     "responses",
     "sphinx-reredirects",
+    "ruff==0.2.1",
+    "nbconvert",
+    "sphinx-sitemap",
   ]
+)
 
 # Some extras are not available on all platforms. `dev` should be available everywhere
 extras_all = extras_dev
@@ -99,5 +96,5 @@ setup(
       "lh-server=pylabrobot.server.liquid_handling_server:main",
       "plr-gui=pylabrobot.gui.gui:main",
     ],
-  }
+  },
 )
