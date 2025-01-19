@@ -366,6 +366,8 @@ class LiquidHandler(Machine):
         use_channels = list(range(len(tip_spots)))
       else:
         use_channels = self._default_use_channels
+
+    # Get tips.
     tips = [tip_spot.get_tip() for tip_spot in tip_spots]
 
     # expand default arguments

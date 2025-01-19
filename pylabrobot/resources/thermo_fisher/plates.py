@@ -88,6 +88,9 @@ def Thermo_TS_96_wellplate_1200ul_Rb(name: str, with_lid: bool = False) -> Plate
     Strips, and Storage Plate Sealing Mats.
   - Cleanliness: 10243223/AB1127: Cleanroom manufacture.
   - ANSI/SLAS-format for compatibility with automated systems.
+
+  Technical drawing:
+  https://assets.thermofisher.com/TFS-Assets/LSG/manuals/MAN0014419_ABgene_Storage_Plate_96well_1_2mL_QR.pdf
   """
   return Plate(
     name=name,
@@ -99,13 +102,13 @@ def Thermo_TS_96_wellplate_1200ul_Rb(name: str, with_lid: bool = False) -> Plate
     ordered_items=create_ordered_items_2d(Well,
       num_items_x=12,
       num_items_y=8,
-      dx=10.0,
-      dy=7.3,
+      dx=10.0,   # Should be 10.23 (14.38 - 8.4/2), not 10.0.
+      dy=7.3,    # Should be 7.09 (11.24 - 8.4/2), not 7.3.
       dz=2.5, # 2.5. https://github.com/PyLabRobot/pylabrobot/pull/183
       item_dx=9,
       item_dy=9,
-      size_x=8.3,
-      size_y=8.3,
+      size_x=8.3, # Should be 8.4, not 8.3.
+      size_y=8.3, # Should be 8.4, not 8.3.
       size_z=20.5,
       bottom_type=WellBottomType.U,
       material_z_thickness=1.15,

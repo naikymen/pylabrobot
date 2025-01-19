@@ -23,7 +23,7 @@ class Pickup:
 
 @dataclass(frozen=True)
 class Drop:
-  resource: Resource
+  resource: Resource  # Can be trash, see LiquidHandler.
   offset: Coordinate
   tip: Tip
 
