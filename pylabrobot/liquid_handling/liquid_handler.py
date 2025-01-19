@@ -96,7 +96,7 @@ def check_updatable(src_tracker: VolumeTracker, dest_tracker: VolumeTracker):
 def _get_centers_with_margin(dim_size: float, n: int, margin: float, min_spacing: float):
   """Get the centers of the channels with a minimum margin on the edges."""
   if dim_size < margin * 2 + (n - 1) * min_spacing:
-    raise ValueError("Resource is too small to space channels.")
+    raise ValueError(f"Resource is too small to space {n} channels: {dim_size} mm")
   if dim_size - (n - 1) * min_spacing <= min_spacing * 2:
     remaining_space = dim_size - (n - 1) * min_spacing - margin * 2
     return [margin + remaining_space / 2 + i * min_spacing for i in range(n)]
@@ -843,7 +843,7 @@ class LiquidHandler(Resource, Machine):
     # If the user specified a single resource, but multiple channels to use, we will assume they
     # want to space the channels evenly across the resource. Note that offsets are relative to the
     # center of the resource.
-    if len(set(resources)) == 1:
+    if len(set(resources)) == 1 & len(use_channels) > 1:
       resource = resources[0]
       resources = [resource] * len(use_channels)
       center_offsets = self._get_single_resource_liquid_op_offsets(
@@ -1007,10 +1007,6 @@ class LiquidHandler(Resource, Machine):
       ValueError: If all channels are `None`.
     """
 
-    # If the user specified a single resource, but multiple channels to use, we will assume they
-    # want to space the channels evenly across the resource. Note that offsets are relative to the
-    # center of the resource.
-
     self._check_containers(resources)
 
     use_channels = use_channels or self._default_use_channels or list(range(len(resources)))
@@ -1030,7 +1026,7 @@ class LiquidHandler(Resource, Machine):
     # If the user specified a single resource, but multiple channels to use, we will assume they
     # want to space the channels evenly across the resource. Note that offsets are relative to the
     # center of the resource.
-    if len(set(resources)) == 1:
+    if len(set(resources)) == 1 & len(use_channels) > 1:
       resource = resources[0]
       resources = [resource] * len(use_channels)
       center_offsets = self._get_single_resource_liquid_op_offsets(
