@@ -50,7 +50,7 @@ extras_agrow = [
   "pymodbus==3.6.8"
 ]
 
-extras_dev = extras_fw + extras_http + extras_plate_reading + extras_websockets + \
+extras_dev = extras_fw + extras_http + extras_plate_reading + extras_websockets + extras_piper + \
     extras_visualizer + extras_opentrons + extras_server + extras_inheco + extras_agrow + [
     "pydata-sphinx-theme",
     "myst_nb",
