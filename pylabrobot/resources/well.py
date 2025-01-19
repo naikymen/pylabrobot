@@ -93,6 +93,8 @@ class Well(Container):
       **super().serialize(),
       "bottom_type": self.bottom_type.value,
       "cross_section_type": self.cross_section_type.value,
+      # TODO: Refactor the conversion to pipettin to use "serialize_state" instead.
+      "well_tracker": self.tracker.serialize()
     }
 
   def set_liquids(self, liquids: List[Tuple[Optional["Liquid"], float]]):

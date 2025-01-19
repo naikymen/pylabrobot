@@ -1,4 +1,5 @@
 from typing import Callable, Optional, cast
+import math
 
 from .container import Container
 from .coordinate import Coordinate
@@ -31,6 +32,8 @@ class PetriDish(Container):
       max_volume=max_volume,
       compute_volume_from_height=compute_volume_from_height,
       compute_height_from_volume=compute_height_from_volume,
+      # TODO: Merge upstream.
+      # max_volume=height*math.pi*(diameter/2)**2
     )
     self.diameter = diameter
     self.height = height
@@ -83,3 +86,38 @@ class PetriDishHolder(Resource):
     if len(self.children) == 0:
       return None
     return cast(PetriDish, self.children[0])
+
+class Colony(Container):
+  """ A colony in a petri dish """
+
+  def __init__(
+    self,
+    name: str,
+    diameter: float,
+    height: float,
+    max_volume: float,
+    category: str = "colony",
+    model: Optional[str] = None
+  ):
+    super().__init__(
+      name=name,
+      size_x=diameter,
+      size_y=diameter,
+      size_z=height,
+      category=category,
+      model=model,
+      max_volume=max_volume
+    )
+    self.diameter = diameter
+    self.height = height
+
+  def serialize(self):
+    super_serialized = super().serialize()
+    for key in ["size_x", "size_y", "size_z"]:
+      del super_serialized[key]
+
+    return {
+      **super_serialized,
+      "diameter": self.diameter,
+      "height": self.height
+    }

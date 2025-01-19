@@ -1,0 +1,102 @@
+from pylabrobot.resources import Coordinate, Resource
+from pylabrobot.resources.resource import Rotation
+from pylabrobot.serializer import serialize
+from typing import Optional
+
+class Anchor(Resource):
+  """A carrier-like resource for PW Anchors."""
+
+  resource: Resource = None
+  active_height: float = 0.0
+
+  def __init__(self,
+    name: str,
+    size_x: float,
+    size_y: float,
+    size_z: float,
+    rotation: Optional[Rotation] = None,
+    category: Optional[str] = None,
+    model: Optional[str] = None,
+    # Visual anchor offset for the UI.
+    anchor_offset: Coordinate = Coordinate.zero()
+  ):
+
+    super().__init__(
+      name=name,
+      size_x=size_x,
+      size_y=size_y,
+      size_z=size_z,
+      rotation=rotation,
+      category=category,
+      model=model
+    )
+
+    # Save curb offset.
+    self.anchor_offset = anchor_offset
+
+  def assign_child_resource(self,
+                            resource: Resource,
+                            # NOTE: Location is deduced from slot. This offset is added.
+                            offset: Coordinate = Coordinate.zero()):
+
+    # Check that the anchor is empty.
+    assert self.resource is None, f"The anchor is occupied by another resource: '{self.resource.name}'"
+
+    # Convert PW rotation angle of anchors to XY offsets for PLR.
+    x = (-resource.get_size_x() if self.rotation in [90, 180] else 0.0)
+    y = (-resource.get_size_y() if self.rotation in [0, 90] else 0.0)
+    # Note that "activeHeight" must be added to the location here.
+    # This is needed to apply the Z offset added by the anchor,
+    # to the calculation in "get_absolute_location".
+    z = self.active_height
+    # Add the provided offset if any.
+    location = Coordinate(x, y, z) + offset
+
+    # Assign the resource as usual.
+    super().assign_child_resource(resource, location)
+
+    # TODO: Check if instead I would like the anchor to assign this
+    #       new child to the anchor's parent. This would match the
+    #       behavior of anchors in PW, which do not "contain" resources,
+    #       technically they only "align" them to the workspace.
+    # NOTE: As of pipettin-gui:9acaae72, any items snapped to an anchor have
+    #       a new property set, indicating its name. Anchors will have their
+    #       children assigned when the platform item resources are created.
+    #
+    # For example:
+    # self.parent.assign_child_resource(resource, location)
+
+    # Save the resource to the anchor.
+    self.resource = resource
+
+  def serialize(self) -> dict:
+    output = super().serialize()
+    output["anchor_offset"] = serialize(self.anchor_offset)
+    return output
+
+  def unassign_child_resource(self, resource):
+    self.resource = None
+    return super().unassign_child_resource(resource)
+
+def load_ola_anchor(platform_item, platform_data, tools_data: dict, **kwargs):
+  anchor = Anchor(
+    name=platform_item["name"],
+    size_x=platform_data["width"],
+    size_y=platform_data["length"],
+    size_z=platform_data["height"],
+    category=platform_data.get("type", None), # Optional in PLR.
+    model=platform_data.get("name", None), # Optional in PLR (not documented in Resource).
+    anchor_offset = Coordinate(
+      x=platform_data["anchorOffsetX"],
+      y=platform_data["anchorOffsetY"],
+      z=platform_data["anchorOffsetZ"],
+    )
+  )
+  anchor.locked = platform_item.get("locked", None)
+  # NOTE: Because "size_z" is not propagated to the location of child resources,
+  #       I will save the "activeHeight" to a new class attribute.
+  anchor.active_z = platform_data["activeHeight"]
+  # Apply rotations using the method from Resource.
+  # TODO: Check that it works as expected.
+  anchor.rotate(z=platform_data.get("rotation", 0))
+  return anchor

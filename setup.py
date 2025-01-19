@@ -36,6 +36,11 @@ extras_server = [
   "flask[async]",
 ]
 
+extras_piper = [
+  "piper@git+https://gitlab.com/pipettin-bot/pipettin-piper.git",
+  # For tests.
+  "deepdiff"
+]
 
 extras_inheco = [
   "hid"
@@ -81,6 +86,7 @@ setup(
     "opentrons": extras_opentrons,
     "server": extras_server,
     "agrow": extras_agrow,
+    "piper": extras_piper,
     "dev": extras_dev,
     "all": extras_all,
   },

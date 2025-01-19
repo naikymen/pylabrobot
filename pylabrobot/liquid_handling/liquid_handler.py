@@ -451,7 +451,7 @@ class LiquidHandler(Machine):
       ... )
 
     Args:
-      tip_spots: Tip resource locations to drop to.
+      tip_spots: List of tip spots where to drop tips. Can also be "Trash" objects.
       use_channels: List of channels to use. Index from front to back. If `None`, the first
         `len(channels)` channels will be used.
       offsets: List of offsets, one for each channel, a translation that will be applied to the tip

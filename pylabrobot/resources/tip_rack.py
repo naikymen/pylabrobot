@@ -60,6 +60,9 @@ class TipSpot(Resource):
     return {
       **super().serialize(),
       "prototype_tip": self.make_tip().serialize(),
+      # Add info about the tip. Is there one or not?
+      # TODO: This may be a hack. Review "tip_tracker.py" and "tip.py".
+      "tip_tracker": self.tracker.serialize()
     }
 
   @classmethod
@@ -69,7 +72,7 @@ class TipSpot(Resource):
     def make_tip() -> Tip:
       return cast(Tip, deserialize(tip_data, allow_marshal=allow_marshal))
 
-    return cls(
+    tip_spot = cls(
       name=data["name"],
       size_x=data["size_x"],
       size_y=data["size_y"],
@@ -77,6 +80,14 @@ class TipSpot(Resource):
       make_tip=make_tip,
       category=data.get("category", "tip_spot")
     )
+
+    # Add the tip.
+    # TODO: This may be a hack. Review "tip_tracker.py" and "tip.py".
+    #       For example, it does not restore liquid history.
+    if data.get("tip_tracker", {}).get(["tip"], None):
+      tip_spot.tracker.add_tip(tip_spot.make_tip())
+
+    return tip_spot
 
   def serialize_state(self) -> Dict[str, Any]:
     return self.tracker.serialize()

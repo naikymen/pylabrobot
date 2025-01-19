@@ -13,7 +13,7 @@ from .deck import Deck
 from .errors import ResourceNotFoundError
 from .itemized_resource import ItemizedResource
 from .liquid import Liquid
-from .petri_dish import PetriDish, PetriDishHolder
+from .petri_dish import PetriDish, PetriDishHolder, Colony
 from .plate import Plate, Lid, Well
 from .plate_adapter import PlateAdapter
 from .powder import Powder
@@ -52,5 +52,7 @@ from .revvity import *
 from .tecan import *
 from .thermo_fisher import *
 from .vwr import *
+
+from .pipettin import *
 
 # labware made from 3rd parties that share their designs with PLR

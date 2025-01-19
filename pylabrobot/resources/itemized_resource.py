@@ -396,6 +396,10 @@ class ItemizedResource(Resource, Generic[T], metaclass=ABCMeta):
     return {
       **super().serialize(),
       "ordering": self._ordering,
+      # TODO: Discuss this change with rick. It does not seem like it was intended to
+      #       retain this kind of information. There is no "deserialize" method here.
+      "num_items_x": self.num_items_x,
+      "num_items_y": self.num_items_y,
     }
 
   def index_of_item(self, item: T) -> Optional[int]:
