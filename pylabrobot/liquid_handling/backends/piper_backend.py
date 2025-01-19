@@ -199,7 +199,7 @@ class PiperBackend(LiquidHandlerBackend):
 
     print("Homing done!")
 
-  async def stop(self, timeout=5.0, home=False):
+  async def stop(self, timeout=2.0, home=False):
     if home:
       # Home the robot.
       if home or self.home_on_setup_and_close:
@@ -217,8 +217,7 @@ class PiperBackend(LiquidHandlerBackend):
       result = await self.controller.machine.check_command_result_ok(
         cmd_id=cmd_id, timeout=timeout, loop_delay=0.2)
       if not result:
-        print("Failed to disable steppers in time, restarting firmware.")
-        await self.controller.machine.firmware_restart()
+        self.controller.machine.firmware_restart()
 
     # TODO: comment on what this does.
     await super().stop()
