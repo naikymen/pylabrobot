@@ -715,8 +715,12 @@ class LiquidHandler(Resource, Machine):
   def _get_single_resource_liquid_op_offsets(
     self, resource: Resource, num_channels: int
   ) -> List[Coordinate]:
+
+    # TODO: This quantity was hardcoded to 2 mm, and is Hamilton-specific.
+    #       It has been set to 0 instead to prevent unintended errors:
+    #       See: https://github.com/PyLabRobot/pylabrobot/pull/366#
     min_spacing_edge = (
-      2  # minimum spacing between the edge of the container and the center of channel
+      0  # minimum spacing between the edge of the container and the center of channel
     )
     min_spacing_between_channels = 9
 
