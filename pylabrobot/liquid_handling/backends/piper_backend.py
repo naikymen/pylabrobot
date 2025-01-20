@@ -80,6 +80,7 @@ class PiperBackend(LiquidHandlerBackend):
 
     # Set the default configuration.
     self.config = config
+    self.verbose = self.config.get("verbose", False)
 
   def init_channels(self, tool_defs: dict):
     """ Compute and save number of channels.
@@ -102,15 +103,15 @@ class PiperBackend(LiquidHandlerBackend):
             raise ValueError(f"Channel {ch} is already provided by {self._channels[ch]}.")
           self._num_channels += 1
           self._channels[ch] = tool_name
-          if self.config.get("verbose", False):
+          if self.verbose:
             print(f"Assigning channel number {ch} to tool '{tool_name}'.")
-    print(f"Configured the PiperBackend with {self._num_channels} channels: {self._channels.values()}")
+    print(f"Configured the PiperBackend with {self._num_channels} channels: {", ".join(self._channels.values())}")
     # The channels property is a dynamic attribute.
     print(self.channels)
 
   @property
   def channels(self):
-    return DynamicAttributes(**{v: k for k, v in self._channels.items()})
+    return DynamicAttributes(what="Channels", **{v: k for k, v in self._channels.items()})
 
   def init_controller(self):
     """Instantiate a controller object and save it to this backend instance.
@@ -390,6 +391,9 @@ class PiperBackend(LiquidHandlerBackend):
       await self._send_command_wait_and_check(gcode, timeout=timeout)
 
   async def run_actions(self, actions: list):
+    if self.verbose:
+      print("Executing actions:\n" + pformat(actions))
+
     # Make GCODE
     gcode_list, parsed_actions = self.parse_actions(actions)
 
@@ -415,7 +419,8 @@ class PiperBackend(LiquidHandlerBackend):
       'tipLength': 50.0,
       'volume': 0
     """
-    print(f"Picking up tips: {ops}")
+    if self.verbose:
+      print(f"Picking up tips: {ops}")
 
     # TODO: Ask Rick how to choose a pipette (or channel from a multi-chanel pipette).
     #       The OT module has a "select_tip_pipette" method.
@@ -428,7 +433,8 @@ class PiperBackend(LiquidHandlerBackend):
 
   async def drop_tips(self, ops: List[Drop], use_channels: List[int], **backend_kwargs):
     """drop_tips"""
-    print(f"Dropping tips {ops}.")
+    if self.verbose:
+      print(f"Dropping tips {ops}.")
 
     # TODO: reject operations which are not "discard to trash" using "NotImplementedError".
     # This is because the Pipettin robot (2023/03) ejects tips using
@@ -442,7 +448,8 @@ class PiperBackend(LiquidHandlerBackend):
 
   async def aspirate(self, ops: List[Aspiration], use_channels: List[int], **backend_kwargs):
     """aspirate"""
-    print(f"Aspirating {ops}.")
+    if self.verbose:
+      print(f"Aspirating {ops}.")
 
     # Make action
     actions = self.make_pipetting_action(ops, use_channels)
@@ -452,7 +459,8 @@ class PiperBackend(LiquidHandlerBackend):
 
   async def dispense(self, ops: List[Dispense], use_channels: List[int], **backend_kwargs):
     """dispense"""
-    print(f"Dispensing {ops}.")
+    if self.verbose:
+      print(f"Dispensing {ops}.")
 
     # Make action
     # TODO: ask Rick if the "Dispense" operation is really the same as "Aspirate" (see standard.py).
