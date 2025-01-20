@@ -220,7 +220,7 @@ class PiperBackend(LiquidHandlerBackend):
       result = await self.controller.machine.check_command_result_ok(
         cmd_id=cmd_id, timeout=timeout, loop_delay=0.2)
       if not result:
-        self.controller.machine.firmware_restart()
+        await self.controller.machine.firmware_restart()
 
     # TODO: comment on what this does.
     await super().stop()
