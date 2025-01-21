@@ -108,6 +108,10 @@ def get_items_platform(item, platforms):
   platform_data = next(x for x in platforms if x["name"] == item.get("platform"))
   return platform_data
 
+def get_item_type(item, platforms):
+  platform_data = get_items_platform(item, platforms)
+  return platform_data["type"]
+
 def get_contents_container(container_link, containers):
   """Get container data for a container link."""
   container_data = next(x for x in containers if x["name"] == container_link.get("container"))

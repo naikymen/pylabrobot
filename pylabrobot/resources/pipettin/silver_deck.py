@@ -24,7 +24,7 @@ from .tip_racks import load_ola_tip_rack
 from .tube_racks import load_ola_tube_rack
 from .custom_racks import load_ola_custom
 from .anchor import load_ola_anchor, Anchor
-from .utils import get_items_platform, create_trash, create_petri_dish, importer_not_implemented
+from .utils import get_items_platform, create_trash, create_petri_dish, importer_not_implemented, get_item_type
 # Pipettin imports.
 from newt.translators.utils import xy_to_plr
 from newt.translators.plr import deck_to_db
@@ -153,9 +153,11 @@ class SilverDeck(Deck):
 
     # Sort items with "ANCHOR" type first
     if anchors_first:
-      items = sorted(items, key=lambda item: item.get("type") != "ANCHOR")
+      items = sorted(items, key=lambda item: get_item_type(item, platforms) != "ANCHOR")
 
+    print(f"Assigning items: {', '.join(i['name'] for i in items)}")
     for item in items:
+      # Get the item's platform data.
       platform_data = get_items_platform(item, platforms)
       # Create a resource from the item.
       # Also add tubes, tips, and other resources in the platform item.
