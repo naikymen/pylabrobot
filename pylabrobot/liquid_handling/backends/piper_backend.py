@@ -183,7 +183,7 @@ class PiperBackend(LiquidHandlerBackend):
     else:
       print("Connections successfully setup.")
 
-  async def _home_machine(self):
+  async def _home_machine(self, axes=None):
     # TODO: customize parameters.
 
     if self.controller.machine.dry:
@@ -192,7 +192,7 @@ class PiperBackend(LiquidHandlerBackend):
 
     try:
       # Generate the homing actions.
-      home_actions = self.make_home_actions()
+      home_actions = self.make_home_actions(axes=axes)
 
       # Generate the actions' gcode.
       await self.run_actions(home_actions)
@@ -205,7 +205,8 @@ class PiperBackend(LiquidHandlerBackend):
   async def stop(self, timeout=2.0, home=False):
     # Home the robot.
     if home or self.home_on_setup_and_close:
-      await self._home_machine()
+      # TODO: Check if it makes sense, this only parks the tool, but does not home if already homed.
+      await self._home_machine(axes="xyz")
 
     if self.controller.machine.dry:
       print("Dry mode enabled, skipping machine cleanup.")
