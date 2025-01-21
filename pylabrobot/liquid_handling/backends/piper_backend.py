@@ -78,12 +78,13 @@ class PiperBackend(LiquidHandlerBackend):
     self._channels: dict = None
     self.home_on_setup_and_close = home_on_setup_and_close
 
-    # Set the default configuration.
-    default_config = {"plugins": ["base_actions", "pipettes"]}
+    # Update the default configuration.
+    piper_config = {"plugins": ["base_actions", "pipettes"]}
     if config is not None:
-      default_config.update(config)
+      piper_config.update(config)
 
-    self.config = config
+    # Save the final config.
+    self.config = piper_config
     self.verbose = self.config.get("verbose", False)
 
   def init_channels(self, tool_defs: dict):
