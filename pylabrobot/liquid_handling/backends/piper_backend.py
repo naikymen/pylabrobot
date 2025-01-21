@@ -203,10 +203,9 @@ class PiperBackend(LiquidHandlerBackend):
     print("Homing done!")
 
   async def stop(self, timeout=2.0, home=False):
-    if home:
-      # Home the robot.
-      if home or self.home_on_setup_and_close:
-        await self._home_machine()
+    # Home the robot.
+    if home or self.home_on_setup_and_close:
+      await self._home_machine()
 
     if self.controller.machine.dry:
       print("Dry mode enabled, skipping machine cleanup.")
