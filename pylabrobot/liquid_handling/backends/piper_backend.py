@@ -79,6 +79,10 @@ class PiperBackend(LiquidHandlerBackend):
     self.home_on_setup_and_close = home_on_setup_and_close
 
     # Set the default configuration.
+    default_config = {"plugins": ["base_actions", "pipettes"]}
+    if config is not None:
+      default_config.update(config)
+
     self.config = config
     self.verbose = self.config.get("verbose", False)
 
